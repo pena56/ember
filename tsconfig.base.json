@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@ember/core": ["./packages/core/src/index.ts"],
+      "@ember/store": ["./packages/store/src/index.ts"],
+      "@ember/tokens": ["./packages/tokens/src/index.ts"]
+    }
+  }
+}

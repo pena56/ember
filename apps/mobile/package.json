@@ -1,0 +1,37 @@
+{
+  "name": "@ember/mobile",
+  "version": "0.0.1",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build": "echo 'mobile build runs via EAS'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ember/core": "workspace:*",
+    "@ember/tokens": "workspace:*",
+    "@expo/log-box": "56.0.12",
+    "@expo/metro-runtime": "56.0.14",
+    "expo": "56.0.9",
+    "expo-constants": "56.0.17",
+    "expo-linking": "56.0.13",
+    "expo-router": "56.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-native": "0.85.3",
+    "react-native-gesture-handler": "3.0.0",
+    "react-native-reanimated": "4.4.1",
+    "react-native-safe-area-context": "5.8.0",
+    "react-native-screens": "4.25.2",
+    "react-native-web": "0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.8",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
+  }
+}
