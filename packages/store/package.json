@@ -13,9 +13,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ember/core": "workspace:*"
+    "@ember/core": "workspace:*",
+    "dexie": "4.4.3"
   },
   "devDependencies": {
+    "fake-indexeddb": "6.2.5",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
   }

@@ -83,11 +83,29 @@ Update after every meaningful change.
   typecheck via `tsc --noEmit` — forced once store gained a cross-package `@ember/core` source
   import. Any future package importing another workspace package's source follows this pattern.
 
+## Unit 03b build notes (2026-06-08)
+- Done (packages/store): `DexieRepository` (Dexie 4.4.3 / IndexedDB) — single `records` table keyed
+  by compound `[collection+id]` (+ `collection` index) + `outbox` table indexed on `hlc`;
+  `structuredClone` on write AND read for value isolation; ctor takes db name (default `'ember'`)
+  for test isolation; uses ambient global `indexedDB` (no fake-indexeddb import in impl). Headless
+  tests via `fake-indexeddb@6.2.5` in vitest `setupFiles`; conformance run uses a unique UUID db
+  name per `makeRepo`. `import { Dexie }` (named) + `import type { Table }` — NodeNext default-import
+  gotcha. conformance.ts/repository.ts untouched; core gained no Dexie import.
+- Built (Sonnet, TDD: 16 Dexie conformance + 16 Memory + 1 index = 33 ✓) → fresh-context review
+  (Opus) = APPROVE-WITH-NITS, NO blockers. Reviewer independently re-ran all gates + confirmed
+  core-purity + suite-untouched.
+- typecheck 8 ✓ · test 5 tasks/33 ✓ · lint 6 ✓.
+- **Follow-up (defer, against 03a's SHARED suite — its own micro-unit, don't weaken in 03b's PR):**
+  `runRepositoryConformance` never calls `close()` (no afterEach), so `close()` is uncovered. Add
+  an `afterEach(repo.close)` + an idempotent-close assertion to conformance.ts so 03b/03c both
+  exercise it. NITs (no action — deliberately consistent w/ MemoryRepository): Dexie `enqueue`
+  clones the entry while Memory doesn't; structuredClone shape constraint undocumented in contract.
+
 ## Current Goal
-- Unit 03a (#26) MERGED — PR #27 merged to main, branch deleted. Next: **03b** — Dexie/web
-  `Repository` impl (`packages/store/dexie`), tested headlessly under `fake-indexeddb` against
-  `runRepositoryConformance`; then **03c** SQLite/mobile (device-bound). Spec 03b with `spec-unit`
-  when ready. Store epic: 03a ✓ → 03b → 03c.
+- **Unit 03b (#29) BUILT + REVIEWED (APPROVE-WITH-NITS, no blockers)** — Dexie/web `Repository` impl
+  on branch `feat/29-dexie-web-repository`. Spec: specs/03b-dexie-web-repository.md. All verify green.
+  Pending: commit + PR "Closes #29". Then **03c** SQLite/mobile (device-bound like 02d).
+  Store epic: 03a ✓ → 03b ✓ → 03c.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
