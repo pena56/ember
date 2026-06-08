@@ -19,6 +19,9 @@ substitute remembered versions.
 | Notifications | expo-notifications | 56.0.16 | Local scheduled + Expo push receipt |
 | Server state cache | @tanstack/react-query | 5.101.0 | Optional, online reads |
 | Validation | zod | 4.4.3 | Schema validation, shared |
+| Styling (web) | tailwindcss + @tailwindcss/vite | 4.3.0 | Utility CSS; semantic tokens as Tailwind v4 `@theme` |
+| Styling (mobile) | uniwind | 1.8.0 | Tailwind v4 bindings for RN (Metro); targets RN 0.85 / React 19 |
+| Fonts | Fraunces (serif) + Inter (sans) | via @expo-google-fonts / @fontsource | App chrome typography (resolved 2026-06-08) |
 
 ## Tooling — lint/format (official configs, verified 2026-06-08)
 Adopt the stack's official/recommended configs rather than hand-rolled rules. Flat config
@@ -82,3 +85,17 @@ Adopt the stack's official/recommended configs rather than hand-rolled rules. Fl
    hardcoded colors/spacing in components.
 7. A given (notification-type, local-day) fires on at most one device — enforced by
    primary-device election + server delivery ledger.
+
+## Deployment (resolved 2026-06-08)
+Trunk-based; production is gated behind a release tag `vX.Y.Z` (never auto-deployed from `main`).
+Targets, not long-lived branches. CI scaffolds the steps; each needs a repo secret before it runs.
+
+| Deployable | PR → preview | `main` → staging | tag `v*` → production | Secret(s) |
+|---|---|---|---|---|
+| Web PWA (`apps/web`) | Cloudflare Pages preview URL | CF Pages staging project | CF Pages prod project | `CLOUDFLARE_API_TOKEN`, `CF_ACCOUNT_ID` |
+| Convex (`convex/`) | — | `convex deploy` → staging deployment | `convex deploy` → production | `CONVEX_DEPLOY_KEY_STAGING`, `CONVEX_DEPLOY_KEY_PROD` |
+| Mobile (`apps/mobile`) | — | `eas update --channel preview` (OTA, JS-only) | `eas update --channel production` | `EXPO_TOKEN` |
+
+Deferred: native EAS Build + store submission (needs Apple Developer + Google Play accounts);
+add `eas build`/`eas submit` on tag once those exist. OTA updates require at least one installed
+dev/internal build to land on.

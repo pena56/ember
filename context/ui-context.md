@@ -19,23 +19,33 @@ mobile share token values, not components). Themes: **warm-light**, **warm-dark*
 NOT OLED black), plus reader-only **sepia**. The reader view picks its reading theme
 **independently** of app chrome (paper / sepia / night) with brightness + warmth controls.
 
-Concrete hex values are TBD in the design pass (unit 02) — directions below, not final.
+Concrete values resolved 2026-06-08 ("Amber Ember" palette). Authored as Tailwind v4
+`@theme` variables in `packages/tokens`, consumed by both clients (see Component Library).
 
-| Role | Token | Direction |
-|---|---|---|
-| Accent (the "ember") | `accent` | warm amber/orange; used for streak, goal ring, primary CTAs |
-| Surface (light) | `surface` | warm cream/off-white |
-| Surface (dark) | `surface` | soft warm charcoal (not pure black) |
-| Text primary | `text` | warm near-black / warm off-white |
-| Reader paper | `reader.bg` | per reading theme: paper / sepia / night |
-| Success/streak-lit | `streak.lit` | glowing ember amber |
-| Streak-at-risk | `streak.risk` | muted warning warm tone |
+**Accent (the "ember"):** `accent #E0701B` · dark-variant `#F2913E` · `streak.lit #F59E0B`
+· `streak.risk #B98A5E`. Used for streak, goal ring, primary CTAs.
+
+| Role | Token | warm-light | warm-dark (soft charcoal, not OLED) |
+|---|---|---|---|
+| Surface | `surface` | `#FAF4EA` | `#1C1815` |
+| Card / raised | `surface.raised` | `#FFFDF9` | `#272220` |
+| Text primary | `text` | `#2A2422` | `#F2E9DB` |
+| Text muted | `text.muted` | `#6F665C` | `#A89C8C` |
+| Hairline / border | `line` | `#E7DDCB` | `#38312B` |
+| Accent | `accent` | `#E0701B` | `#F2913E` |
+
+**Reader themes** (`reader.bg` / `reader.text`, chosen independently of app chrome):
+paper `#FBF6EC` / `#2A2422` · sepia `#F2E5CC` / `#4A3F2F` · night `#14110E` / `#C9BEAD`.
+Brightness + warmth controls modulate these at render time.
 
 ## Typography
-- **Headings / numbers** (streak count, book titles, big stats): a warm **serif** — literary feel.
-- **Body / UI / labels**: a clean, legible **sans**.
+Resolved 2026-06-08: **Fraunces** (serif) + **Inter** (sans).
+- **Headings / numbers** (streak count, book titles, big stats): **Fraunces** — warm variable
+  serif with optical sizing + soft axis; its display numerals carry the hero streak count.
+- **Body / UI / labels**: **Inter** — neutral, highly legible, flawless cross-platform.
+- Load via `@expo-google-fonts/fraunces` + `@expo-google-fonts/inter` (mobile) and self-hosted
+  woff2 / `@fontsource` (web). Pin versions at unit-02 spec time.
 - PDF body text renders as the PDF's own embedded fonts; typography here is app chrome only.
-- Font files shared conceptually across clients; load per-platform.
 
 ## Reader UX
 - **Continuous vertical scroll by default**; page-flip mode available as a setting.
@@ -57,8 +67,15 @@ Tabs: **Today / Library / Stats** (+ Settings).
   (incl. primary-device choice), storage quota usage.
 
 ## Component Library
-No third-party UI kit chosen yet — build a small shared-token-driven component set per client
-(RN + web can't share components, but share tokens + patterns). Decide in unit 02.
+Resolved 2026-06-08: **bespoke, token-driven components per client** — no UI kit. RN + web
+can't share components, but share tokens + patterns. Styling via **Tailwind v4**:
+- **Web** (`apps/web`): Tailwind v4 via `@tailwindcss/vite`.
+- **Mobile** (`apps/mobile`): **uniwind** (Tailwind v4 bindings for React Native, Metro-based —
+  chosen over NativeWind because it natively targets Tailwind v4 / RN 0.85 / React 19).
+- Semantic tokens authored once in `packages/tokens` as a Tailwind v4 `@theme`, consumed by
+  both clients' Tailwind configs (preserves architecture invariant #6 — no hardcoded
+  colors/spacing). `frontend-design` + `impeccable` drive component quality at build time.
+- Small surface: Text, Button, Card, ListRow, TabBar/Nav, Surface, GoalRing, Ember.
 
 ## Layout Patterns
 - Card-based Today screen; generous spacing; soft rounded corners (cozy).

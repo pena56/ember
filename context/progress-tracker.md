@@ -32,13 +32,18 @@ Update after every meaningful change.
 - **Mobile text-layer extraction** (unit 05): react-native-pdf's text-layer story is weaker than
   pdf.js. Confirm approach — native text extraction, a pdf.js-in-webview path on mobile, or a
   hybrid. Affects highlight anchoring parity across clients.
-- **Concrete color hex values + chosen fonts** (unit 02): directions set (warm amber accent,
-  cream/charcoal surfaces, serif headings + sans body), exact tokens TBD in the design pass.
 - **Convex auth provider** (unit 11): which sign-in method(s) — email link, OAuth (Google/Apple)?
-- **Per-client component approach** (unit 02): build bespoke token-driven components vs adopt a
-  light RN/web UI kit each.
 - **Quota numbers** (unit 13): confirm defaults (e.g. 2GB/user, 100MB/file) and monetization path.
 - **Web reader leaf decisions**: font/scroll polish — safe to decide during build.
+
+## Resolved decisions (2026-06-08, grill-me — promoted to ui-context.md / architecture.md)
+- **Components:** bespoke token-driven per client; styling via Tailwind v4 (`@tailwindcss/vite`
+  web) + uniwind (mobile). Tokens authored once as Tailwind v4 `@theme`.
+- **Fonts:** Fraunces (serif/headings/streak numbers) + Inter (sans/body/UI).
+- **Palette "Amber Ember":** accent `#E0701B`; warm-light surface `#FAF4EA`/text `#2A2422`;
+  warm-dark surface `#1C1815`/text `#F2E9DB`; reader paper/sepia/night defined in ui-context.md.
+- **Deploy:** trunk-based, tag-gated prod. Web→Cloudflare Pages, Convex→staging+tag-prod,
+  Mobile→EAS Update OTA (native build/submit deferred). Secrets per architecture.md Deployment.
 
 ## Architecture Decisions (durable — promoted to architecture.md invariants)
 - On-device store is source of truth; Convex is sync server, never on read path.
