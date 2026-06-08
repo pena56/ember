@@ -2,7 +2,8 @@
 Update after every meaningful change.
 
 ## Current Phase
-- unit-02 (tokens) → PR #18 open (Closes #2). unit-02b (web theming) specced → executing.
+- unit-02 (tokens) → PR #18 open (Closes #2). unit-02b (web theming) built + reviewed + fixed /
+  awaiting commit+PR for #19.
 
 ## Current Goal
 - Active issue: #19 (Unit 02b — web theming, `apps/web`; spec specs/02b-web-theming.md, branch
@@ -46,6 +47,21 @@ Update after every meaningful change.
   generate; selector blocks override sepia/night), parity test extended to warm-dark + reader.
 - Carry-forward for 02b/02c: `theme.css` is a fragment with NO `@import "tailwindcss"` — clients
   MUST import it after their own Tailwind entry. Reader colors default to paper in `@theme`.
+
+## Unit 02b build notes (2026-06-08)
+- Done (apps/web): `@tailwindcss/vite` + `@import "tailwindcss"` then `@ember/tokens/theme.css`;
+  ThemeProvider (`system`/light/dark, default system, persisted, FOUC inline script in index.html
+  matching the provider's resolution rule); self-hosted Fraunces+Inter via @fontsource; minimal
+  themed shell + segmented theme control; jsdom + RTL tests (10).
+- Built (Sonnet, TDD) → impeccable polish (fixed broken `rounded-radius-md`→`rounded-md`, added
+  focus-visible rings, redesigned active state token-purely) → fresh-context review (Opus) =
+  CHANGES-REQUESTED → fixed: **BLOCKER** font family mismatch (`@fontsource-variable/fraunces`
+  registers `'Fraunces Variable'` ≠ token `'Fraunces'` → swapped to non-variable
+  `@fontsource/fraunces@5.2.9`); wordmark `text-accent`→`text-text` (warm-light accent-on-surface
+  was 2.95:1, below AA large-text). All verify green + web build OK.
+- **Token follow-up (defer to tokens pkg / before 02c):** to use the *variable* Fraunces (optical
+  sizing, the documented design intent), widen `--font-serif` to `'Fraunces Variable', 'Fraunces',
+  serif` in theme.css so both the variable and static packages resolve. Out of 02b's boundary.
 
 ## Open Questions (resolve before/at the relevant unit)
 - **Mobile text-layer extraction** (unit 05): react-native-pdf's text-layer story is weaker than
