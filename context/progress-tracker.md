@@ -84,7 +84,10 @@ Update after every meaningful change.
   import. Any future package importing another workspace package's source follows this pattern.
 
 ## Current Goal
-- Unit 03a (#26) BUILT + reviewed (APPROVE-WITH-NITS, applied) → committing + PR `Closes #26`.
+- Unit 03a (#26) DONE — PR #27 open (`Closes #26`), branch feat/26-core-sync-primitives, all gates
+  green. Next: **03b** — Dexie/web `Repository` impl (`packages/store/dexie`), tested headlessly
+  under `fake-indexeddb` against `runRepositoryConformance`; then **03c** SQLite/mobile (device-
+  bound). Spec 03b with `spec-unit` when ready. Store epic: 03a ✓ → 03b → 03c.
 - Prior active issue: #24 (Unit 02d — mobile theming; spec specs/02d-mobile-theming.md,
   branch feat/24-mobile-theming) — built+reviewed, awaiting commit+PR+device verification.
 - Theming epic: 02 tokens ✓ → 02b web ✓ → 02c tokens/uniwind ✓ → **02d mobile theming** (this,
