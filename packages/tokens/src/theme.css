@@ -1,0 +1,70 @@
+/*
+ * @ember/tokens — Tailwind v4 @theme fragment
+ *
+ * Import this file AFTER your own Tailwind entry point:
+ *   @import "@ember/tokens/theme.css";
+ *
+ * This file declares the default (warm-light) semantic tokens and provides
+ * selector-based overrides for warm-dark and the three reader themes.
+ * No @import "tailwindcss" here — this is a pure fragment.
+ */
+
+@theme {
+  /* ── Ember accent (theme-independent) ──────────────────────────────────── */
+  --color-accent:      #e0701b;
+  --color-accent-dark: #f2913e;
+  --color-streak-lit:  #f59e0b;
+  --color-streak-risk: #b98a5e;
+
+  /* ── App chrome — default: warm-light ──────────────────────────────────── */
+  --color-surface:        #faf4ea;
+  --color-surface-raised: #fffdf9;
+  --color-text:           #2a2422;
+  --color-text-muted:     #6f665c;
+  --color-line:           #e7ddcb;
+
+  /* ── Reader surface — default: paper (overridden per [data-reader-theme]) ── */
+  /* Declared in @theme so `bg-reader-bg` / `text-reader-text` utilities generate. */
+  --color-reader-bg:   #fbf6ec;
+  --color-reader-text: #2a2422;
+
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  --font-serif: 'Fraunces', serif;
+  --font-sans:  'Inter', sans-serif;
+
+  /* ── Radii ──────────────────────────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+/* ── App theme: warm-dark ───────────────────────────────────────────────────── */
+:root[data-app-theme='warm-dark'],
+.warm-dark {
+  --color-surface:        #1c1815;
+  --color-surface-raised: #272220;
+  --color-text:           #f2e9db;
+  --color-text-muted:     #a89c8c;
+  --color-line:           #38312b;
+  --color-accent:         #f2913e;
+}
+
+/* ── Reader themes ──────────────────────────────────────────────────────────── */
+[data-reader-theme='paper'],
+.paper {
+  --color-reader-bg:   #fbf6ec;
+  --color-reader-text: #2a2422;
+}
+
+[data-reader-theme='sepia'],
+.sepia {
+  --color-reader-bg:   #f2e5cc;
+  --color-reader-text: #4a3f2f;
+}
+
+[data-reader-theme='night'],
+.night {
+  --color-reader-bg:   #14110e;
+  --color-reader-text: #c9bead;
+}

@@ -2,11 +2,14 @@
 Update after every meaningful change.
 
 ## Current Phase
-- unit-01 complete / ready for unit-02
+- unit-02 (tokens slice) built + reviewed / awaiting commit+PR for #2
 
 ## Current Goal
-- Active issue: #2 (Unit 02 — design tokens + theming). Backlog lives in GitHub Issues
-  (#1–#17, repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄ specs/NN-….md.
+- Active issue: #2 (Unit 02 — design tokens, **narrowed to `packages/tokens` source of truth**;
+  spec specs/02-design-tokens.md, branch feat/2-design-tokens). Original "tokens + theming" was
+  multi-boundary → split: client theming becomes follow-on units **02b-web** / **02c-mobile**
+  (new issues to be opened when specced). Backlog lives in GitHub Issues (#1–#17, repo
+  pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄ specs/NN-….md.
 
 ## Completed
 - (scaffolding) Context files generated from grill-me planning + look/feel session.
@@ -24,9 +27,23 @@ Update after every meaningful change.
   tsconfig.json); user must run `npx convex dev` once to provision deployment and generate `convex/_generated`.
 
 ## Next Up
-- Unit 02: design tokens + shared component primitives.
+- **Unit 02b — Web theming** (`apps/web`): `@tailwindcss/vite`, `@import "@ember/tokens/theme.css"`
+  AFTER `@import "tailwindcss"` (load-order contract — see theme.css header), light/dark/system
+  provider via `data-app-theme`, `@fontsource` Fraunces+Inter, themed chrome. Open new issue.
+- **Unit 02c — Mobile theming** (`apps/mobile`): uniwind + Metro, consume tokens, provider,
+  `@expo-google-fonts`, themed chrome. Open new issue.
 - Manual follow-up: run `npx convex dev` from repo root to provision the Convex dev
   deployment and generate `convex/_generated`.
+
+## Unit 02 build notes (2026-06-08)
+- Done: `@ember/tokens` emits Amber Ember tokens twice — typed TS (`src/index.ts`) + Tailwind v4
+  `@theme` fragment (`src/theme.css`, exported as `@ember/tokens/theme.css`). Parity test guards
+  TS↔CSS drift across BOTH app themes + reader themes. No new deps. All verify green.
+- Built (Sonnet, TDD) → fresh-context review (Opus) = APPROVE-WITH-NITS; applied both SHOULD-FIX
+  inline: reader colors moved into `@theme` (so `bg-reader-bg`/`text-reader-text` utilities
+  generate; selector blocks override sepia/night), parity test extended to warm-dark + reader.
+- Carry-forward for 02b/02c: `theme.css` is a fragment with NO `@import "tailwindcss"` — clients
+  MUST import it after their own Tailwind entry. Reader colors default to paper in `@theme`.
 
 ## Open Questions (resolve before/at the relevant unit)
 - **Mobile text-layer extraction** (unit 05): react-native-pdf's text-layer story is weaker than
