@@ -9,6 +9,7 @@ import {
   themes,
 } from '../index.js';
 import themeCss from '../theme.css?raw';
+import themeUniwndCss from '../theme.uniwind.css?raw';
 
 describe('@ember/tokens', () => {
   it('exports TOKENS_VERSION 0.1.0', () => {
@@ -126,6 +127,72 @@ describe('@ember/tokens', () => {
       // reader colors must live in @theme so utilities generate (not only in selector blocks)
       expect(css).toMatch(/--color-reader-bg\s*:/);
       expect(css).toMatch(/--color-reader-text\s*:/);
+    });
+
+    it('--font-serif in theme.css contains Fraunces Variable', () => {
+      expect(css).toContain('Fraunces Variable');
+    });
+  });
+
+  describe('uniwind CSS parity', () => {
+    const css = themeUniwndCss;
+
+    // Extract the body of an `@variant <name> { ... }` block so theme values are
+    // asserted INSIDE their own block, not merely somewhere in the file (the
+    // @theme defaults also carry warm-light values, which would mask a broken
+    // @variant light block under a whole-file substring check).
+    const variantBody = (name: string): string => {
+      const match = new RegExp(`@variant\\s+${name}\\s*\\{([^}]*)\\}`).exec(css);
+      expect(match, `Missing @variant ${name} block in theme.uniwind.css`).not.toBeNull();
+      return match![1]!;
+    };
+
+    it('@variant light block carries exactly the warm-light values', () => {
+      const body = variantBody('light');
+      for (const [role, hex] of Object.entries(themes['warm-light'])) {
+        expect(body, `@variant light missing warm-light.${role} value ${hex}`).toContain(hex);
+      }
+    });
+
+    it('@variant dark block carries exactly the warm-dark values', () => {
+      const body = variantBody('dark');
+      for (const [role, hex] of Object.entries(themes['warm-dark'])) {
+        expect(body, `@variant dark missing warm-dark.${role} value ${hex}`).toContain(hex);
+      }
+    });
+
+    it('reader defaults (readerThemes.paper) appear in theme.uniwind.css', () => {
+      expect(css, `Missing paper.bg in theme.uniwind.css`).toContain(readerThemes.paper.bg);
+      expect(css, `Missing paper.text in theme.uniwind.css`).toContain(readerThemes.paper.text);
+    });
+
+    it('every ember accent value appears in theme.uniwind.css', () => {
+      for (const [label, hex] of Object.entries(ember)) {
+        expect(css, `Missing ember.${label} value ${hex} in theme.uniwind.css`).toContain(hex);
+      }
+    });
+
+    it('declares @variant light and @variant dark blocks', () => {
+      expect(css).toMatch(/@variant\s+light/);
+      expect(css).toMatch(/@variant\s+dark/);
+    });
+
+    it('declares expected --color-* names inside @theme', () => {
+      expect(css).toMatch(/--color-surface\s*:/);
+      expect(css).toMatch(/--color-surface-raised\s*:/);
+      expect(css).toMatch(/--color-text\s*:/);
+      expect(css).toMatch(/--color-text-muted\s*:/);
+      expect(css).toMatch(/--color-line\s*:/);
+      expect(css).toMatch(/--color-accent\s*:/);
+      expect(css).toMatch(/--color-accent-dark\s*:/);
+      expect(css).toMatch(/--color-streak-lit\s*:/);
+      expect(css).toMatch(/--color-streak-risk\s*:/);
+      expect(css).toMatch(/--color-reader-bg\s*:/);
+      expect(css).toMatch(/--color-reader-text\s*:/);
+    });
+
+    it('--font-serif in theme.uniwind.css contains Fraunces Variable', () => {
+      expect(css).toContain('Fraunces Variable');
     });
   });
 });

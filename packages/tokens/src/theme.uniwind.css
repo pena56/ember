@@ -1,0 +1,36 @@
+/* @ember/tokens — uniwind (Tailwind v4 for RN) theme fragment.
+   Import AFTER `@import "tailwindcss"; @import "uniwind";` in the app's global.css. */
+
+/* Token names → utilities (defaults = warm-light). */
+@theme {
+  --color-accent:      #e0701b;
+  --color-accent-dark: #f2913e;
+  --color-streak-lit:  #f59e0b;
+  --color-streak-risk: #b98a5e;
+  --color-surface:        #faf4ea;
+  --color-surface-raised: #fffdf9;
+  --color-text:           #2a2422;
+  --color-text-muted:     #6f665c;
+  --color-line:           #e7ddcb;
+  --color-reader-bg:   #fbf6ec;   /* default reader = paper; per-reader-theme switching is unit 05 */
+  --color-reader-text: #2a2422;
+  --font-serif: 'Fraunces Variable', 'Fraunces', serif;
+  --font-sans:  'Inter', sans-serif;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
+}
+
+/* Per-theme values for runtime switching (Uniwind.setTheme('light'|'dark'|'system')). */
+@layer theme {
+  :root {
+    @variant light {
+      --color-surface: #faf4ea; --color-surface-raised: #fffdf9;
+      --color-text: #2a2422; --color-text-muted: #6f665c;
+      --color-line: #e7ddcb; --color-accent: #e0701b;
+    }
+    @variant dark {
+      --color-surface: #1c1815; --color-surface-raised: #272220;
+      --color-text: #f2e9db; --color-text-muted: #a89c8c;
+      --color-line: #38312b; --color-accent: #f2913e;
+    }
+  }
+}

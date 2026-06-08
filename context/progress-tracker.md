@@ -2,8 +2,18 @@
 Update after every meaningful change.
 
 ## Current Phase
-- Units 02 (tokens, #2) + 02b (web theming, #19) MERGED to main. Now: 02c (tokens→uniwind, #22)
-  specced → executing. Then 02d (mobile theming).
+- Units 02 (tokens, #2) + 02b (web theming, #19) MERGED to main. 02c (tokens→uniwind, #22)
+  built + reviewed + fixed / awaiting commit+PR. Then 02d (mobile theming).
+
+## Unit 02c build notes (2026-06-08)
+- Done (packages/tokens): added `theme.uniwind.css` (uniwind `@theme` + `@layer theme{:root{
+  @variant light/dark}}` form) authored from the same TS source; widened `--font-serif` to
+  `'Fraunces Variable', 'Fraunces', serif` in both CSS files; added `./theme.uniwind.css` export.
+- Built (Sonnet, TDD) → fresh-context review (Opus) = APPROVE-WITH-NITS → applied the SHOULD-FIX:
+  parity test now extracts each `@variant` block body and asserts warm-light/warm-dark values live
+  INSIDE the correct block (was a whole-file `.toContain`, which the @theme defaults masked).
+- Tokens tests 23 ✓ · web 10 ✓ · typecheck/lint ✓. Invariant #6 intact (single TS source, both
+  CSS reps parity-tested).
 
 ## Current Goal
 - Active issue: #22 (Unit 02c — tokens: uniwind theme representation + variable Fraunces,
