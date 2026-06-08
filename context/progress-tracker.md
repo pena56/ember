@@ -2,8 +2,8 @@
 Update after every meaningful change.
 
 ## Current Phase
-- Units 02 (#2), 02b (#19), 02c (#22) MERGED to main. 02d (mobile theming, #24) built + reviewed /
-  awaiting commit+PR. Completes the theming epic (pending device verification).
+- Theming epic COMPLETE: units 02 (#2), 02b (#19), 02c (#22), 02d (#24) all MERGED to main
+  (#24 closed; commit+PR + device verification done). Store epic underway: 03a (#26) MERGED.
 - **Unit 03 (local store + HLC + outbox) scored COMPLEX → split** (2026-06-08). Build-plan unit 03
   crosses boundaries (core HLC/outbox + store Repository + two platform impls) → split into:
   **03a** core sync primitives + Repository interface (#26, this — specced) → **03b** Dexie/web
@@ -84,21 +84,17 @@ Update after every meaningful change.
   import. Any future package importing another workspace package's source follows this pattern.
 
 ## Current Goal
-- Unit 03a (#26) DONE — PR #27 open (`Closes #26`), branch feat/26-core-sync-primitives, all gates
-  green. Next: **03b** — Dexie/web `Repository` impl (`packages/store/dexie`), tested headlessly
-  under `fake-indexeddb` against `runRepositoryConformance`; then **03c** SQLite/mobile (device-
-  bound). Spec 03b with `spec-unit` when ready. Store epic: 03a ✓ → 03b → 03c.
-- Prior active issue: #24 (Unit 02d — mobile theming; spec specs/02d-mobile-theming.md,
-  branch feat/24-mobile-theming) — built+reviewed, awaiting commit+PR+device verification.
-- Theming epic: 02 tokens ✓ → 02b web ✓ → 02c tokens/uniwind ✓ → **02d mobile theming** (this,
-  final). Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
-  specs/NN-….md.
-- 02d note: runtime verification (render/toggle/fonts) is device-bound — done via `expo start` on
-  a simulator/device; executor lands code + green typecheck/test/lint (incl. committing the
-  uniwind-generated `src/uniwind-types.d.ts`).
-- **Decision (2026-06-08): KV persistence via `expo-sqlite/kv-store`, NOT AsyncStorage.**
-  expo-sqlite is already the chosen local store (architecture.md); its kv-store is an
-  AsyncStorage-compatible, SQLite-backed API — one fewer dependency. Applies project-wide.
+- Unit 03a (#26) MERGED — PR #27 merged to main, branch deleted. Next: **03b** — Dexie/web
+  `Repository` impl (`packages/store/dexie`), tested headlessly under `fake-indexeddb` against
+  `runRepositoryConformance`; then **03c** SQLite/mobile (device-bound). Spec 03b with `spec-unit`
+  when ready. Store epic: 03a ✓ → 03b → 03c.
+- Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
+  specs/NN-….md ⇄ PR "Closes #NN".
+
+## Durable decisions (project-wide)
+- **KV persistence via `expo-sqlite/kv-store`, NOT AsyncStorage** (2026-06-08): expo-sqlite is the
+  chosen local store (architecture.md); its kv-store is an AsyncStorage-compatible, SQLite-backed
+  API — one fewer dependency.
 
 ## Completed
 - (scaffolding) Context files generated from grill-me planning + look/feel session.
