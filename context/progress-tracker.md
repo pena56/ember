@@ -2,10 +2,12 @@
 Update after every meaningful change.
 
 ## Current Phase
-- unit-02 (tokens slice) built + reviewed / awaiting commit+PR for #2
+- unit-02 (tokens) → PR #18 open (Closes #2). unit-02b (web theming) specced → executing.
 
 ## Current Goal
-- Active issue: #2 (Unit 02 — design tokens, **narrowed to `packages/tokens` source of truth**;
+- Active issue: #19 (Unit 02b — web theming, `apps/web`; spec specs/02b-web-theming.md, branch
+  feat/19-web-theming, stacked on feat/2-design-tokens until #18 merges).
+- Prev: #2 (Unit 02 — design tokens, **narrowed to `packages/tokens` source of truth**;
   spec specs/02-design-tokens.md, branch feat/2-design-tokens). Original "tokens + theming" was
   multi-boundary → split: client theming becomes follow-on units **02b-web** / **02c-mobile**
   (new issues to be opened when specced). Backlog lives in GitHub Issues (#1–#17, repo
