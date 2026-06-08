@@ -4,6 +4,12 @@ Update after every meaningful change.
 ## Current Phase
 - Units 02 (#2), 02b (#19), 02c (#22) MERGED to main. 02d (mobile theming, #24) built + reviewed /
   awaiting commit+PR. Completes the theming epic (pending device verification).
+- **Unit 03 (local store + HLC + outbox) scored COMPLEX → split** (2026-06-08). Build-plan unit 03
+  crosses boundaries (core HLC/outbox + store Repository + two platform impls) → split into:
+  **03a** core sync primitives + Repository interface (#26, this — specced) → **03b** Dexie/web
+  impl → **03c** SQLite/mobile impl (device-bound like 02d). Spec: specs/03a-core-sync-primitives.md.
+  Decisions (confirmed): generic record store (not domain-typed; entities land with units 04/07/10);
+  shared `runRepositoryConformance` suite both impls run. Route 03a = standard (pure TS, no new dep).
 
 ## Unit 02d build notes (2026-06-08)
 - Done (apps/mobile): uniwind + Metro (`metro.config.js` withUniwindConfig, `global.css` at app
@@ -59,9 +65,28 @@ Update after every meaningful change.
 - Tokens tests 23 ✓ · web 10 ✓ · typecheck/lint ✓. Invariant #6 intact (single TS source, both
   CSS reps parity-tested).
 
+## Unit 03a build notes (2026-06-08)
+- Done: `@ember/core` HLC clock (`hlc.ts`: tick/receive/compare/encode/parse/initialClock — pure,
+  caller passes physical time, no `Date.now()`) + append-only outbox (`outbox.ts`: OutboxEntry +
+  `makeOutboxEntry` stamping encoded HLC, drops payload on delete; no uuid/crypto in core).
+  `@ember/store` `Repository` interface (generic record store + outbox ops), `MemoryRepository`
+  reference impl (structuredClone value isolation, hlc-sorted unacked, idempotent ack), and shared
+  `runRepositoryConformance(label, makeRepo)` suite (03b/03c plug into it). encode is lexicographic
+  & provably agrees with compare (WALL_PAD 15 ⇒ ~year 33658, COUNTER_PAD 8 — overflow out of scope).
+- Built (Sonnet, TDD: core 23 tests, store conformance) → fresh-context review (Opus) =
+  APPROVE-WITH-NITS, NO blockers/should-fix. Reviewer re-ran all gates + verified the store tsconfig
+  change (composite:false/noEmit — mirrors apps/web+mobile) doesn't weaken typecheck or break
+  03b/03c (all consumers resolve `@ember/*` to source via paths, nobody reads compiled d.ts).
+  Applied 2 nits (wrong comment year; merged duplicate import).
+- typecheck 8 ✓ · test 5 tasks ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core-purity intact.
+- **tsconfig carry-forward:** `packages/store/tsconfig.json` now `composite:false`/`noEmit:true`,
+  typecheck via `tsc --noEmit` — forced once store gained a cross-package `@ember/core` source
+  import. Any future package importing another workspace package's source follows this pattern.
+
 ## Current Goal
-- Active issue: #24 (Unit 02d — mobile theming, `apps/mobile`; spec specs/02d-mobile-theming.md,
-  branch feat/24-mobile-theming).
+- Unit 03a (#26) BUILT + reviewed (APPROVE-WITH-NITS, applied) → committing + PR `Closes #26`.
+- Prior active issue: #24 (Unit 02d — mobile theming; spec specs/02d-mobile-theming.md,
+  branch feat/24-mobile-theming) — built+reviewed, awaiting commit+PR+device verification.
 - Theming epic: 02 tokens ✓ → 02b web ✓ → 02c tokens/uniwind ✓ → **02d mobile theming** (this,
   final). Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md.
