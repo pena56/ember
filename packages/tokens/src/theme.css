@@ -29,7 +29,7 @@
   --color-reader-text: #2a2422;
 
   /* ── Typography ─────────────────────────────────────────────────────────── */
-  --font-serif: 'Fraunces', serif;
+  --font-serif: 'Fraunces Variable', 'Fraunces', serif;
   --font-sans:  'Inter', sans-serif;
 
   /* ── Radii ──────────────────────────────────────────────────────────────── */

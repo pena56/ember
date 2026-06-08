@@ -2,16 +2,26 @@
 Update after every meaningful change.
 
 ## Current Phase
-- unit-02 (tokens) → PR #18 open (Closes #2). unit-02b (web theming) built + reviewed + fixed /
-  awaiting commit+PR for #19.
+- Units 02 (tokens, #2) + 02b (web theming, #19) MERGED to main. 02c (tokens→uniwind, #22)
+  built + reviewed + fixed / awaiting commit+PR. Then 02d (mobile theming).
+
+## Unit 02c build notes (2026-06-08)
+- Done (packages/tokens): added `theme.uniwind.css` (uniwind `@theme` + `@layer theme{:root{
+  @variant light/dark}}` form) authored from the same TS source; widened `--font-serif` to
+  `'Fraunces Variable', 'Fraunces', serif` in both CSS files; added `./theme.uniwind.css` export.
+- Built (Sonnet, TDD) → fresh-context review (Opus) = APPROVE-WITH-NITS → applied the SHOULD-FIX:
+  parity test now extracts each `@variant` block body and asserts warm-light/warm-dark values live
+  INSIDE the correct block (was a whole-file `.toContain`, which the @theme defaults masked).
+- Tokens tests 23 ✓ · web 10 ✓ · typecheck/lint ✓. Invariant #6 intact (single TS source, both
+  CSS reps parity-tested).
 
 ## Current Goal
-- Active issue: #19 (Unit 02b — web theming, `apps/web`; spec specs/02b-web-theming.md, branch
-  feat/19-web-theming, stacked on feat/2-design-tokens until #18 merges).
-- Prev: #2 (Unit 02 — design tokens, **narrowed to `packages/tokens` source of truth**;
-  spec specs/02-design-tokens.md, branch feat/2-design-tokens). Original "tokens + theming" was
-  multi-boundary → split: client theming becomes follow-on units **02b-web** / **02c-mobile**
-  (new issues to be opened when specced). Backlog lives in GitHub Issues (#1–#17, repo
+- Active issue: #22 (Unit 02c — tokens: uniwind theme representation + variable Fraunces,
+  `packages/tokens`; spec specs/02c-tokens-uniwind.md, branch feat/22-tokens-uniwind).
+- Theming split (original "tokens + theming" was multi-boundary): 02 tokens ✓ → 02b web ✓ →
+  **02c tokens/uniwind** (this) → **02d mobile theming** (next). uniwind switches themes via its
+  JS runtime + `@variant` (not the web's `[data-app-theme]` selectors), so it needs its own
+  parity-tested theme CSS authored from the one TS source. Backlog lives in GitHub Issues (repo
   pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄ specs/NN-….md.
 
 ## Completed
@@ -30,13 +40,23 @@ Update after every meaningful change.
   tsconfig.json); user must run `npx convex dev` once to provision deployment and generate `convex/_generated`.
 
 ## Next Up
-- **Unit 02b — Web theming** (`apps/web`): `@tailwindcss/vite`, `@import "@ember/tokens/theme.css"`
-  AFTER `@import "tailwindcss"` (load-order contract — see theme.css header), light/dark/system
-  provider via `data-app-theme`, `@fontsource` Fraunces+Inter, themed chrome. Open new issue.
-- **Unit 02c — Mobile theming** (`apps/mobile`): uniwind + Metro, consume tokens, provider,
-  `@expo-google-fonts`, themed chrome. Open new issue.
+- **Unit 02d — Mobile theming** (`apps/mobile`): uniwind + Metro (`withUniwindConfig`,
+  `cssEntryFile: src/global.css` importing `tailwindcss` + `uniwind` + `@ember/tokens/theme.uniwind.css`),
+  theme provider using `Uniwind.setTheme`/`useUniwind` (system/light/dark) persisted via
+  AsyncStorage, fonts via `@expo-google-fonts/fraunces`+`inter`, themed chrome. Depends on 02c (#22).
+  Open new issue when specced. Reader-theme switching on mobile deferred to reader unit 05.
 - Manual follow-up: run `npx convex dev` from repo root to provision the Convex dev
   deployment and generate `convex/_generated`.
+
+## uniwind research (2026-06-08, for 02c/02d — verified from docs.uniwind.dev)
+- metro: `withUniwindConfig(getDefaultConfig(__dirname), { cssEntryFile, extraThemes, dtsFile })`.
+  No babel preset. Restart with `expo start --clear`.
+- global.css: `@import 'tailwindcss'; @import 'uniwind';` then theme fragment.
+- Theming: token names in `@theme` (utility generation) + per-theme values in
+  `@layer theme { :root { @variant light {} @variant dark {} } }`. Built-in themes light/dark/system.
+- Runtime: `Uniwind.setTheme('light'|'dark'|'system')`, `Uniwind.currentTheme`,
+  `useUniwind() → { theme, hasAdaptiveThemes }`. `dark:` variant for classes.
+- className works on RN core components (View/Text); wrap 3rd-party with `withUniwind(Comp)`.
 
 ## Unit 02 build notes (2026-06-08)
 - Done: `@ember/tokens` emits Amber Ember tokens twice — typed TS (`src/index.ts`) + Tailwind v4
