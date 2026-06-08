@@ -3,7 +3,7 @@ Update after every meaningful change.
 
 ## Current Phase
 - Theming epic COMPLETE: units 02 (#2), 02b (#19), 02c (#22), 02d (#24) all MERGED to main
-  (#24 closed; commit+PR + device verification done). Store epic underway: 03a (#26) MERGED.
+  (#24 closed; commit+PR + device verification done). Store epic underway: 03a (#26), 03b (#29) MERGED.
 - **Unit 03 (local store + HLC + outbox) scored COMPLEX → split** (2026-06-08). Build-plan unit 03
   crosses boundaries (core HLC/outbox + store Repository + two platform impls) → split into:
   **03a** core sync primitives + Repository interface (#26, this — specced) → **03b** Dexie/web
@@ -102,10 +102,11 @@ Update after every meaningful change.
   clones the entry while Memory doesn't; structuredClone shape constraint undocumented in contract.
 
 ## Current Goal
-- **Unit 03b (#29) BUILT + REVIEWED (APPROVE-WITH-NITS, no blockers)** — Dexie/web `Repository` impl
-  on branch `feat/29-dexie-web-repository`. Spec: specs/03b-dexie-web-repository.md. All verify green.
-  Pending: commit + PR "Closes #29". Then **03c** SQLite/mobile (device-bound like 02d).
-  Store epic: 03a ✓ → 03b ✓ → 03c.
+- **Unit 03b (#29) MERGED** — PR #30 merged to main (CI verify ✓), branch deleted. Dexie/web
+  `Repository` impl. Spec: specs/03b-dexie-web-repository.md. Next: **03c** — expo-sqlite/mobile
+  `Repository` impl, device-bound like 02d (executor lands code + green static checks; runtime
+  persistence proven on device). Plus the deferred close()-coverage micro-unit against 03a's shared
+  conformance suite (see 03b build notes). Store epic: 03a ✓ → 03b ✓ → 03c.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
