@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ember Reader</title>
+    <script>
+      (function () {
+        var stored = localStorage.getItem('ember-app-theme');
+        var theme =
+          stored === 'warm-light' || stored === 'warm-dark'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'warm-dark'
+              : 'warm-light';
+        document.documentElement.dataset.appTheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
