@@ -1,0 +1,113 @@
+name: Deploy
+
+# Trunk-based, tag-gated production (see context/architecture.md → Deployment).
+#   push to main   -> STAGING
+#   push tag  v*   -> PRODUCTION
+# Every job is SECRET-GUARDED: if the required repo secret isn't set, the `guard`
+# job marks it unavailable and that deploy is skipped (not failed). So this workflow
+# is safe to merge before any hosting account exists — jobs light up as you add secrets.
+#
+# Required secrets (add in repo Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID          (web → Cloudflare Pages)
+#   CONVEX_DEPLOY_KEY_STAGING, CONVEX_DEPLOY_KEY_PROD  (convex)
+#   EXPO_TOKEN                                    (mobile → EAS Update)
+# Mobile also needs apps/mobile/eas.json + an EAS project (run `eas init` once).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+# Never cancel an in-flight deploy.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      is_prod: ${{ steps.det.outputs.is_prod }}
+      cf: ${{ steps.det.outputs.cf }}
+      convex: ${{ steps.det.outputs.convex }}
+      expo: ${{ steps.det.outputs.expo }}
+    steps:
+      - id: det
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCT: ${{ secrets.CF_ACCOUNT_ID }}
+          CONVEX_S: ${{ secrets.CONVEX_DEPLOY_KEY_STAGING }}
+          CONVEX_P: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
+          EXPO: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then is_prod=true; else is_prod=false; fi
+          echo "is_prod=$is_prod" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "$CF_TOKEN" && -n "$CF_ACCT" ]]; then echo "cf=true"; else echo "cf=false"; fi >> "$GITHUB_OUTPUT"
+
+          if [[ "$is_prod" == "true" ]]; then ck="$CONVEX_P"; else ck="$CONVEX_S"; fi
+          if [[ -n "$ck" ]]; then echo "convex=true"; else echo "convex=false"; fi >> "$GITHUB_OUTPUT"
+
+          if [[ -n "$EXPO" ]]; then echo "expo=true"; else echo "expo=false"; fi >> "$GITHUB_OUTPUT"
+
+  web:
+    needs: guard
+    if: needs.guard.outputs.cf == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.guard.outputs.is_prod == 'true' && 'production' || 'staging' }}
+    env:
+      PROJECT: ${{ needs.guard.outputs.is_prod == 'true' && 'ember-web' || 'ember-web-staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=@ember/web
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy apps/web/dist --project-name=${{ env.PROJECT }} --branch=main
+
+  convex:
+    needs: guard
+    if: needs.guard.outputs.convex == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.guard.outputs.is_prod == 'true' && 'production' || 'staging' }}
+    env:
+      CONVEX_DEPLOY_KEY: ${{ needs.guard.outputs.is_prod == 'true' && secrets.CONVEX_DEPLOY_KEY_PROD || secrets.CONVEX_DEPLOY_KEY_STAGING }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec convex deploy -y
+
+  mobile:
+    needs: guard
+    if: needs.guard.outputs.expo == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.guard.outputs.is_prod == 'true' && 'production' || 'staging' }}
+    env:
+      BRANCH: ${{ needs.guard.outputs.is_prod == 'true' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: pnpm install --frozen-lockfile
+      - name: EAS Update (OTA)
+        working-directory: apps/mobile
+        run: eas update --branch "$BRANCH" --message "${{ github.sha }}" --non-interactive
