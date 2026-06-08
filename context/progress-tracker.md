@@ -2,8 +2,52 @@
 Update after every meaningful change.
 
 ## Current Phase
-- Units 02 (#2), 02b (#19), 02c (#22) MERGED to main. Now: 02d (mobile theming, #24) specced →
-  executing. This completes the theming epic.
+- Units 02 (#2), 02b (#19), 02c (#22) MERGED to main. 02d (mobile theming, #24) built + reviewed /
+  awaiting commit+PR. Completes the theming epic (pending device verification).
+
+## Unit 02d build notes (2026-06-08)
+- Done (apps/mobile): uniwind + Metro (`metro.config.js` withUniwindConfig, `global.css` at app
+  root importing tailwindcss+uniwind+`@ember/tokens/theme.uniwind.css`), `babel.config.js`
+  (babel-preset-expo), theme provider (default system, `expo-sqlite/kv-store` persistence via
+  `getItemSync` at init, `Uniwind.setTheme`), fonts via `@expo-google-fonts` registered under
+  token-stack family names, themed shell + accessible segmented control (accent underline on
+  raised surface). Pure `coerceStoredPreference` unit-tested (7 mobile tests).
+- Built (Sonnet, TDD) → impeccable (redesigned the near-invisible active segment to match 02b's
+  accent-underline a11y pattern) → fresh-context review (Opus) = APPROVE-WITH-NITS, NO blockers.
+  Reviewer verified the hand-authored `src/uniwind-types.d.ts` is byte-identical to uniwind's
+  generator output (Metro wasn't run — no simulator).
+- typecheck 8 ✓ · test 5 tasks/42 ✓ · lint 6 ✓. No new async-storage dep (kv-store instead).
+- **DEVICE-BOUND (user, before/after merge):** `npx expo start --clear` → confirm the generated
+  uniwind d.ts matches the committed one; themed render + Fraunces/Inter apply; live light↔dark
+  toggle + `system` follows device; persistence across reload. If `font-serif` doesn't resolve,
+  adjust the family-name keys in `app/_layout.tsx`.
+- **Bundler fixes (found on first device run; validated headlessly via `expo export -p android`
+  → "Android Bundled … Exported: dist"):**
+  1. **Metro `.js` resolution** — the repo authors relative imports with explicit `.js` (TS/NodeNext
+     style; fine for tsc/Vite). Metro doesn't rewrite `.js`→`.tsx`, so it failed to resolve
+     `../src/theme/theme-provider.js`. Fixed with a `resolver.resolveRequest` wrapper in
+     `apps/mobile/metro.config.js` that strips `.js` and retries. **Carry-forward: any future RN
+     relative import keeps the `.js` convention — Metro handles it via this resolver.**
+  2. **reanimated 4 worklets** — `react-native-reanimated@4.4.1` (scaffolded in unit 01, first
+     bundled now) needs `react-native-worklets` + its babel plugin. Installed
+     `react-native-worklets@0.8.3` (via `expo install`) and added `react-native-worklets/plugin`
+     (last) to `apps/mobile/babel.config.js`.
+  - Also: expo tooling added `apps/mobile/.gitignore` (+`dist/`), expo-env.d.ts + .expo/types to
+    tsconfig include (expo-env.d.ts gitignored, regenerated — not committed).
+  3. **SDK-56 version alignment** — unit-01 pinned 6 mobile deps AHEAD of what Expo SDK 56
+     supports (latent until first run). `expo install --fix` aligned them (now "up to date"):
+     react/react-dom `19.2.7→19.2.3` (must match RN's react-native-renderer exactly),
+     react-native-gesture-handler `3.0.0→~2.31.1` (major), react-native-reanimated `4.4.1→4.3.1`,
+     react-native-safe-area-context `5.8.0→~5.7.0`, @types/react `19.1.8→~19.2.14`.
+     **Lesson: pin Expo-managed native deps via `expo install`, not the bare npm registry —
+     SDK 56 lags the latest. Web (Vite) React stays 19.2.7; only mobile is RN-locked to 19.2.3.**
+  - After all fixes: `expo export -p android` → "Android Bundled … Exported: dist"; static
+    checks typecheck 8 ✓ · test 5 ✓ · lint 6 ✓. Runtime visuals still device-bound (user).
+  4. **uniwind className did nothing on device** (first visual run: no styling at all — flex/gap/
+     colors/fonts all ignored, though `className` typechecks). Root cause: uniwind's runtime must be
+     bootstrapped by **`import '../global.css'` in the root `app/_layout.tsx`** — the metro
+     `cssEntryFile` config ALONE is not enough. **Carry-forward: always import the css entry in the
+     app root.** Also hid the expo-router default header (`Stack screenOptions headerShown:false`).
 
 ## Unit 02c build notes (2026-06-08)
 - Done (packages/tokens): added `theme.uniwind.css` (uniwind `@theme` + `@layer theme{:root{
