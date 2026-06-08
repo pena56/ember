@@ -17,5 +17,5 @@
       "@ember/tokens": ["../../packages/tokens/src/index.ts"]
     }
   },
-  "include": ["app", "src", "app.json"]
+  "include": ["app", "src", "app.json", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

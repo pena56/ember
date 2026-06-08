@@ -8,7 +8,7 @@ substitute remembered versions.
 |---|---|---|---|
 | Monorepo | pnpm workspaces + Turborepo | latest | Share TS domain/sync logic across clients |
 | Language | TypeScript | 6.0.3 | End-to-end types incl. Convex |
-| Mobile | Expo / React Native | SDK 56.0.9 / RN 0.85.3 | iOS + Android client |
+| Mobile | Expo / React Native | SDK 56.0.9 / RN 0.85.3 (React 19.2.3) | iOS + Android client |
 | Mobile routing | expo-router | 56.2.9 | File-based navigation |
 | Web | React + Vite (PWA) | React 19.2.7 / Vite 8.0.16 | Laptop client, full offline-first |
 | Backend / sync | Convex | 1.40.0 | Sync server, file storage, scheduled fns — NOT on-device source of truth |
@@ -22,6 +22,12 @@ substitute remembered versions.
 | Styling (web) | tailwindcss + @tailwindcss/vite | 4.3.0 | Utility CSS; semantic tokens as Tailwind v4 `@theme` |
 | Styling (mobile) | uniwind | 1.8.0 | Tailwind v4 bindings for RN (Metro); targets RN 0.85 / React 19 |
 | Fonts | Fraunces (serif) + Inter (sans) | via @expo-google-fonts / @fontsource | App chrome typography (resolved 2026-06-08) |
+
+> **Expo-managed native deps must be pinned via `expo install`, not the bare npm registry.** Expo
+> SDK 56 lags the latest releases, so registry-latest pins break at runtime (e.g. React must match
+> RN's bundled `react-native-renderer` exactly → mobile React is **19.2.3**, while web is 19.2.7).
+> Run `expo install --check` in `apps/mobile` after touching its deps. (Corrected in unit 02d:
+> react/react-dom, react-native-gesture-handler, -reanimated, -safe-area-context, @types/react.)
 
 ## Tooling — lint/format (official configs, verified 2026-06-08)
 Adopt the stack's official/recommended configs rather than hand-rolled rules. Flat config
