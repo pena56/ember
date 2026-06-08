@@ -2,8 +2,8 @@
 Update after every meaningful change.
 
 ## Current Phase
-- Units 02 (tokens, #2) + 02b (web theming, #19) MERGED to main. 02c (tokens→uniwind, #22)
-  built + reviewed + fixed / awaiting commit+PR. Then 02d (mobile theming).
+- Units 02 (#2), 02b (#19), 02c (#22) MERGED to main. Now: 02d (mobile theming, #24) specced →
+  executing. This completes the theming epic.
 
 ## Unit 02c build notes (2026-06-08)
 - Done (packages/tokens): added `theme.uniwind.css` (uniwind `@theme` + `@layer theme{:root{
@@ -16,13 +16,17 @@ Update after every meaningful change.
   CSS reps parity-tested).
 
 ## Current Goal
-- Active issue: #22 (Unit 02c — tokens: uniwind theme representation + variable Fraunces,
-  `packages/tokens`; spec specs/02c-tokens-uniwind.md, branch feat/22-tokens-uniwind).
-- Theming split (original "tokens + theming" was multi-boundary): 02 tokens ✓ → 02b web ✓ →
-  **02c tokens/uniwind** (this) → **02d mobile theming** (next). uniwind switches themes via its
-  JS runtime + `@variant` (not the web's `[data-app-theme]` selectors), so it needs its own
-  parity-tested theme CSS authored from the one TS source. Backlog lives in GitHub Issues (repo
-  pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄ specs/NN-….md.
+- Active issue: #24 (Unit 02d — mobile theming, `apps/mobile`; spec specs/02d-mobile-theming.md,
+  branch feat/24-mobile-theming).
+- Theming epic: 02 tokens ✓ → 02b web ✓ → 02c tokens/uniwind ✓ → **02d mobile theming** (this,
+  final). Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
+  specs/NN-….md.
+- 02d note: runtime verification (render/toggle/fonts) is device-bound — done via `expo start` on
+  a simulator/device; executor lands code + green typecheck/test/lint (incl. committing the
+  uniwind-generated `src/uniwind-types.d.ts`).
+- **Decision (2026-06-08): KV persistence via `expo-sqlite/kv-store`, NOT AsyncStorage.**
+  expo-sqlite is already the chosen local store (architecture.md); its kv-store is an
+  AsyncStorage-compatible, SQLite-backed API — one fewer dependency. Applies project-wide.
 
 ## Completed
 - (scaffolding) Context files generated from grill-me planning + look/feel session.
