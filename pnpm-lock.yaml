@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      convex:
+        specifier: 1.40.0
+        version: 1.40.0(react@19.2.7)
     devDependencies:
       '@convex-dev/eslint-plugin':
         specifier: 2.0.0
@@ -148,6 +152,16 @@ importers:
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@types/node@25.9.2)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.0)(terser@5.48.0)(yaml@2.9.0))
+
+  convex:
+    dependencies:
+      convex:
+        specifier: 1.40.0
+        version: 1.40.0(react@19.2.7)
+    devDependencies:
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/core:
     devDependencies:

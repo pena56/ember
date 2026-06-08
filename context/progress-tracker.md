@@ -5,19 +5,23 @@ Update after every meaningful change.
 - unit-01 complete / ready for unit-02
 
 ## Current Goal
-- Unit 02: design tokens + shared component primitives.
+- Active issue: #2 (Unit 02 — design tokens + theming). Backlog lives in GitHub Issues
+  (#1–#17, repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄ specs/NN-….md.
 
 ## Completed
 - (scaffolding) Context files generated from grill-me planning + look/feel session.
 - Stack chosen and versions pinned (architecture.md, verified 2026-06-08).
 - Build plan drafted (specs/00-build-plan.md, units 01–17).
 - **Unit 01 done** (2026-06-08): pnpm + Turborepo monorepo scaffold on branch
-  `feat/01-monorepo-tooling-scaffold`. All three verify commands green:
-  `pnpm -w typecheck` ✓ · `pnpm -w test` ✓ · `pnpm -w lint` ✓.
-  ESLint flat config enforces kebab-case filenames, PascalCase no-I-prefix types,
-  and import-x/order. Convex hand-scaffolded (schema.ts empty defineSchema, convex.json,
-  tsconfig.json); user must run `npx convex dev` once to provision deployment and
-  generate `convex/_generated`.
+  `feat/01-monorepo-tooling-scaffold`. Spec: specs/01-monorepo-tooling-scaffold.md.
+  Built (Sonnet) → fresh-context review (Opus) found 2 blockers + 2 should-fixes → fixed → re-verified.
+  All verify commands green AND now cover convex:
+  `pnpm -w typecheck` ✓ (8 tasks, incl. @ember/convex) · `pnpm -w test` ✓ · `pnpm -w lint` ✓ (6 tasks, incl. @ember/convex).
+  ESLint flat config enforces kebab-case filenames, PascalCase no-I-prefix types, import-x/order;
+  apps/mobile extends eslint-config-expo, convex/ uses @convex-dev/eslint-plugin (both wired into Turbo).
+  Decision recorded in architecture.md: eslint-plugin-import → eslint-plugin-import-x@4.16.2 (v2 incompatible with ESLint 10).
+  Convex hand-scaffolded as workspace member @ember/convex (schema.ts empty defineSchema, package.json, convex.json,
+  tsconfig.json); user must run `npx convex dev` once to provision deployment and generate `convex/_generated`.
 
 ## Next Up
 - Unit 02: design tokens + shared component primitives.

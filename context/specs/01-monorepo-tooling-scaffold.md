@@ -1,6 +1,6 @@
 # Unit 01: Monorepo + Tooling Scaffold
 
-Issue: local-only (no remote) · Branch: feat/01-monorepo-tooling-scaffold · Boundary: repo-root tooling
+Issue: #1 · Branch: feat/01-monorepo-tooling-scaffold · Boundary: repo-root tooling
 Route: standard — single tooling boundary, fully-resolved spec, no novel logic; too large for inline.
 
 ## Goal

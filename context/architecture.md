@@ -31,7 +31,7 @@ Adopt the stack's official/recommended configs rather than hand-rolled rules. Fl
 | Mobile (apps/mobile) | eslint-config-expo | 56.0.4 | Official Expo/React-Native config |
 | Web (apps/web) | eslint-plugin-react-hooks · eslint-plugin-jsx-a11y | 7.1.1 · 6.10.2 | React hooks + a11y |
 | Backend (convex/) | @convex-dev/eslint-plugin | 2.0.0 | Official Convex rules — arg validation, query/mutation/action misuse |
-| Imports | eslint-plugin-import · eslint-import-resolver-typescript | 2.32.0 · 4.4.5 | Ordered/grouped imports, resolve `@ember/*` |
+| Imports | eslint-plugin-import-x · eslint-import-resolver-typescript | 4.16.2 · 4.4.5 | Ordered/grouped imports, resolve `@ember/*` (import fork; v2 incompatible with ESLint 10) |
 | Filenames | eslint-plugin-unicorn | 65.0.0 | `filename-case` → kebab-case |
 | Format | prettier · eslint-config-prettier | 3.8.3 · 10.1.8 | Format; turn off conflicting lint rules |
 

@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "convex"
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
