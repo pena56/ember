@@ -2,19 +2,27 @@
 Update after every meaningful change.
 
 ## Current Phase
-- scaffolding
+- unit-01 complete / ready for unit-02
 
 ## Current Goal
-- Unit 01 (monorepo + tooling scaffold): spec written (specs/01-monorepo-tooling-scaffold.md,
-  local-only id, route=standard). Dispatch to executor → fresh-context review.
+- Unit 02: design tokens + shared component primitives.
 
 ## Completed
 - (scaffolding) Context files generated from grill-me planning + look/feel session.
 - Stack chosen and versions pinned (architecture.md, verified 2026-06-08).
 - Build plan drafted (specs/00-build-plan.md, units 01–17).
+- **Unit 01 done** (2026-06-08): pnpm + Turborepo monorepo scaffold on branch
+  `feat/01-monorepo-tooling-scaffold`. All three verify commands green:
+  `pnpm -w typecheck` ✓ · `pnpm -w test` ✓ · `pnpm -w lint` ✓.
+  ESLint flat config enforces kebab-case filenames, PascalCase no-I-prefix types,
+  and import-x/order. Convex hand-scaffolded (schema.ts empty defineSchema, convex.json,
+  tsconfig.json); user must run `npx convex dev` once to provision deployment and
+  generate `convex/_generated`.
 
 ## Next Up
-- Unit 01: monorepo + tooling scaffold.
+- Unit 02: design tokens + shared component primitives.
+- Manual follow-up: run `npx convex dev` from repo root to provision the Convex dev
+  deployment and generate `convex/_generated`.
 
 ## Open Questions (resolve before/at the relevant unit)
 - **Mobile text-layer extraction** (unit 05): react-native-pdf's text-layer story is weaker than
