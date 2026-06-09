@@ -1,2 +1,83 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@ember/tokens/theme.css";
+
+/* ── Dark-mode variant: follow data-app-theme attribute, NOT .dark class ── */
+@custom-variant dark (&:where([data-app-theme="warm-dark"], [data-app-theme="warm-dark"] *));
+
+/* ── shadcn CSS variable mapping (warm-light defaults) ─────────────────────
+ * These are a thin alias layer over the Amber Ember tokens.
+ * ALL palette decisions live in packages/tokens — shadcn vars reference them.
+ * ──────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Surfaces */
+    --background:    var(--color-surface);
+    --foreground:    var(--color-text);
+
+    --card:          var(--color-surface-raised);
+    --card-foreground: var(--color-text);
+
+    --popover:       var(--color-surface-raised);
+    --popover-foreground: var(--color-text);
+
+    /* Primary action (the "ember" accent) */
+    --primary:       var(--color-accent);
+    --primary-foreground: var(--color-on-accent);
+
+    /* Secondary (muted surface) */
+    --secondary:     var(--color-surface-raised);
+    --secondary-foreground: var(--color-text);
+
+    /* Muted */
+    --muted:         var(--color-surface-raised);
+    --muted-foreground: var(--color-text-muted);
+
+    /* Accent (hover/highlight surface — distinct from primary CTA) */
+    --accent:        var(--color-surface-raised);
+    --accent-foreground: var(--color-text);
+
+    /* Destructive (keep a sensible fallback — no token yet) */
+    --destructive:   #dc2626;
+    --destructive-foreground: #ffffff;
+
+    /* Border / input / ring */
+    --border:        var(--color-line);
+    --input:         var(--color-line);
+    --ring:          var(--color-accent);
+
+    /* Radius — map to token scale */
+    --radius:        var(--radius-md);
+  }
+
+  /* Dark mode: warm-dark token values applied via data-app-theme attribute */
+  [data-app-theme="warm-dark"] {
+    --background:    var(--color-surface);
+    --foreground:    var(--color-text);
+
+    --card:          var(--color-surface-raised);
+    --card-foreground: var(--color-text);
+
+    --popover:       var(--color-surface-raised);
+    --popover-foreground: var(--color-text);
+
+    --primary:       var(--color-accent);
+    --primary-foreground: var(--color-on-accent);
+
+    --secondary:     var(--color-surface-raised);
+    --secondary-foreground: var(--color-text);
+
+    --muted:         var(--color-surface-raised);
+    --muted-foreground: var(--color-text-muted);
+
+    --accent:        var(--color-surface-raised);
+    --accent-foreground: var(--color-text);
+
+    --destructive:   #ef4444;
+    --destructive-foreground: #ffffff;
+
+    --border:        var(--color-line);
+    --input:         var(--color-line);
+    --ring:          var(--color-accent);
+  }
+}

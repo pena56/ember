@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 
+import { Button } from '@/components/ui/button.js';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ImportDropzoneProps {
@@ -80,7 +82,7 @@ export function ImportDropzone({ onFiles, disabled = false }: ImportDropzoneProp
     if (picked.length > 0) {
       onFiles(picked);
     }
-    // Reset so the same file can be re-selected after a dedupe notice
+    // Reset so the same file can be re-selected after a dedupe toast
     e.target.value = '';
   }
 
@@ -117,21 +119,16 @@ export function ImportDropzone({ onFiles, disabled = false }: ImportDropzoneProp
         </p>
       </div>
 
-      <button
+      {/* shadcn Button — primary variant; text comes from --primary-foreground (token) */}
+      <Button
         type="button"
         onClick={handleButtonClick}
         disabled={disabled}
-        className={[
-          'font-sans text-sm font-medium px-6 py-3 rounded-lg',
-          'bg-accent text-white',
-          'hover:opacity-90 active:opacity-80',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-          'transition-opacity duration-150',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-        ].join(' ')}
+        size="lg"
+        className="font-sans"
       >
         Add PDF
-      </button>
+      </Button>
 
       {/* Hidden file input — accepts PDF, multiple */}
       <input

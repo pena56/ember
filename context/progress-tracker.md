@@ -144,6 +144,44 @@ Update after every meaningful change.
   `src/dev/verification-harness.tsx`, `app/dev/index.tsx`, `app/dev/sqlite-03c.tsx`, `__DEV__` link
   in `app/index.tsx`.
 
+## Unit 04d build notes (2026-06-09)
+- Done (apps/web): shadcn/ui foundation. `shadcn init` (new-york style — switched off the CLI-default
+  `base-nova` because it pulls `@base-ui/react`; new-york uses the unified `radix-ui` pkg) + added
+  Button/Card/Sonner into `src/components/ui/`; `@/* → ./src/*` alias in tsconfig + vite + vitest; `cn()`
+  in `src/lib/utils.ts`. CSS entry `styles.css`: `@import "tailwindcss"` → `tw-animate-css` → tokens, then
+  **shadcn semantic vars aliased BY REFERENCE to `@ember/tokens` vars** (`--primary:var(--color-accent)`,
+  `--background:var(--color-surface)`, `--card:var(--color-surface-raised)`, `--foreground/...:
+  var(--color-text)`, `--muted-foreground:var(--color-text-muted)`, `--border/--input:var(--color-line)`,
+  `--ring:var(--color-accent)`, `--primary-foreground:var(--color-on-accent)`, `--radius:var(--radius-md)`;
+  destructive is the one allowed hardcoded fallback — no token yet). Dark mode via
+  `@custom-variant dark (… [data-app-theme="warm-dark"] …)` keyed to the EXISTING ThemeProvider attribute,
+  NOT `.dark` — and because each aliased token already switches under `[data-app-theme="warm-dark"]` in
+  theme.css, shadcn surfaces flip for free. Palette stays single-sourced in packages/tokens (invariant #6).
+- Sonner retrofit of 04b: removed the inline notice state/banner; import feedback now `toast.success`/
+  `toast`/`toast.error` (added/deduped/rejected, warm voice); `<Toaster>` mounted once in App.tsx, themed
+  from our own `useTheme().resolvedTheme` (NOT next-themes, which the CLI assumed — removed it +
+  CLI-added geist font). `import-dropzone` accent button → shadcn `<Button>` (kills the `text-white`
+  hardcode = 04b nit **N1**). Import/dedupe/OPFS/persistence logic untouched.
+- ESLint override scoped to `apps/web/src/components/ui/**` ONLY (vendored shadcn — relaxes filename-case/
+  naming/import-order/react-refresh); authored `src/library`+`src/store` stay strict.
+- Built (Sonnet) → impeccable (light pass on retrofit) → fresh-context review (Opus) =
+  **CHANGES-REQUESTED → fixed**. BLOCKER (a11y): `--color-on-accent` was `#ffffff` — white on the amber
+  accent is 3.2:1 (light) / 2.4:1 (dark), fails WCAG AA for button text (same class as 02b's catch).
+  **Fixed:** `--color-on-accent` → dark ink `#2a2422` (passes 4.7:1 / 6.5:1) across index.ts + theme.css +
+  theme.uniwind.css + parity test. Reviewer verified token aliasing single-sourced, dark wiring, boundary
+  isolation (core/store/mobile byte-identical), lint scoping, Sonner tests not hollowed; re-ran all gates.
+- Token change this unit: added `--color-on-accent` to packages/tokens (TS + both CSS + parity test) —
+  the proper N1 fix (was an app-level `text-white`). Nit (deferred, harmless): the explicit
+  `[data-app-theme="warm-dark"]` block in styles.css is redundant (tokens already switch) — left for
+  legibility; could be trimmed to a comment later.
+- typecheck 9 ✓ · test 29 web + 23 tokens (+ store/mobile) ✓ · lint 6 ✓. Deps added by CLI (sonner,
+  lucide-react, radix-ui, cva, clsx, tailwind-merge, tw-animate-css, @types/node). core/store/mobile
+  untouched. **Carry-forward: web UI now builds on shadcn (ui-context.md); handroll only the gaps.**
+- **BROWSER-VERIFY (user, before merge):** `pnpm --filter @ember/web dev` → import a PDF → bottom-right
+  success toast; re-import → "already in your library" toast; drop a non-PDF → error toast; toggle
+  System/Light/Dark → shadcn Button/Card + toasts all re-theme; Tab to "Add PDF" → accent focus ring;
+  primary button = ember accent with dark-ink label (readable, no white-on-amber).
+
 ## Unit 04b build notes (2026-06-09)
 - Done (apps/web): `OpfsBlobStore` (OPFS-backed BlobStore, blobs/ subdir, lazy dir handle, copy-
   through inherent); `subtleCryptoHasher` (Web Crypto `crypto.subtle.digest` → lowercase hex);
@@ -203,15 +241,26 @@ Update after every meaningful change.
   `importDocument` (dedupe-by-sha256, exactly-once outbox)+`listDocuments`. Spec:
   specs/04a-document-model-identity.md. **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port
   (mirrors 03c driver port); PDF bytes via a `BlobStore` port; core runtime-dep-free (zod deferred).
-- **Unit 04b (#36) BUILT** — web import + Library list (apps/web). Binds 04a ports to browser APIs
-  (`BlobStore`→OPFS, `Hasher`→SubtleCrypto, `Repository`→existing DexieRepository) + a minimal
-  localStorage-persisted HLC clock/device id (first web write through the outbox); Library screen with
-  drag-drop + file-picker PDF import (dedupe-by-hash), recently-added-first list, warm empty state,
-  display-only rows (reader nav lands in 05). All gates green (typecheck 9 ✓ · test 29 web + 139 cross-
-  repo = 168 total · lint 6 ✓). BROWSER-VERIFY still pending (user, real Chromium OPFS).
+- **Unit 04b (#36) MERGED** — PR #37 merged to main (CI verify ✓ 49s), branch deleted, BROWSER-VERIFIED
+  by user (drag-drop + picker import, dedupe, on-disk persistence across reload all ✓). Web import +
+  Library list (apps/web): 04a ports bound to browser APIs (`BlobStore`→OPFS, `Hasher`→SubtleCrypto,
+  `Repository`→DexieRepository) + minimal localStorage-persisted HLC clock/device id; Library screen
+  (drag-drop + picker PDF import, dedupe-by-hash, recently-added-first, empty state, display-only rows).
   See Unit 04b build notes below.
+- **UI DIRECTION CHANGED (2026-06-09, user):** adopt **shadcn/ui** as the web component foundation —
+  handroll web components only where shadcn has no good fit; otherwise compose shadcn primitives (e.g.
+  Sonner toasts, not inline banners). **Supersedes the 2026-06-08 "bespoke, no UI kit" decision** —
+  recorded in ui-context.md "Component Library" + the styling memory. Mobile stays bespoke uniwind
+  (shadcn is Radix/web-only). shadcn themes via CSS vars mapped to Amber Ember tokens → invariant #6 holds.
+- **Unit 04d (#38) SPECCED** — Web UI foundation: shadcn init on apps/web (Vite/Tailwind v4/React 19),
+  map shadcn CSS vars → Amber Ember tokens, dark mode via existing `data-app-theme` (not `.dark`), add
+  Button/Card/Sonner, retrofit 04b's inline notices → Sonner toasts + accent button → shadcn Button
+  (folds in 04b nit N1, the `text-white` hardcode → `--primary-foreground` token). Spec:
+  specs/04d-web-ui-foundation-shadcn.md. Route = standard (single boundary; new deps are one CLI-managed
+  install — review focus = the token-mapping seam). **Decisions (confirmed w/ user):** foundation +
+  Sonner first, migrate rest incrementally; landed as its own unit after merging 04b (not amended in).
 - **Then:** **04c** mobile import + Library list (expo-file-system BlobStore, expo-crypto Hasher;
-  device-bound). Run `spec 04c` after 04b merges.
+  device-bound). Run `spec 04c` when ready (independent of 04d — mobile UI untouched by shadcn).
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 

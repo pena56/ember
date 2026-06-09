@@ -11,7 +11,8 @@
     "paths": {
       "@ember/core": ["../../packages/core/src/index.ts"],
       "@ember/store": ["../../packages/store/src/index.ts"],
-      "@ember/tokens": ["../../packages/tokens/src/index.ts"]
+      "@ember/tokens": ["../../packages/tokens/src/index.ts"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

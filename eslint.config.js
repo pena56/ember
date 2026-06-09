@@ -138,6 +138,19 @@ export default tseslint.config(
     },
   },
 
+  // --- apps/web shadcn vendored primitives (src/components/ui/**) ---
+  // These are copied-in, auto-generated files from the shadcn CLI.
+  // Relax the strict authored-code rules so we don't churn them.
+  {
+    files: ['apps/web/src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'unicorn/filename-case': 'off',
+      '@typescript-eslint/naming-convention': 'off',
+      'import-x/order': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+
   // --- Prettier last (disables conflicting formatting rules) ---
   prettierConfig,
 );

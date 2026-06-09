@@ -4,7 +4,6 @@ import { useTheme } from '../theme/use-theme.js';
 import { DocumentRow } from './document-row.js';
 import { ImportDropzone } from './import-dropzone.js';
 import { useLibrary } from './use-library.js';
-import type { Notice } from './use-library.js';
 
 // ── Theme control ─────────────────────────────────────────────────────────────
 
@@ -43,39 +42,6 @@ function ThemeControl() {
           {LABELS[pref]}
         </button>
       ))}
-    </div>
-  );
-}
-
-// ── Notice banner ─────────────────────────────────────────────────────────────
-
-const NOTICE_STYLES: Record<Notice['kind'], string> = {
-  added: 'bg-accent/10 border-accent/30 text-accent',
-  deduped: 'bg-surface-raised border-line text-text-muted',
-  rejected: 'bg-surface-raised border-line text-text-muted',
-};
-
-function NoticeBanner({ notice, onDismiss }: { notice: Notice; onDismiss: () => void }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={[
-        'flex items-center justify-between gap-4 px-4 py-3 rounded-lg border font-sans text-sm',
-        NOTICE_STYLES[notice.kind],
-      ].join(' ')}
-    >
-      <span>{notice.message}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Dismiss notice"
-        className="shrink-0 p-2 -m-2 rounded opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-          <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
     </div>
   );
 }
@@ -139,7 +105,7 @@ function DocumentList({ documents }: { documents: ReturnType<typeof useLibrary>[
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function LibraryPage() {
-  const { documents, loading, notice, importFiles, dismissNotice } = useLibrary();
+  const { documents, loading, importFiles } = useLibrary();
 
   return (
     <div className="min-h-screen bg-surface text-text flex flex-col">
@@ -169,11 +135,6 @@ export function LibraryPage() {
 
         {/* Import dropzone */}
         <ImportDropzone onFiles={(files) => { void importFiles(files); }} disabled={loading} />
-
-        {/* Inline notice */}
-        {notice !== null && (
-          <NoticeBanner notice={notice} onDismiss={dismissNotice} />
-        )}
 
         {/* Document list / empty state */}
         {loading && documents.length === 0 ? (

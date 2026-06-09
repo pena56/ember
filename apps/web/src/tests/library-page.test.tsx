@@ -11,6 +11,16 @@ import { createWebStore } from '../store/web-store.js';
 import type { WebStore } from '../store/web-store.js';
 import { ThemeProvider } from '../theme/theme-provider.js';
 
+// ── Mock sonner ────────────────────────────────────────────────────────────────
+
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+  Toaster: () => null,
+}));
+
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 function makeMatchMedia(prefersDark = false) {
@@ -109,9 +119,16 @@ describe('LibraryPage', () => {
 
     // Empty state should no longer show
     expect(screen.queryByText(/waiting for its first spark/i)).toBeNull();
+
+    // toast.success should have been called with the added message
+    const { toast } = await import('sonner');
+    expect(toast.success).toHaveBeenCalledWith(
+      'Added to your library',
+      expect.objectContaining({ description: expect.stringContaining('my-book') }),
+    );
   });
 
-  it('importing the same bytes twice shows a dedupe notice and no second row', async () => {
+  it('importing the same bytes twice shows a dedupe toast and no second row', async () => {
     const store = makeMemoryStore();
     renderLibrary(store);
 
@@ -139,8 +156,13 @@ describe('LibraryPage', () => {
       fireEvent.change(input);
     });
 
+    // Dedupe toast should have been called
+    const { toast } = await import('sonner');
     await waitFor(() => {
-      expect(screen.getByText(/already in your library/i)).toBeDefined();
+      expect(toast).toHaveBeenCalledWith(
+        'Already in your library',
+        expect.objectContaining({ description: expect.stringContaining('already in your collection') }),
+      );
     });
 
     // Only one document row should exist
@@ -148,7 +170,7 @@ describe('LibraryPage', () => {
     expect(rows.length).toBe(1);
   });
 
-  it('rejects a non-PDF file with a notice and adds no row', async () => {
+  it('rejects a non-PDF file with a toast and adds no row', async () => {
     const store = makeMemoryStore();
     renderLibrary(store);
 
@@ -164,8 +186,13 @@ describe('LibraryPage', () => {
       fireEvent.change(input);
     });
 
+    // toast.error should have been called with the rejected message
+    const { toast } = await import('sonner');
     await waitFor(() => {
-      expect(screen.getByText(/is not a PDF/i)).toBeDefined();
+      expect(toast.error).toHaveBeenCalledWith(
+        "That's not a PDF",
+        expect.objectContaining({ description: expect.stringContaining("notes.txt") }),
+      );
     });
 
     // Still shows empty state, no rows
