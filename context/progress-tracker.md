@@ -160,13 +160,14 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 04a (#34) — PR #35 OPEN** (awaiting CI + merge). First slice of umbrella Unit 04 (#4), which
-  scored COMPLEX (crosses core/store/web/mobile) → split like the 02/03 epics. Spec:
+- **Unit 04a (#34) MERGED** — PR #35 merged to main (CI verify ✓ 52s), branch deleted. Shared
+  document brain: core `Document`+`Hasher` port+identity, store `BlobStore` port+`MemoryBlobStore`+
+  `importDocument` (dedupe-by-sha256, exactly-once outbox)+`listDocuments`. Spec:
   specs/04a-document-model-identity.md. **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port
   (mirrors 03c driver port); PDF bytes via a `BlobStore` port; core runtime-dep-free (zod deferred).
-- **Next (after 04a merges):** **04b** web import + Library list (bind `BlobStore`→OPFS, `Hasher`→
-  SubtleCrypto; file input/drag-drop; UI unit → frontend-design/impeccable) → **04c** mobile import +
-  Library list (expo-file-system BlobStore, expo-crypto Hasher; device-bound).
+- **Next:** **04b** web import + Library list (bind `BlobStore`→OPFS, `Hasher`→SubtleCrypto; file
+  input/drag-drop; UI unit → frontend-design/impeccable) → **04c** mobile import + Library list
+  (expo-file-system BlobStore, expo-crypto Hasher; device-bound). Run `spec 04b` when ready.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
