@@ -103,15 +103,18 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active }: PdfPageProps)
             if (cancelled) return;
 
             if (textContent.items.length > 0) {
-              // Size the overlay to match the CSS canvas size
-              const cssHeight = viewport.height / devicePixelRatio;
-              textDiv.style.width = `${displayWidth.toString()}px`;
-              textDiv.style.height = `${cssHeight.toString()}px`;
+              // CSS render scale (display px per PDF unit) — independent of the
+              // device-pixel-ratio used for the canvas. pdf.js sizes each glyph
+              // as calc(var(--total-scale-factor) * --font-height), so this var
+              // MUST be set on the container or text renders unscaled/misplaced.
+              const cssScale =
+                displayWidth / pageHandle.getViewport({ scale: 1 }).width;
+              textDiv.style.setProperty('--total-scale-factor', cssScale.toString());
 
               textLayerHandle = new TextLayer({
                 textContentSource: textContent,
                 container: textDiv,
-                viewport: pageHandle.getViewport({ scale: displayWidth / pageHandle.getViewport({ scale: 1 }).width }),
+                viewport: pageHandle.getViewport({ scale: cssScale }),
               });
               await textLayerHandle.render();
             }
@@ -156,19 +159,11 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active }: PdfPageProps)
       style={{ width: displayWidth }}
     >
       <canvas ref={canvasRef} className="block" />
-      {/* Text layer — absolutely positioned over the canvas, transparent text */}
-      <div
-        ref={textLayerRef}
-        className="absolute inset-0 overflow-hidden leading-none select-text"
-        style={{
-          // Match pdf.js text layer expectations
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          lineHeight: 1,
-          pointerEvents: 'auto',
-        }}
-      />
+      {/* Text layer — transparent, selectable glyphs over the canvas.
+          The `textLayer` class (styles.css) supplies pdf.js's structural
+          positioning + transparent color; --total-scale-factor is set at
+          render time. */}
+      <div ref={textLayerRef} className="textLayer" />
     </div>
   );
 }
