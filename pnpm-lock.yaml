@@ -142,6 +142,9 @@ importers:
       '@ember/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ember/store':
+        specifier: workspace:*
+        version: link:../../packages/store
       '@ember/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
