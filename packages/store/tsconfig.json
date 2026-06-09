@@ -6,6 +6,7 @@
     "declarationMap": false,
     "noEmit": true,
     "lib": ["ES2022", "DOM"],
+    "types": ["node"],
     "paths": {
       "@ember/core": ["../core/src/index.ts"]
     }

@@ -2,7 +2,7 @@
 // This file exports a function and runs NO tests on its own import.
 // 03b (Dexie) and 03c (expo-sqlite) both call runRepositoryConformance to prove their impls.
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { encode, initialClock, makeOutboxEntry, tick } from '@ember/core';
 
@@ -17,6 +17,10 @@ export function runRepositoryConformance(
 
     beforeEach(async () => {
       repo = await makeRepo();
+    });
+
+    afterEach(async () => {
+      await repo.close();
     });
 
     // --- put / get / delete ---
@@ -188,6 +192,13 @@ export function runRepositoryConformance(
       expect(e1.hlc < e2.hlc).toBe(true);
       expect(e1.hlc).toBe(encode(h1));
       expect(e2.hlc).toBe(encode(h2));
+    });
+
+    // --- close() coverage ---
+
+    it('close() is idempotent — calling it twice does not throw', async () => {
+      // afterEach will call close() once; this call is the second.
+      await expect(repo.close()).resolves.not.toThrow();
     });
   });
 }
