@@ -299,7 +299,21 @@ Update after every meaningful change.
   `border-line`/paged-button `bg-line` use the APP-chrome `line` token (not redefined under
   `[data-reader-theme]`), so page edges/hover follow app chrome, not the reader theme. Add reader-scoped
   `reader-line`/`reader-muted` tokens. (reader-bg/reader-text themselves track the reader theme correctly.)
-  **NEXT: commit → push branch → PR (Closes #42) → user BROWSER-VERIFY → merge → 05b.**
+  **POST-VERIFY FIX (browser bug found by user): the pdf.js text layer rendered as OPAQUE, unscaled,
+  misaligned black text stamped over each page.** Root cause: pdf.js v6 `TextLayer.render()` only sets
+  per-glyph vars (`--font-height`/`--scale-x`/`--rotate`) and sizes glyphs as
+  `calc(var(--total-scale-factor) * --font-height)` — the CALLER must (a) apply the `.textLayer` CSS
+  (transparent color + absolute positioning) and (b) set `--total-scale-factor` on the container. We did
+  neither. Fix (commit 81137e5): styles.css gained the structural `.textLayer` rules from pdfjs-dist v6
+  (unlayered so they beat Tailwind utilities; native `::selection` kept so selection stays visible);
+  pdf-page.tsx sets `--total-scale-factor` to the CSS render scale + uses `className="textLayer"`, dropping
+  the hand-rolled inline positioning. Gates green; user BROWSER-VERIFIED (canvas-only, text selects + tracks
+  glyphs). **Carry-forward: any pdf.js text layer needs BOTH the `.textLayer` CSS and `--total-scale-factor`
+  set by the caller — `TextLayer.render()` alone is not enough.**
+  **Unit 05a (#42) MERGED** — PR #43 merged to main (merge commit 26dd9b0), branch deleted, BROWSER-VERIFIED
+  by user (render/scroll, paged toggle, text selection, paper/sepia/night, scanned PDF no-text-layer + no
+  error all ✓). **NEXT: Unit 05b — mobile reader (#5 umbrella): react-native-pdf render + headless pdf.js
+  text extraction; promote the shared text-layer shape to packages/core once both clients prove identical.**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
   + kv-store-persisted HLC clock; bespoke uniwind Library screen (expo-document-picker PDF import, dedupe,
