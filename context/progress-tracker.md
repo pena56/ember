@@ -267,8 +267,39 @@ Update after every meaningful change.
 - **Unit 04c (#40) MERGED** — PR #41 merged to main (CI verify ✓ 52s, commit 7aecb4e), branch deleted,
   DEVICE-VERIFIED by user (pick → import → toast → reload-persist + dedupe + non-PDF reject + light/dark
   re-theme all ✓), throwaway dev harness removed. mobile import + Library list (apps/mobile).
-  **NEXT: Unit 05** — PDF reader (scroll + paged) + text-layer extraction on both clients. Resolve the
-  open question first (mobile text-layer extraction approach — see Open Questions). Run `spec 05` when ready.
+  **Unit 05 SPLIT + specced (2026-06-09):** build-plan unit 05 (PDF reader on both clients) scored
+  **COMPLEX** — crosses web+mobile, two new render deps, AND an unresolved open question → split into
+  **05a** web reader (#42, this — specced) → **05b** mobile reader (device-bound, react-native-pdf render +
+  headless pdf.js text extraction). Web first: pdf.js is the reference text engine 05b's mobile contract is
+  measured against. Umbrella issue #5; sub-issue #42. Spec: specs/05a-web-pdf-reader.md, route **standard**.
+  **Open question RESOLVED (user):** mobile extracts its text layer with the **same pdf.js engine**
+  (react-native-pdf renders pixels; headless pdf.js extracts text) → identical extraction = highlight-anchor
+  parity (unit 10) for free. Consequence: the shared text-layer *shape* is promoted to `packages/core` in
+  **05b** (once both clients proven identical), NOT in 05a — 05a keeps text-layer code in apps/web.
+  05a scope: pdfjs-dist (6.0.227) reader — continuous-scroll default + paged toggle, virtualized page render,
+  selectable text layer, reader theme (paper/sepia/night) independent of app chrome, clickable Library rows +
+  state-based view switch (no router dep). Out: reading-position/resume (unit 06), highlights (unit 10) —
+  opens at page 1. UI unit → frontend-design + impeccable before review.
+  **STATUS: BUILT (Sonnet, TDD: 44 web tests — 7 page-visibility pure helpers, 7 reader-page behaviour,
+  1 app-navigation, +29 pre-existing) → impeccable polish (a11y: page-indicator live region now announces
+  ONLY in paged mode — scroll mode updates currentPage every tick so a persistent live region spammed SRs;
+  + hairline `border-line` on page cards so sheets read as discrete paper on all 3 reader themes) →
+  fresh-context review (Opus) = **APPROVE-WITH-NITS**, NO blockers. Applied both SHOULD-FIX: App.tsx title
+  lookup moved from a useState-initializer side-effect → a proper `useEffect([store, docId])` w/ cancel
+  guard; paged-mode keydown effect given an explicit dep array (`[currentPage,numPages,onPageChange]`) +
+  inlined nav, killing per-render listener churn. Gates: typecheck 9 ✓ · test 44 web ✓ · lint 6 ✓.
+  packages/ byte-identical to main (no pdf.js leak into core/store; text-layer shape NOT promoted — that's
+  05b). Dep added: pdfjs-dist@6.0.227 (ESM; worker via `?url` Vite import; no allowBuilds entry needed).
+  Files: src/reader/{pdf,use-pdf-document,page-visibility}.ts + {pdf-page,reader-page}.tsx + 3 test files;
+  store/web-store.ts (+`getPdfBytes`→blobs.get, ONLY store change); App.tsx (+openDocId state-nav);
+  document-row.tsx/library-page.tsx (rows clickable +onOpen). **Reviewer NITs deferred:** (1) exported+tested
+  `mostVisiblePage` is unused — ScrollReader uses an inline IntersectionObserver topmost-visible heuristic;
+  wire it or drop the dead export in a later polish (browser-verify indicator tracking). (2) dpr/scale calc
+  duplicated in pdf-page. **Follow-up (own micro-unit, packages/tokens — don't widen 05a):** page-card
+  `border-line`/paged-button `bg-line` use the APP-chrome `line` token (not redefined under
+  `[data-reader-theme]`), so page edges/hover follow app chrome, not the reader theme. Add reader-scoped
+  `reader-line`/`reader-muted` tokens. (reader-bg/reader-text themselves track the reader theme correctly.)
+  **NEXT: commit → push branch → PR (Closes #42) → user BROWSER-VERIFY → merge → 05b.**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
   + kv-store-persisted HLC clock; bespoke uniwind Library screen (expo-document-picker PDF import, dedupe,
@@ -372,9 +403,10 @@ Update after every meaningful change.
   serif` in theme.css so both the variable and static packages resolve. Out of 02b's boundary.
 
 ## Open Questions (resolve before/at the relevant unit)
-- **Mobile text-layer extraction** (unit 05): react-native-pdf's text-layer story is weaker than
-  pdf.js. Confirm approach — native text extraction, a pdf.js-in-webview path on mobile, or a
-  hybrid. Affects highlight anchoring parity across clients.
+- ~~**Mobile text-layer extraction** (unit 05)~~ **RESOLVED 2026-06-09 (user):** react-native-pdf renders
+  pixels; a **headless pdf.js extracts the text layer** (same engine as web) → identical extraction =
+  highlight-anchor parity across clients for free. Shared text-layer shape promoted to packages/core in 05b.
+  (Validate the exact headless-pdf.js-on-RN mechanism against official docs at 05b spec time.)
 - **Convex auth provider** (unit 11): which sign-in method(s) — email link, OAuth (Google/Apple)?
 - **Quota numbers** (unit 13): confirm defaults (e.g. 2GB/user, 100MB/file) and monetization path.
 - **Web reader leaf decisions**: font/scroll polish — safe to decide during build.

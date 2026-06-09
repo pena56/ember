@@ -6,6 +6,7 @@ import { formatBytes } from '../store/format-bytes.js';
 
 interface DocumentRowProps {
   document: Document;
+  onOpen: (id: string) => void;
 }
 
 // ── PDF page icon ─────────────────────────────────────────────────────────────
@@ -44,23 +45,52 @@ function formatDate(epochMs: number): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DocumentRow({ document: doc }: DocumentRowProps) {
+export function DocumentRow({ document: doc, onOpen }: DocumentRowProps) {
   return (
-    <li className="flex items-center gap-4 px-5 py-4">
-      <PdfIcon />
+    <li>
+      <button
+        type="button"
+        onClick={() => { onOpen(doc.id); }}
+        aria-label={`Open ${doc.title}`}
+        className={[
+          'w-full flex items-center gap-4 px-5 py-4 text-left',
+          'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent',
+          'hover:bg-surface transition-colors',
+        ].join(' ')}
+      >
+        <PdfIcon />
 
-      <div className="flex flex-col gap-1 min-w-0 flex-1">
-        <span className="font-serif text-base font-medium text-text leading-snug truncate">
-          {doc.title}
-        </span>
-        <span className="font-sans text-xs text-text-muted leading-relaxed">
-          {doc.filename}
-          <span className="mx-1.5 opacity-40">·</span>
-          {formatBytes(doc.byteSize)}
-          <span className="mx-1.5 opacity-40">·</span>
-          {formatDate(doc.importedAt)}
-        </span>
-      </div>
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <span className="font-serif text-base font-medium text-text leading-snug truncate">
+            {doc.title}
+          </span>
+          <span className="font-sans text-xs text-text-muted leading-relaxed">
+            {doc.filename}
+            <span className="mx-1.5 opacity-40">·</span>
+            {formatBytes(doc.byteSize)}
+            <span className="mx-1.5 opacity-40">·</span>
+            {formatDate(doc.importedAt)}
+          </span>
+        </div>
+
+        {/* Open chevron affordance */}
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          aria-hidden="true"
+          className="shrink-0 text-text-muted opacity-50"
+        >
+          <path
+            d="M6 4L10 8L6 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </li>
   );
 }

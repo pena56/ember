@@ -9,6 +9,8 @@ import type { WebClock } from './web-clock.js';
 export interface WebStore {
   importPdf(file: File): Promise<ImportResult>;
   listDocuments(): Promise<Document[]>;
+  /** Read back the raw PDF bytes for a stored document by id. Returns undefined when the blob is not found. */
+  getPdfBytes(id: string): Promise<Uint8Array | undefined>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -54,6 +56,10 @@ export function createWebStore(deps: {
       const docs = await listDocuments(repo);
       // Recently-added-first: sort descending by importedAt
       return [...docs].sort((a, b) => b.importedAt - a.importedAt);
+    },
+
+    async getPdfBytes(id: string): Promise<Uint8Array | undefined> {
+      return blobs.get(id);
     },
   };
 }
