@@ -144,16 +144,29 @@ Update after every meaningful change.
   `src/dev/verification-harness.tsx`, `app/dev/index.tsx`, `app/dev/sqlite-03c.tsx`, `__DEV__` link
   in `app/index.tsx`.
 
+## Unit 04a build notes (2026-06-09)
+- Done: `@ember/core` document layer (`document.ts`: `Document` type [id=sha256 hex, title, filename,
+  byteSize, contentType, importedAt — NO pageCount until reader/05], `Hasher` port, `computeDocumentId`,
+  `makeDocument` w/ filename→title strip; pure, caller supplies time/uuid/hlc, core stays runtime-dep-free).
+  `@ember/store`: `BlobStore` port (content-addressed by doc id) + `MemoryBlobStore` reference impl
+  (Map-backed, slice()-copies in/out for value isolation, idempotent close) + `runBlobStoreConformance`
+  (test-only, NOT barrel-exported — 03c Metro carry-forward); `documents.ts` `importDocument` (hash →
+  dedupe-by-content-id → new doc: put record + blob + EXACTLY ONE HLC-stamped outbox entry; identical
+  bytes = no-op merge, zero 2nd outbox) + `listDocuments` + `DOCUMENTS_COLLECTION`.
+- Built (Sonnet, TDD: core 30 [+7 new], store 69 [+9 blob conformance +8 documents]) → fresh-context
+  review (Opus) = **APPROVE**, no blockers/should-fixes. Applied 1 nit (merged duplicate `@ember/core`
+  import). Reviewer re-ran all gates on a busted cache + verified barrel safety, value isolation, exactly-
+  once outbox, core purity, 03a/b/c suites byte-identical.
+- typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
+
 ## Current Goal
-- **Unit 04a (#34) SPECED** — first slice of umbrella Unit 04 (#4). Build-plan unit 04 (Import + doc
-  identity + Library list) scored COMPLEX (crosses core/store/web/mobile) → split like the 02/03 epics:
-  **04a** shared brain (core `Document`+`Hasher` port+`computeDocumentId`+`makeDocument`; store `BlobStore`
-  port+`MemoryBlobStore`+`importDocument` dedupe-by-sha256+`listDocuments`, pure/headless) → **04b** web
-  import + Library list (OPFS BlobStore, SubtleCrypto Hasher) → **04c** mobile import + Library list
-  (expo-file-system BlobStore, expo-crypto Hasher; device-bound). Spec: specs/04a-document-model-identity.md.
-  **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port (mirrors 03c driver port); PDF bytes
-  persisted via a `BlobStore` port. Core stays runtime-dep-free (no zod — deferred to client-import
-  boundary 04b/04c). Route 04a = standard (Sonnet executor + Opus review), like 03a.
+- **Unit 04a (#34) — PR #35 OPEN** (awaiting CI + merge). First slice of umbrella Unit 04 (#4), which
+  scored COMPLEX (crosses core/store/web/mobile) → split like the 02/03 epics. Spec:
+  specs/04a-document-model-identity.md. **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port
+  (mirrors 03c driver port); PDF bytes via a `BlobStore` port; core runtime-dep-free (zod deferred).
+- **Next (after 04a merges):** **04b** web import + Library list (bind `BlobStore`→OPFS, `Hasher`→
+  SubtleCrypto; file input/drag-drop; UI unit → frontend-design/impeccable) → **04c** mobile import +
+  Library list (expo-file-system BlobStore, expo-crypto Hasher; device-bound).
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
