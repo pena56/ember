@@ -8,5 +8,9 @@ allowBuilds:
   # transitive optional dep of @vitest/mocker; we never import it — skip its build script
   msw: false
   unrs-resolver: true
+  # react-native-svg ships a `prepare` script (bob build); needed for frozen CI install
+  react-native-svg: true
+  # sonner-native ships a `prepare` script (bob build); needed for frozen CI install
+  sonner-native: true
 minimumReleaseAgeExclude:
   - eslint-plugin-unicorn@65.0.0
