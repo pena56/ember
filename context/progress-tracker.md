@@ -144,6 +144,44 @@ Update after every meaningful change.
   `src/dev/verification-harness.tsx`, `app/dev/index.tsx`, `app/dev/sqlite-03c.tsx`, `__DEV__` link
   in `app/index.tsx`.
 
+## Unit 04b build notes (2026-06-09)
+- Done (apps/web): `OpfsBlobStore` (OPFS-backed BlobStore, blobs/ subdir, lazy dir handle, copy-
+  through inherent); `subtleCryptoHasher` (Web Crypto `crypto.subtle.digest` → lowercase hex);
+  `createWebClock` (localStorage-persisted HLC clock + stable device id, fully injectable deps);
+  `createWebStore` (composes repo+blobs+hasher+clock into `importPdf`/`listDocuments` surface);
+  `StoreProvider`/`useWebStore` (mirrors ThemeProvider shape; skips production store construction when
+  injected store prop present — prevents OPFS crash in jsdom); Library screen (`LibraryPage`,
+  `ImportDropzone`, `DocumentRow`, `use-library`) with drag-drop + hidden file input, ember flame SVG
+  + drag-over "warming" state, warm empty state, inline dismiss-able notices, recently-added-first
+  list, relocated theme control in sticky header. All token-only (no hardcoded values). `App.tsx`
+  replaced with `<LibraryPage />`; `StoreProvider` wired inside `ThemeProvider` in `main.tsx`.
+- Tests: `format-bytes.test.ts` (4), `subtle-crypto-hasher.test.ts` (3 known SHA-256 vectors),
+  `web-clock.test.ts` (7 — monotonic stamps, counter bumps, reload persistence), `library-page.test.tsx`
+  (5 — empty state, import adds row, dedupe adds no row, non-PDF rejected, theme control aria-pressed).
+  OpfsBlobStore NOT unit-tested (no OPFS in jsdom) — browser-verified step below.
+- Built TDD-first (Sonnet) → frontend-design (Library screen) → impeccable (polished: em-dash → comma,
+  h2 heading hierarchy, dismiss button 44×44 touch target, motion-safe animation guards, `opacity-50`
+  empty state icon, items-center row alignment, role="status" loading) → gate fixes (Hasher import from
+  @ember/core not @ember/store; Uint8Array cast for TS6; react-hooks/set-state-in-effect restructured
+  via loadTick counter; import-x/order; prefer-const; unused var).
+- typecheck 9 ✓ · test 29 web (7 files) ✓ · lint 6 ✓. `@ember/store: workspace:*` added to apps/web deps.
+  packages/core and packages/store unchanged (byte-identical). Invariants #1/#2/#6 intact.
+- Fresh-context review (Opus) = **APPROVE-WITH-NITS**, NO blockers. Reviewer re-ran all gates, hand-
+  verified HLC monotonicity-across-reload + counter restore, confirmed packages/ byte-identical to main,
+  and independently confirmed the SHA-256 test vectors are correct (`abc`/empty). Nits N2 (spec listed
+  `format-bytes.ts` under library/, lives under store/ — organizational, no effect) + N3 (web-store ticks
+  the HLC eagerly even on dedupe — harmless, monotonic, no outbox entry written; lazy-stamp would be a
+  core change, out of scope) left as-is.
+- **Follow-up (defer — own micro-unit against packages/tokens, like 02b's token deferrals; do NOT widen
+  04b's diff into the tokens pkg + its parity test):** N1 — `import-dropzone.tsx` accent button uses
+  `text-white` (the only hardcoded color; soft invariant-#6 deviation). Add a semantic `--color-on-accent`
+  token to `packages/tokens` (TS source + theme.css + theme.uniwind.css, extend parity test) and switch to
+  `text-on-accent`. Value is visually fine on the orange accent — quality debt, not a bug.
+- **BROWSER-VERIFY (user, before merge):** `pnpm --filter @ember/web dev` → Chromium (localhost, secure
+  context) → drop a PDF → row appears with derived title → full page reload → row persists (real OPFS
+  + Dexie) → re-drop same file → dedupe notice, no second row. Non-PDF → gentle rejection notice.
+  Theme toggle (System/Light/Dark) still works with focus-visible a11y pattern.
+
 ## Unit 04a build notes (2026-06-09)
 - Done: `@ember/core` document layer (`document.ts`: `Document` type [id=sha256 hex, title, filename,
   byteSize, contentType, importedAt — NO pageCount until reader/05], `Hasher` port, `computeDocumentId`,
@@ -165,9 +203,15 @@ Update after every meaningful change.
   `importDocument` (dedupe-by-sha256, exactly-once outbox)+`listDocuments`. Spec:
   specs/04a-document-model-identity.md. **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port
   (mirrors 03c driver port); PDF bytes via a `BlobStore` port; core runtime-dep-free (zod deferred).
-- **Next:** **04b** web import + Library list (bind `BlobStore`→OPFS, `Hasher`→SubtleCrypto; file
-  input/drag-drop; UI unit → frontend-design/impeccable) → **04c** mobile import + Library list
-  (expo-file-system BlobStore, expo-crypto Hasher; device-bound). Run `spec 04b` when ready.
+- **Unit 04b (#36) BUILT** — web import + Library list (apps/web). Binds 04a ports to browser APIs
+  (`BlobStore`→OPFS, `Hasher`→SubtleCrypto, `Repository`→existing DexieRepository) + a minimal
+  localStorage-persisted HLC clock/device id (first web write through the outbox); Library screen with
+  drag-drop + file-picker PDF import (dedupe-by-hash), recently-added-first list, warm empty state,
+  display-only rows (reader nav lands in 05). All gates green (typecheck 9 ✓ · test 29 web + 139 cross-
+  repo = 168 total · lint 6 ✓). BROWSER-VERIFY still pending (user, real Chromium OPFS).
+  See Unit 04b build notes below.
+- **Then:** **04c** mobile import + Library list (expo-file-system BlobStore, expo-crypto Hasher;
+  device-bound). Run `spec 04c` after 04b merges.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 

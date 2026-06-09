@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ember/core": "workspace:*",
+    "@ember/store": "workspace:*",
     "@ember/tokens": "workspace:*",
     "@fontsource/fraunces": "5.2.9",
     "@fontsource/inter": "5.2.8",
