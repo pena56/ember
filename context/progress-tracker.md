@@ -101,12 +101,58 @@ Update after every meaningful change.
   exercise it. NITs (no action — deliberately consistent w/ MemoryRepository): Dexie `enqueue`
   clones the entry while Memory doesn't; structuredClone shape constraint undocumented in contract.
 
+## Unit 03c build notes (2026-06-09)
+- Done (packages/store): tiny async `SqliteDriver` port (`sqlite-driver.ts`: exec/run/all/close +
+  `SqlValue`); `SqliteRepository` (`sqlite-repository.ts`: private ctor + static async `create(driver)`
+  that runs DDL; records & outbox stored as JSON text → value isolation via JSON.parse, no
+  structuredClone; `INSERT OR REPLACE` upsert, `ORDER BY hlc ASC` == 03a encoded-HLC string sort under
+  SQLite BINARY collation; idempotent `close()` guarded by a `closed` flag since DatabaseSync throws on
+  double-close); `nodeSqliteDriver` (`node-sqlite-driver.ts`: wraps Node 24 built-in `node:sqlite`
+  `DatabaseSync`, sync→async, `:memory:` default). Barrel exports port+repo+node driver but NOT the expo
+  binding. Also bundled the deferred **close()-coverage micro-unit** into `conformance.ts`
+  (`afterEach(close)` + idempotent-close test) — all 3 impls now exercise close().
+- Done (apps/mobile): thin `expoSqliteDriver` adapter (`src/store/expo-sqlite-driver.ts`) over
+  expo-sqlite async API (openDatabaseAsync/execAsync/runAsync/getAllAsync/closeAsync) — the ONLY file
+  importing expo-sqlite. Added `@ember/store` workspace dep.
+- Built (Sonnet, TDD: SqliteRepository runs the full shared suite via node:sqlite → store 52 tests =
+  17×3 impls + 1 index) → fresh-context review (Opus) = **APPROVE-WITH-NITS**, NO blockers/should-fix.
+  Reviewer re-ran all gates + verified suite not weakened, expo-sqlite/node:sqlite each imported in
+  exactly one file, core untouched, HLC ordering sound. Applied 2 nits: pinned `@types/node` exact
+  (25.9.2, house style) + commented the deliberate `types:["node"]` mobile-tsconfig trade-off.
+- typecheck 9 ✓ · test 5 tasks/52 ✓ · lint 6 ✓. No new external dep (node:sqlite built-in;
+  expo-sqlite already pinned). Invariants #1/#2 + core-purity intact.
+- **BARREL FIX (found on first device bundle — spec was wrong):** the public barrel must NOT
+  re-export test-only modules. Metro (mobile) bundles `@ember/store`'s barrel, so exporting
+  `node-sqlite-driver` (imports `node:sqlite`) AND `conformance` (imports `vitest`) crashed
+  `expo export -p android` with "attempted to import node:sqlite". Fixed: `index.ts` exports only
+  the consumer surface (repository/sqlite-driver/sqlite-repository/memory/dexie); tests import
+  `conformance.js` + `node-sqlite-driver.js` via relative paths (they already did). This also made
+  the mobile `@types/node`/`types:["node"]` additions unnecessary — reverted both; only
+  `packages/store` keeps node types (for the node driver file + its test). Verified headlessly:
+  `expo export -p android` → "Android bundles (1) … Exported: dist".
+  **Carry-forward: never re-export vitest/node-only modules from a package barrel a client bundles.**
+- **DEVICE-BOUND (user, before merge):** `npx expo start` in apps/mobile → Home has a `__DEV__`
+  "Dev · device verifications" link → **Unit 03c** screen. Tap "Run all" (conformance smoke must go
+  green), then for persistence: tap "1. Write persistence marker" → fully reload the app → tap
+  "2. Read persistence marker" (must show the pre-reload stamp = real on-disk SQLite persistence).
+  Interactive harness, NOT console logs.
+- **Device-verification convention established** (ai-workflow-rules.md): every device-bound unit
+  drops an interactive screen under `apps/mobile/app/dev/` fed by the shared
+  `src/dev/verification-harness.tsx`, listed in `app/dev/index.tsx`, reached via the `__DEV__` home
+  link. **Throwaway** — once all checks are green, delete `app/dev/` + `src/dev/` + the home link in
+  the same PR (the real `src/store/expo-sqlite-driver.ts` adapter stays). Files added this turn:
+  `src/dev/verification-harness.tsx`, `app/dev/index.tsx`, `app/dev/sqlite-03c.tsx`, `__DEV__` link
+  in `app/index.tsx`.
+
 ## Current Goal
-- **Unit 03b (#29) MERGED** — PR #30 merged to main (CI verify ✓), branch deleted. Dexie/web
-  `Repository` impl. Spec: specs/03b-dexie-web-repository.md. Next: **03c** — expo-sqlite/mobile
-  `Repository` impl, device-bound like 02d (executor lands code + green static checks; runtime
-  persistence proven on device). Plus the deferred close()-coverage micro-unit against 03a's shared
-  conformance suite (see 03b build notes). Store epic: 03a ✓ → 03b ✓ → 03c.
+- **Unit 03c (#31) DONE — device-verified, harness removed, PR opened.** expo-sqlite/mobile
+  `Repository` via driver-port. User ran the interactive verification screen on device: conformance
+  smoke + persistence-across-reload all green. Throwaway harness (`app/dev/`, `src/dev/`, `__DEV__`
+  home link) deleted in the same PR per the convention; real `src/store/expo-sqlite-driver.ts` stays.
+  typecheck 9 ✓ · test 52 ✓ · lint 6 ✓ · `expo export -p android` ✓. Spec:
+  specs/03c-sqlite-mobile-repository.md. Store epic COMPLETE: 03a ✓ → 03b ✓ → 03c ✓.
+- **Next:** Unit 04 (Import + document identity + Library list, issue #4) — first real entities land
+  on the store; SHA-256 doc identity. Backlog in GitHub Issues.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
