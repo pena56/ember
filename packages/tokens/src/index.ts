@@ -12,6 +12,9 @@ export type ReaderThemeName = 'paper' | 'sepia' | 'night';
 export const ember = {
   accent: '#e0701b',
   accentDark: '#f2913e',
+  /** Text on top of the accent color (e.g. primary button label). Dark ink, not white:
+   *  white on the amber accent is ~3.2:1 (light) / ~2.4:1 (dark) — fails AA. Resolves N1. */
+  onAccent: '#2a2422',
   streakLit: '#f59e0b',
   streakRisk: '#b98a5e',
 } as const;

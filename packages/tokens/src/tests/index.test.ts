@@ -20,6 +20,7 @@ describe('@ember/tokens', () => {
     it('exports ember accent colors', () => {
       expect(ember.accent).toBe('#e0701b');
       expect(ember.accentDark).toBe('#f2913e');
+      expect(ember.onAccent).toBe('#2a2422');
       expect(ember.streakLit).toBe('#f59e0b');
       expect(ember.streakRisk).toBe('#b98a5e');
     });
@@ -122,6 +123,7 @@ describe('@ember/tokens', () => {
       expect(css).toMatch(/--color-line\s*:/);
       expect(css).toMatch(/--color-accent\s*:/);
       expect(css).toMatch(/--color-accent-dark\s*:/);
+      expect(css).toMatch(/--color-on-accent\s*:/);
       expect(css).toMatch(/--color-streak-lit\s*:/);
       expect(css).toMatch(/--color-streak-risk\s*:/);
       // reader colors must live in @theme so utilities generate (not only in selector blocks)
@@ -185,6 +187,7 @@ describe('@ember/tokens', () => {
       expect(css).toMatch(/--color-line\s*:/);
       expect(css).toMatch(/--color-accent\s*:/);
       expect(css).toMatch(/--color-accent-dark\s*:/);
+      expect(css).toMatch(/--color-on-accent\s*:/);
       expect(css).toMatch(/--color-streak-lit\s*:/);
       expect(css).toMatch(/--color-streak-risk\s*:/);
       expect(css).toMatch(/--color-reader-bg\s*:/);

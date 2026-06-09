@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import type { Document } from '@ember/core';
 
@@ -6,19 +7,10 @@ import { useWebStore } from '../store/store-context.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type NoticeKind = 'rejected' | 'deduped' | 'added';
-
-export interface Notice {
-  kind: NoticeKind;
-  message: string;
-}
-
 export interface LibraryState {
   documents: Document[];
   loading: boolean;
-  notice: Notice | null;
   importFiles: (files: File[]) => Promise<void>;
-  dismissNotice: () => void;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -31,7 +23,6 @@ export function useLibrary(): LibraryState {
   const store = useWebStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState<Notice | null>(null);
   // Incrementing this triggers the load effect without calling setState inside it.
   const [loadTick, setLoadTick] = useState(0);
 
@@ -72,13 +63,11 @@ export function useLibrary(): LibraryState {
 
       if (rejected.length > 0 && pdfs.length === 0) {
         // All files rejected
-        setNotice({
-          kind: 'rejected',
-          message:
-            rejected.length === 1
-              ? `"${rejected[0]!.name}" is not a PDF, and only PDFs can be added to your library.`
-              : `${rejected.length.toString()} files are not PDFs, and only PDFs can be added to your library.`,
-        });
+        const description =
+          rejected.length === 1
+            ? `"${rejected[0]!.name}" can't be added. Only PDFs are supported.`
+            : `${rejected.length.toString()} files can't be added. Only PDFs are supported.`;
+        toast.error("That's not a PDF", { description });
         return;
       }
 
@@ -93,36 +82,27 @@ export function useLibrary(): LibraryState {
       // Trigger the load effect
       refresh();
 
-      // Show a notice for the batch result
+      // Show a toast for the batch result
       if (rejected.length > 0) {
-        setNotice({
-          kind: 'rejected',
-          message: `${rejected.length.toString()} non-PDF ${rejected.length === 1 ? 'file was' : 'files were'} skipped.`,
-        });
+        const description = `${rejected.length.toString()} non-PDF ${rejected.length === 1 ? 'file was' : 'files were'} skipped.`;
+        toast.error("That's not a PDF", { description });
       } else if (lastResult?.deduped === true) {
-        setNotice({
-          kind: 'deduped',
-          message: 'Already in your library, no duplicate added.',
+        toast('Already in your library', {
+          description: 'This book is already in your collection. No duplicate added.',
         });
       } else if (pdfs.length === 1) {
         const name = pdfs[0]!.name.replace(/\.pdf$/i, '');
-        setNotice({
-          kind: 'added',
-          message: `"${name}" has been added to your library.`,
+        toast.success('Added to your library', {
+          description: `"${name}" is ready to read.`,
         });
       } else {
-        setNotice({
-          kind: 'added',
-          message: `${pdfs.length.toString()} PDFs added to your library.`,
+        toast.success('Added to your library', {
+          description: `${pdfs.length.toString()} PDFs are ready to read.`,
         });
       }
     },
     [store, refresh],
   );
 
-  const dismissNotice = useCallback(() => {
-    setNotice(null);
-  }, []);
-
-  return { documents, loading, notice, importFiles, dismissNotice };
+  return { documents, loading, importFiles };
 }

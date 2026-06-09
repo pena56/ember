@@ -67,15 +67,23 @@ Tabs: **Today / Library / Stats** (+ Settings).
   (incl. primary-device choice), storage quota usage.
 
 ## Component Library
-Resolved 2026-06-08: **bespoke, token-driven components per client** — no UI kit. RN + web
-can't share components, but share tokens + patterns. Styling via **Tailwind v4**:
-- **Web** (`apps/web`): Tailwind v4 via `@tailwindcss/vite`.
-- **Mobile** (`apps/mobile`): **uniwind** (Tailwind v4 bindings for React Native, Metro-based —
-  chosen over NativeWind because it natively targets Tailwind v4 / RN 0.85 / React 19).
-- Semantic tokens authored once in `packages/tokens` as a Tailwind v4 `@theme`, consumed by
-  both clients' Tailwind configs (preserves architecture invariant #6 — no hardcoded
-  colors/spacing). `frontend-design` + `impeccable` drive component quality at build time.
-- Small surface: Text, Button, Card, ListRow, TabBar/Nav, Surface, GoalRing, Ember.
+**Revised 2026-06-09** (supersedes the 2026-06-08 "bespoke, no UI kit" decision): clients still
+can't share components (RN ≠ web), but share tokens + patterns. Styling stays **Tailwind v4**;
+component *foundation* now differs per client:
+- **Web** (`apps/web`): **build on shadcn/ui** (Radix + Tailwind v4, copied into the repo — not a
+  black-box dep). **Handroll a web component only when shadcn has no good equivalent**; otherwise
+  compose shadcn primitives. shadcn themes via CSS variables → map those to the Amber Ember token
+  values so it stays token-driven (architecture invariant #6 holds — no hardcoded palette). Toasts
+  via **Sonner** (shadcn's notification primitive), not inline banners. Dark mode via the existing
+  `data-app-theme` provider. (shadcn is web-only — Radix can't target RN.)
+- **Mobile** (`apps/mobile`): **bespoke, token-driven** components on **uniwind** (Tailwind v4
+  bindings for React Native, Metro — chosen over NativeWind because it natively targets Tailwind v4 /
+  RN 0.85 / React 19). No shadcn here; handroll against tokens.
+- Semantic tokens authored once in `packages/tokens` as a Tailwind v4 `@theme`, consumed by both
+  clients (and by shadcn's CSS-var mapping on web) — preserves invariant #6. `frontend-design` +
+  `impeccable` drive quality at build time, now *on top of* shadcn primitives for web.
+- Surface: shadcn primitives (Button, Card, Sonner, Dialog, …) on web; bespoke Text/ListRow/TabBar/
+  Surface/GoalRing/Ember where shadcn has no fit or the motif is brand-specific (ember/streak).
 
 ## Layout Patterns
 - Card-based Today screen; generous spacing; soft rounded corners (cozy).

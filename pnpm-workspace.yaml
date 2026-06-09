@@ -5,6 +5,8 @@ packages:
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
+  # transitive optional dep of @vitest/mocker; we never import it — skip its build script
+  msw: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - eslint-plugin-unicorn@65.0.0

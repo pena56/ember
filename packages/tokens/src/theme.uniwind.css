@@ -5,6 +5,9 @@
 @theme {
   --color-accent:      #e0701b;
   --color-accent-dark: #f2913e;
+  /* Text on the accent color (e.g. primary button label). Dark ink, not white: white on the
+     amber accent fails AA (~3.2:1 light / ~2.4:1 dark); dark ink passes (4.7:1 / 6.5:1). Resolves N1. */
+  --color-on-accent:   #2a2422;
   --color-streak-lit:  #f59e0b;
   --color-streak-risk: #b98a5e;
   --color-surface:        #faf4ea;
