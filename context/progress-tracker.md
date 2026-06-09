@@ -252,13 +252,18 @@ Update after every meaningful change.
   Sonner toasts, not inline banners). **Supersedes the 2026-06-08 "bespoke, no UI kit" decision** —
   recorded in ui-context.md "Component Library" + the styling memory. Mobile stays bespoke uniwind
   (shadcn is Radix/web-only). shadcn themes via CSS vars mapped to Amber Ember tokens → invariant #6 holds.
-- **Unit 04d (#38) SPECCED** — Web UI foundation: shadcn init on apps/web (Vite/Tailwind v4/React 19),
-  map shadcn CSS vars → Amber Ember tokens, dark mode via existing `data-app-theme` (not `.dark`), add
-  Button/Card/Sonner, retrofit 04b's inline notices → Sonner toasts + accent button → shadcn Button
-  (folds in 04b nit N1, the `text-white` hardcode → `--primary-foreground` token). Spec:
-  specs/04d-web-ui-foundation-shadcn.md. Route = standard (single boundary; new deps are one CLI-managed
-  install — review focus = the token-mapping seam). **Decisions (confirmed w/ user):** foundation +
-  Sonner first, migrate rest incrementally; landed as its own unit after merging 04b (not amended in).
+- **Unit 04d (#38) MERGED** — PR #39 merged to main, branch deleted, BROWSER-VERIFIED by user (import
+  toasts + light/dark re-theming of shadcn surfaces + readable dark-ink button + focus ring all ✓). Web
+  UI foundation: shadcn (Button/Card/Sonner) on apps/web, CSS vars aliased by reference to Amber Ember
+  tokens, dark mode via existing `data-app-theme`; retrofitted 04b notices → Sonner toasts + accent button
+  → shadcn Button (closed nit N1). Review (Opus) = CHANGES-REQUESTED (a11y) → fixed `--color-on-accent`
+  white→dark-ink `#2a2422`. See Unit 04d build notes below. Spec: specs/04d-web-ui-foundation-shadcn.md.
+- **CI fix (post-review, on the 04d branch):** first CI run RED — `ERR_PNPM_IGNORED_BUILDS: msw@2.14.6`.
+  msw is a transitive optional dep of `@vitest/mocker` that entered the lockfile during the shadcn
+  re-resolve; it ships a build script, and pnpm fails frozen CI installs until each build script is
+  explicitly allowed/denied. **Fixed:** `allowBuilds: msw: false` in `pnpm-workspace.yaml` (we never
+  import msw). Re-run CI verify ✓ 50s. **Carry-forward: any new dep with a postinstall/build script must
+  be added to `allowBuilds` in pnpm-workspace.yaml (true to run it, false to skip) or CI install fails.**
 - **Then:** **04c** mobile import + Library list (expo-file-system BlobStore, expo-crypto Hasher;
   device-bound). Run `spec 04c` when ready (independent of 04d — mobile UI untouched by shadcn).
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
