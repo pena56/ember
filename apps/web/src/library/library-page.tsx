@@ -86,7 +86,13 @@ function EmptyState() {
 
 // ── Document list ─────────────────────────────────────────────────────────────
 
-function DocumentList({ documents }: { documents: ReturnType<typeof useLibrary>['documents'] }) {
+function DocumentList({
+  documents,
+  onOpen,
+}: {
+  documents: ReturnType<typeof useLibrary>['documents'];
+  onOpen: (id: string) => void;
+}) {
   if (documents.length === 0) {
     return <EmptyState />;
   }
@@ -95,7 +101,7 @@ function DocumentList({ documents }: { documents: ReturnType<typeof useLibrary>[
     <section aria-label="Your library">
       <ul className="rounded-xl overflow-hidden bg-surface-raised border border-line divide-y divide-line">
         {documents.map((doc) => (
-          <DocumentRow key={doc.id} document={doc} />
+          <DocumentRow key={doc.id} document={doc} onOpen={onOpen} />
         ))}
       </ul>
     </section>
@@ -104,7 +110,12 @@ function DocumentList({ documents }: { documents: ReturnType<typeof useLibrary>[
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export function LibraryPage() {
+interface LibraryPageProps {
+  /** Called when the user opens a document row. */
+  onOpen?: (id: string) => void;
+}
+
+export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
   const { documents, loading, importFiles } = useLibrary();
 
   return (
@@ -146,7 +157,7 @@ export function LibraryPage() {
             <div className="w-5 h-5 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
           </div>
         ) : (
-          <DocumentList documents={documents} />
+          <DocumentList documents={documents} onOpen={onOpen ?? (() => undefined)} />
         )}
       </main>
     </div>
