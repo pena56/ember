@@ -264,8 +264,11 @@ Update after every meaningful change.
   explicitly allowed/denied. **Fixed:** `allowBuilds: msw: false` in `pnpm-workspace.yaml` (we never
   import msw). Re-run CI verify ✓ 50s. **Carry-forward: any new dep with a postinstall/build script must
   be added to `allowBuilds` in pnpm-workspace.yaml (true to run it, false to skip) or CI install fails.**
-- **Unit 04c (#40) DONE — DEVICE-VERIFIED by user (pick → import → toast → reload-persist all ✓), dev
-  harness removed, PR #41 open (Closes #40), awaiting CI + merge.** mobile import + Library list (apps/mobile).
+- **Unit 04c (#40) MERGED** — PR #41 merged to main (CI verify ✓ 52s, commit 7aecb4e), branch deleted,
+  DEVICE-VERIFIED by user (pick → import → toast → reload-persist + dedupe + non-PDF reject + light/dark
+  re-theme all ✓), throwaway dev harness removed. mobile import + Library list (apps/mobile).
+  **NEXT: Unit 05** — PDF reader (scroll + paged) + text-layer extraction on both clients. Resolve the
+  open question first (mobile text-layer extraction approach — see Open Questions). Run `spec 05` when ready.
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
   + kv-store-persisted HLC clock; bespoke uniwind Library screen (expo-document-picker PDF import, dedupe,
