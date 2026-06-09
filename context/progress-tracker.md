@@ -264,8 +264,43 @@ Update after every meaningful change.
   explicitly allowed/denied. **Fixed:** `allowBuilds: msw: false` in `pnpm-workspace.yaml` (we never
   import msw). Re-run CI verify ✓ 50s. **Carry-forward: any new dep with a postinstall/build script must
   be added to `allowBuilds` in pnpm-workspace.yaml (true to run it, false to skip) or CI install fails.**
-- **Then:** **04c** mobile import + Library list (expo-file-system BlobStore, expo-crypto Hasher;
-  device-bound). Run `spec 04c` when ready (independent of 04d — mobile UI untouched by shadcn).
+- **Unit 04c (#40) DONE — DEVICE-VERIFIED by user (pick → import → toast → reload-persist all ✓), dev
+  harness removed, committing + PR Closes #40.** mobile import + Library list (apps/mobile; device-bound).
+  Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
+  expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
+  + kv-store-persisted HLC clock; bespoke uniwind Library screen (expo-document-picker PDF import, dedupe,
+  recently-added-first, theme control). New deps: expo-file-system/expo-crypto/expo-document-picker (via
+  `expo install`) + `sonner-native@0.26.1` (toast feedback) which pulls `react-native-svg` (peer); +allowBuilds
+  for any with a build script. Independent of 04d (shadcn is web-only). Throwaway device-verify screen per
+  ai-workflow-rules. Decisions (this session): document-picker (no drag-drop on mobile); new expo-file-system
+  OO API; clock persists via expo-sqlite/kv-store (settled); Library replaces the home-screen placeholder;
+  **sonner-native toasts (not an inline banner)** themed from useTheme — mirrors 04d's web Sonner retrofit.
+  native-clock/format-bytes mirror web's (dedup hoist deferred — don't widen web).
+  **STATUS: BUILT (Sonnet, TDD: mobile 20 tests) → impeccable polish (token-resolved spinner tint killed
+  a hardcoded `#E0701B`; branded react-native-svg ember flame replacing the emoji, matching web; de-duped
+  card/empty-state copy + em-dash; pressed CTA state) → fresh-context review (Opus) = APPROVE-WITH-NITS.
+  Fixes applied: mixed-batch toast now tallies added vs deduped (was last-file-only); corrected the dev
+  harness SHA-256("abc") vector (was wrong → device check would've always failed); tightened the dedupe
+  test to assert `repo.unacked()` length directly (invariant #2). Gates: typecheck 9 ✓ · test 25 mobile ✓ ·
+  lint 6 ✓ · `expo export -p android` → Exported: dist ✓. Deps installed: expo-file-system ~56.0.7,
+  expo-crypto ~56.0.4, expo-document-picker ~56.0.4, react-native-svg 15.15.4, sonner-native 0.26.1
+  (+react-native-svg/sonner-native in allowBuilds).
+- **3 device-only bugs surfaced during the user's device pass — none catchable by typecheck/test/bundle;
+  CARRY-FORWARD for future mobile units:**
+  1. **expo-sqlite/kv-store via `require` needs the default instance.** `getItemSync`/`setItemSync` are
+     methods on the *default export* (`export default AsyncStorage`; alias `Storage`), NOT top-level named
+     exports — so `require('expo-sqlite/kv-store').getItemSync` is undefined. Reach `.default`/`.Storage`
+     (native-clock.ts). (Static `import Storage from '…'` like the theme provider also works.)
+  2. **uniwind `className` is a no-op on third-party components** (e.g. `SafeAreaView` from
+     react-native-safe-area-context) — it only styles RN core / `withUniwind`-wrapped comps (02d rule).
+     Put `bg-surface`/padding on a core `View`; use SafeAreaView only for insets via `style`.
+  3. **Reading a document-picker pick on Android/Expo Go:** new `File.bytes()` rejects SAF `content://`
+     ("Missing READ permission"); `copyToCacheDirectory:true` lands in `cache/DocumentPicker/` which is
+     outside Expo Go's readable scope ("isn't readable"). Working pattern (pick-pdf.ts): pick with
+     `copyToCacheDirectory:false` → legacy `copyAsync` (ContentResolver) into scoped `cacheDirectory` →
+     `readAsStringAsync` base64 → decode via the pure unit-tested `base64.ts`. Works in Expo Go + standalone.
+  **Process carry-forward (user): pick mobile/Expo APIs from the OFFICIAL docs, not type stubs/memory —
+  runtime constraints (SAF scoping, Expo Go sandbox) don't show in any local gate. See memory.**
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
