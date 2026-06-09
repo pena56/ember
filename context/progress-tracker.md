@@ -145,13 +145,15 @@ Update after every meaningful change.
   in `app/index.tsx`.
 
 ## Current Goal
-- **Unit 03c (#31) MERGED** — PR #32 merged to main (CI verify ✓), branch deleted. expo-sqlite/mobile
-  `Repository` via driver-port; device-verified (conformance smoke + persistence-across-reload) before
-  merge. Throwaway harness deleted in the same PR per the convention; real
-  `src/store/expo-sqlite-driver.ts` stays. Spec: specs/03c-sqlite-mobile-repository.md.
-  **Store epic COMPLETE: 03a ✓ → 03b ✓ → 03c ✓.**
-- **Next:** Unit 04 (Import + document identity + Library list, issue #4) — first real entities land
-  on the store; SHA-256 doc identity. Backlog in GitHub Issues.
+- **Unit 04a (#34) SPECED** — first slice of umbrella Unit 04 (#4). Build-plan unit 04 (Import + doc
+  identity + Library list) scored COMPLEX (crosses core/store/web/mobile) → split like the 02/03 epics:
+  **04a** shared brain (core `Document`+`Hasher` port+`computeDocumentId`+`makeDocument`; store `BlobStore`
+  port+`MemoryBlobStore`+`importDocument` dedupe-by-sha256+`listDocuments`, pure/headless) → **04b** web
+  import + Library list (OPFS BlobStore, SubtleCrypto Hasher) → **04c** mobile import + Library list
+  (expo-file-system BlobStore, expo-crypto Hasher; device-bound). Spec: specs/04a-document-model-identity.md.
+  **Decisions (confirmed w/ user):** SHA-256 via `Hasher` port (mirrors 03c driver port); PDF bytes
+  persisted via a `BlobStore` port. Core stays runtime-dep-free (no zod — deferred to client-import
+  boundary 04b/04c). Route 04a = standard (Sonnet executor + Opus review), like 03a.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
   specs/NN-….md ⇄ PR "Closes #NN".
 
