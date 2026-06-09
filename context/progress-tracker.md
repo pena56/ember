@@ -145,12 +145,11 @@ Update after every meaningful change.
   in `app/index.tsx`.
 
 ## Current Goal
-- **Unit 03c (#31) DONE — device-verified, harness removed, PR opened.** expo-sqlite/mobile
-  `Repository` via driver-port. User ran the interactive verification screen on device: conformance
-  smoke + persistence-across-reload all green. Throwaway harness (`app/dev/`, `src/dev/`, `__DEV__`
-  home link) deleted in the same PR per the convention; real `src/store/expo-sqlite-driver.ts` stays.
-  typecheck 9 ✓ · test 52 ✓ · lint 6 ✓ · `expo export -p android` ✓. Spec:
-  specs/03c-sqlite-mobile-repository.md. Store epic COMPLETE: 03a ✓ → 03b ✓ → 03c ✓.
+- **Unit 03c (#31) MERGED** — PR #32 merged to main (CI verify ✓), branch deleted. expo-sqlite/mobile
+  `Repository` via driver-port; device-verified (conformance smoke + persistence-across-reload) before
+  merge. Throwaway harness deleted in the same PR per the convention; real
+  `src/store/expo-sqlite-driver.ts` stays. Spec: specs/03c-sqlite-mobile-repository.md.
+  **Store epic COMPLETE: 03a ✓ → 03b ✓ → 03c ✓.**
 - **Next:** Unit 04 (Import + document identity + Library list, issue #4) — first real entities land
   on the store; SHA-256 doc identity. Backlog in GitHub Issues.
 - Backlog lives in GitHub Issues (repo pena56/ember); Unit NN ⇄ Issue #NN ⇄ feat/NN-… ⇄
