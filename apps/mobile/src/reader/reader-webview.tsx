@@ -17,11 +17,13 @@ import { useEffect, useRef } from 'react';
 import type { WebViewMessageEvent } from 'react-native-webview';
 import WebView from 'react-native-webview';
 
+import type { PageTextGeometry } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { bytesToBase64 } from '../store/base64.js';
 
 import { buildReaderHtml } from './build-reader-html.js';
+import { geometryFromBridge } from './page-geometry.js';
 import { PDF_JS_SRC, PDF_WORKER_SRC } from './pdf-js-content.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -34,7 +36,8 @@ export type WebViewInMessage =
   | { type: 'ready'; numPages: number }
   | { type: 'page'; current: number }
   | { type: 'stage'; stage: string }
-  | { type: 'error'; message?: string };
+  | { type: 'error'; message?: string }
+  | { type: 'geometry'; pageNumber: number; viewport: { width: number; height: number }; items: unknown[] };
 
 export interface ReaderWebViewProps {
   /**
@@ -49,6 +52,8 @@ export interface ReaderWebViewProps {
   onError: (message?: string) => void;
   /** Progress stages from the in-WebView reader (diagnostics + hang watchdog). */
   onStage?: (stage: string) => void;
+  /** Called once per page as the page renders; receives normalized geometry from the WebView. */
+  onTextGeometry?: (geometry: PageTextGeometry) => void;
 }
 
 // ── HTML singleton (built once; pdf.js content is ~3MB) ──────────────────────
@@ -70,6 +75,7 @@ export function ReaderWebView({
   onPageChange,
   onError,
   onStage,
+  onTextGeometry,
 }: ReaderWebViewProps) {
   const webViewRef = useRef<WebView | null>(null);
   // The in-page pdf.js (~3MB) only attaches its `message` listener after it
@@ -137,6 +143,14 @@ export function ReaderWebView({
         break;
       case 'error':
         onError(msg.message);
+        break;
+      case 'geometry':
+        // Guard the adapter call so a malformed bridge message can't crash the handler.
+        try {
+          onTextGeometry?.(geometryFromBridge(msg));
+        } catch {
+          // Non-fatal: geometry extraction failure must never break rendering.
+        }
         break;
     }
   }

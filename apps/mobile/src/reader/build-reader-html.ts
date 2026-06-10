@@ -20,7 +20,8 @@
  *   RN → WebView: { type:'load', bytesBase64 } | { type:'setMode', mode } |
  *                 { type:'setTheme', theme } | { type:'gotoPage', page }
  *   WebView → RN: { type:'ready', numPages } | { type:'page', current } |
- *                 { type:'error', message? }
+ *                 { type:'error', message? } |
+ *                 { type:'geometry', pageNumber, viewport:{width,height}, items }
  */
 
 // ── Reader palette (must match ui-context.md exactly — no token pipeline here) ──
@@ -294,9 +295,17 @@ async function renderPage(pageNum, container) {
     const renderTask = page.render({ canvas, viewport });
     await renderTask.promise;
 
-    // Text layer (transparent, selectable — 05c will extract geometry)
+    // Text layer (transparent, selectable) + geometry extraction (05c-3)
     try {
       const textContent = await page.getTextContent();
+      // Post raw geometry to RN using the scale-1 viewport (naturalVp).
+      // Fires even for text-empty pages so RN always receives a geometry message.
+      postToRN({
+        type: 'geometry',
+        pageNumber: pageNum,
+        viewport: { width: naturalVp.width, height: naturalVp.height },
+        items: textContent.items,
+      });
       if (textContent.items.length > 0) {
         const textDiv = document.createElement('div');
         textDiv.className = 'textLayer';
