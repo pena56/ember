@@ -106,3 +106,54 @@ describe('createNativeStore', () => {
     expect(unacked).toHaveLength(1);
   });
 });
+
+// ── getPdfBytes tests ─────────────────────────────────────────────────────────
+
+describe('getPdfBytes', () => {
+  it('returns the stored bytes after import', async () => {
+    const { store } = makeDeps();
+    const bytes = new Uint8Array([10, 20, 30, 40, 50]);
+
+    const result = await store.importPdf(bytes, 'book.pdf');
+    expect(result.deduped).toBe(false);
+
+    const docs = await store.listDocuments();
+    expect(docs).toHaveLength(1);
+    const doc = docs[0]!;
+
+    const retrieved = await store.getPdfBytes(doc.id);
+    expect(retrieved).toBeDefined();
+    expect(retrieved).toEqual(bytes);
+  });
+
+  it('returns undefined for an unknown id', async () => {
+    const { store } = makeDeps();
+
+    const retrieved = await store.getPdfBytes('does-not-exist');
+    expect(retrieved).toBeUndefined();
+  });
+
+  it('result is value-isolated — mutating it does not corrupt the store', async () => {
+    const { store } = makeDeps();
+    const original = new Uint8Array([1, 2, 3, 4, 5]);
+
+    const result = await store.importPdf(original, 'isolated.pdf');
+    const docs = await store.listDocuments();
+    const doc = docs[0]!;
+
+    const retrieved1 = await store.getPdfBytes(doc.id);
+    expect(retrieved1).toBeDefined();
+
+    // Mutate the retrieved copy — the store must still return the original content.
+    retrieved1![0] = 0xff;
+    retrieved1![1] = 0xff;
+
+    const retrieved2 = await store.getPdfBytes(doc.id);
+    expect(retrieved2).toBeDefined();
+    expect(retrieved2![0]).toBe(original[0]);
+    expect(retrieved2![1]).toBe(original[1]);
+
+    // Suppress unused-variable warning
+    void result;
+  });
+});

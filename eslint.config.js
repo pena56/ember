@@ -108,7 +108,9 @@ export default tseslint.config(
   // context.getFilename() was removed in ESLint 10 flat config. Pin the React version
   // statically to avoid the version-detection code path entirely.
   {
-    files: ['apps/mobile/**/*.{ts,tsx,js,jsx}'],
+    // Includes mjs/cjs so Node build scripts (e.g. scripts/bundle-pdfjs.mjs), which the
+    // Expo config above also matches, skip the crashing version-detection code path too.
+    files: ['apps/mobile/**/*.{ts,tsx,js,jsx,mjs,cjs}'],
     settings: {
       react: { version: '19.2.7' },
     },

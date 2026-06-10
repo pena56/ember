@@ -16,6 +16,13 @@ export interface NativeStore {
   importPdf(bytes: Uint8Array, filename: string, contentType?: string): Promise<ImportResult>;
   /** Return all documents, sorted recently-added-first. */
   listDocuments(): Promise<Document[]>;
+  /**
+   * Read back the raw PDF bytes for a stored document.
+   *
+   * Returns `undefined` if no blob exists for the given id (e.g. missing or
+   * never imported). Mirror of web-store's `getPdfBytes` (05a).
+   */
+  getPdfBytes(id: string): Promise<Uint8Array | undefined>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -54,6 +61,10 @@ export function createNativeStore(deps: {
       const docs = await listDocuments(repo);
       // Recently-added-first: sort descending by importedAt (UI concern)
       return [...docs].sort((a, b) => b.importedAt - a.importedAt);
+    },
+
+    async getPdfBytes(id: string): Promise<Uint8Array | undefined> {
+      return blobs.get(id);
     },
   };
 }

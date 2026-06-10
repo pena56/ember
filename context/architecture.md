@@ -15,7 +15,7 @@ substitute remembered versions.
 | Local store (mobile) | expo-sqlite | 56.0.4 | On-device source of truth |
 | Local store (web) | Dexie (IndexedDB) | 4.4.3 | On-device source of truth |
 | PDF (web) | pdfjs-dist | 6.0.227 | Render + text-layer extraction |
-| PDF (mobile) | react-native-pdf | 7.0.4 | Render (text-layer extraction strategy TBD — see Open Questions) |
+| PDF (mobile) | pdfjs-dist (in a WebView via react-native-webview) | 6.0.227 / 13.16.1 | Render + selectable text layer — one engine for render AND text, exact parity with 05a web reader; highlight anchors (unit 10) fall out in 05c. Stays in Expo Go (react-native-webview ships in the Expo Go binary; react-native-pdf, a native module, would have required a custom dev client). |
 | Notifications | expo-notifications | 56.0.16 | Local scheduled + Expo push receipt |
 | Server state cache | @tanstack/react-query | 5.101.0 | Optional, online reads |
 | Validation | zod | 4.4.3 | Schema validation, shared |
