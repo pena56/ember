@@ -423,7 +423,9 @@ Update after every meaningful change.
     (3) surface via optional onTextGeometry on ReaderWebView (no consumer — unit-10 seam; ReaderScreen untouched), fired per page
     from the existing getTextContent() path. Device-bound: extraction runs in the WebView → throwaway app/dev/ screen loads the
     committed sample.pdf, extracts on-device, diffs expected-geometry.json → PASS, then DELETED in this PR (03c/04c convention).
-    **05c-3 BUILT (2026-06-10) — PR open, Closes #50.** TDD executor (Sonnet) → fresh-context Opus review = **APPROVE-WITH-NITS**,
+    **05c-3 MERGED (2026-06-10) — PR #51 squash-merged to main, #50 closed, branch deleted, main synced (CI verify ✓ 59s).
+    Completes the 05c chain (05c-1 core shape → 05c-2 web golden → 05c-3 mobile parity).** TDD executor (Sonnet) →
+    fresh-context Opus review = **APPROVE-WITH-NITS**,
     NO blockers (confirmed parity test genuine/not self-fulfilling, adapter pure, scale-1 viewport, core/store/web/ReaderScreen
     byte-untouched; re-ran all gates). Permanent surface: `src/reader/page-geometry.ts` (`geometryFromBridge` — drops
     TextMarkedContent, projects, calls core `normalizePageText`; the byte-for-byte golden parity test reads apps/web's committed
