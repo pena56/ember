@@ -14,6 +14,9 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { TextLayer } from 'pdfjs-dist';
 import { useEffect, useRef, useState } from 'react';
 
+import type { PageTextGeometry } from '@ember/core';
+
+import { extractPageGeometry } from './page-geometry.js';
 import { placeholderHeight } from './page-visibility.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -25,11 +28,17 @@ interface PdfPageProps {
   displayWidth: number;
   /** When false render a same-size placeholder only (virtualization). */
   active: boolean;
+  /**
+   * Optional callback fired after getTextContent() resolves on every active render.
+   * Receives the normalized page geometry (05c-2 seam for unit 10 highlight anchors).
+   * No-op when unset. Geometry failure never breaks canvas/text-layer rendering.
+   */
+  onTextGeometry?: (geometry: PageTextGeometry) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PdfPage({ pdf, pageNumber, displayWidth, active }: PdfPageProps) {
+export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   // Natural page size for the placeholder box
@@ -102,6 +111,13 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active }: PdfPageProps)
             const textContent = await pageHandle.getTextContent();
             if (cancelled) return;
 
+            // Fire geometry callback (runs even for text-empty pages so unit 10
+            // can anchor against any page). Must be before the items.length guard.
+            const vp1 = pageHandle.getViewport({ scale: 1 });
+            onTextGeometry?.(
+              extractPageGeometry(pageNumber, { width: vp1.width, height: vp1.height }, textContent),
+            );
+
             if (textContent.items.length > 0) {
               // CSS render scale (display px per PDF unit) — independent of the
               // device-pixel-ratio used for the canvas. pdf.js sizes each glyph
@@ -137,7 +153,7 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active }: PdfPageProps)
       textLayerHandle?.cancel();
       pageHandle?.cleanup();
     };
-  }, [pdf, pageNumber, displayWidth, active]);
+  }, [pdf, pageNumber, displayWidth, active, onTextGeometry]);
 
   const placeholderH = naturalSize
     ? placeholderHeight(naturalSize.w, naturalSize.h, displayWidth)

@@ -391,7 +391,28 @@ Update after every meaningful change.
   no pdf.js). **05c-1 BUILT (2026-06-10) — PR #47 open, Closes #46.** TDD executor (Sonnet) → fresh-context
   Opus review = APPROVE (nits only, none blocking). `normalizePageText()` + the promoted shape shipped;
   15 fixture tests incl. the scale-independence parity property; typecheck/test(45)/lint all green; core
-  purity held (zero imports). Next: merge #47, then **05c-2** (web extraction + golden parity fixture).
+  purity held (zero imports). **05c-1 MERGED (2026-06-10) — PR #47 squash-merged, #46 closed, branch deleted, main synced.**
+  - **05c-2 SPECCED (2026-06-10) — Issue #48, Closes #48, branch feat/48-web-text-geometry, spec specs/05c-web-text-geometry.md.**
+    Route **standard** (single boundary apps/web; pdfjs-dist already a web dep — no new dep; ambiguity resolved with user).
+    apps/web produces the core geometry shape from real pdf.js + a **golden parity fixture captured from real pdf.js (Node
+    legacy build)** — committed `test-fixtures/{sample.pdf,raw-textcontent.json,expected-geometry.json}` become the contract
+    05c-3 (mobile) diffs byte-for-byte. New `page-geometry.ts` adapter (filters TextMarkedContent, type-only pdf.js import →
+    `normalizePageText`); `pdf-page.tsx` fires optional `onTextGeometry?(geometry)` from the live render path (no consumer
+    yet — unit 10's seam); `capture-geometry.mjs` one-time generator mirroring mobile `bundle-pdfjs.mjs`. **Design RESOLVED
+    (user, 2026-06-10):** (1) golden source = real-pdf.js Node capture (not hand-authored — faithful for the byte-diff
+    contract); (2) wire via optional callback now (not deferred). Tautology guard: golden snapshot = regression lock;
+    independent hand-computed spot-checks (top→small y, bottom→large y) validate the golden itself.
+  - **05c-2 BUILT + IN REVIEW (2026-06-10) — PR #49 open (Closes #48), branch feat/48-web-text-geometry.** Built by Sonnet TDD
+    executor → fresh-context Opus high-effort code-review = **APPROVE, no correctness bugs**. Verify all green: typecheck 9 ✓ ·
+    test 55/12 files ✓ · lint 6 ✓; `node apps/web/scripts/capture-geometry.mjs` extracts 2 items + writes both goldens. Files:
+    `apps/web/src/reader/page-geometry.ts` (+test), `pdf-page.tsx` (onTextGeometry seam), `scripts/capture-geometry.mjs`,
+    `test-fixtures/{sample.pdf,raw-textcontent.json,expected-geometry.json}`, `src/tests/pdf-page-geometry.test.tsx`.
+    Implementation note: type-only pdf.js import uses deep path `pdfjs-dist/types/src/display/api` (top-level doesn't re-export
+    `TextContent`/`TextItem`). 3 advisory review findings (non-blocking): (1) `onTextGeometry` in render-effect deps — unit-10
+    consumer must pass a stable callback identity or the canvas+TextLayer re-renders; (2) `capture-geometry.mjs` inlines the
+    core normalizer (Node can't resolve workspace `.ts` exports) — drift caught at test time; (3) spot-checks hardcode font
+    metrics (intentional, keeps them independent of the golden). **Next: merge PR #49 → then 05c-3 (apps/mobile WebView extract
+    + RN bridge, device-bound) diffs the committed golden byte-for-byte — the unit-10 highlight-anchor parity payoff.**
 - **Unit 04c (#40) build context (historical — already MERGED, see above):**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
