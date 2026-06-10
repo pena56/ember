@@ -411,8 +411,39 @@ Update after every meaningful change.
     `TextContent`/`TextItem`). 3 advisory review findings (non-blocking): (1) `onTextGeometry` in render-effect deps — unit-10
     consumer must pass a stable callback identity or the canvas+TextLayer re-renders; (2) `capture-geometry.mjs` inlines the
     core normalizer (Node can't resolve workspace `.ts` exports) — drift caught at test time; (3) spot-checks hardcode font
-    metrics (intentional, keeps them independent of the golden). **Next: merge PR #49 → then 05c-3 (apps/mobile WebView extract
-    + RN bridge, device-bound) diffs the committed golden byte-for-byte — the unit-10 highlight-anchor parity payoff.**
+    metrics (intentional, keeps them independent of the golden).
+  - **05c-3 SPECCED (2026-06-10) — Issue #50, Closes #50, branch feat/50-mobile-text-geometry, spec specs/05c-mobile-text-geometry.md.**
+    Route **standard** (single boundary apps/mobile; no new dep — pdfjs-dist/react-native-webview from 05b + @ember/core already
+    deps; not a UI unit). Final 05c slice: the mobile WebView extracts per-item text geometry and RN reproduces the committed web
+    golden BYTE-FOR-BYTE through the SAME @ember/core normalizer = the unit-10 highlight-anchor parity payoff.
+    **Design RESOLVED (parity by construction):** (1) WebView PROJECTS (posts raw {pageNumber,viewport(scale-1),items} — the SAME
+    shape 05c-2's raw-textcontent.json captured), RN NORMALIZES via real @ember/core normalizePageText → headlessly testable + same
+    function as web; (2) bridge message shape == web golden shape by design, so the parity test feeds the COMMITTED
+    apps/web/test-fixtures/raw-textcontent.json → asserts expected-geometry.json (single source of truth, no copy, no device);
+    (3) surface via optional onTextGeometry on ReaderWebView (no consumer — unit-10 seam; ReaderScreen untouched), fired per page
+    from the existing getTextContent() path. Device-bound: extraction runs in the WebView → throwaway app/dev/ screen loads the
+    committed sample.pdf, extracts on-device, diffs expected-geometry.json → PASS, then DELETED in this PR (03c/04c convention).
+    **05c-3 BUILT (2026-06-10) — PR open, Closes #50.** TDD executor (Sonnet) → fresh-context Opus review = **APPROVE-WITH-NITS**,
+    NO blockers (confirmed parity test genuine/not self-fulfilling, adapter pure, scale-1 viewport, core/store/web/ReaderScreen
+    byte-untouched; re-ran all gates). Permanent surface: `src/reader/page-geometry.ts` (`geometryFromBridge` — drops
+    TextMarkedContent, projects, calls core `normalizePageText`; the byte-for-byte golden parity test reads apps/web's committed
+    `raw-textcontent.json`→`expected-geometry.json`), `build-reader-html.ts` (posts `{type:'geometry',pageNumber,viewport(scale-1),
+    items}` per page from the existing getTextContent path), `reader-webview.tsx` (geometry msg → optional `onTextGeometry`).
+    typecheck 9 ✓ · test 38 mobile (34+4) / web 55 / core 45 / store 69 / tokens 23 ✓ · lint 6 ✓ · `expo export -p android` →
+    Exported: dist ✓. **DEVICE-VERIFIED (user, Expo Go): dev screen showed PASS — page-1 geometry item count 2, first box
+    x=0.0840 y=0.0594 w=0.0863 h=0.0143 == the committed web golden, byte-for-byte on a real device** (the unit-10 parity payoff).
+    - **3 device-only harness bugs found+fixed during the user's pass (harness-only — permanent surface untouched; carry-forwards):**
+      1. **`readAsStringAsync` from the NEW `expo-file-system` API throws (deprecated).** Use `expo-file-system/legacy` (the 04c rule);
+         to read a BUNDLED asset, legacy `downloadAsync(resolveAssetSource(uri), dest)` → `readAsStringAsync(dest,{encoding:'base64'})`
+         → `base64ToBytes` (Metro asset URI is http:// in dev, so stage to scoped cache first).
+      2. **The WebView reader renders LAZILY via IntersectionObserver in scroll mode** — a hidden/1px WebView never renders page 1,
+         so the geometry post (inside `renderPage`) never fires. A headless geometry harness must size the WebView visibly AND use
+         **paged mode** (renders page 1 immediately on load, not gated on intersection).
+      3. **The dev index needs a reachable link** — `app/index.tsx` (home) had no `/dev` link after 03c/04c harnesses were deleted;
+         a `__DEV__` link from home is required to reach `app/dev/`.
+    - Throwaway dev harness (`app/dev/` + the home `__DEV__` link + the copied `assets/sample-golden.pdf`) DELETED post-PASS in the
+      same PR (03c/04c convention); only the permanent surface remains. One review nit left as-is (matches web's adapter): the
+      `transform` type guard checks presence not `Array.isArray` — theoretical only (real pdf.js always sends a length-6 array).
 - **Unit 04c (#40) build context (historical — already MERGED, see above):**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
