@@ -402,7 +402,7 @@ Update after every meaningful change.
     (user, 2026-06-10):** (1) golden source = real-pdf.js Node capture (not hand-authored — faithful for the byte-diff
     contract); (2) wire via optional callback now (not deferred). Tautology guard: golden snapshot = regression lock;
     independent hand-computed spot-checks (top→small y, bottom→large y) validate the golden itself.
-  - **05c-2 BUILT + IN REVIEW (2026-06-10) — PR #49 open (Closes #48), branch feat/48-web-text-geometry.** Built by Sonnet TDD
+  - **05c-2 MERGED (2026-06-10) — PR #49 squash-merged, #48 closed, branch deleted, main synced.** Built by Sonnet TDD
     executor → fresh-context Opus high-effort code-review = **APPROVE, no correctness bugs**. Verify all green: typecheck 9 ✓ ·
     test 55/12 files ✓ · lint 6 ✓; `node apps/web/scripts/capture-geometry.mjs` extracts 2 items + writes both goldens. Files:
     `apps/web/src/reader/page-geometry.ts` (+test), `pdf-page.tsx` (onTextGeometry seam), `scripts/capture-geometry.mjs`,
