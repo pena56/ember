@@ -374,6 +374,24 @@ Update after every meaningful change.
   - **NIT (deferred, WebView-local — fine per spec's invariant-#6 exception): sepia/night page-border hexes
     (#D4C5A6 / #2A2420) in build-reader-html are invented (not in tokens/ui-context); paper border = the `line`
     token. Could document in ui-context.md later.**
+- **Unit 05c SCORED COMPLEX → split by boundary (2026-06-10).** Build-plan 05c (structured text-geometry
+  extraction across the RN↔WebView bridge + promote the shared text-layer shape to packages/core, the
+  unit-10 parity piece) crosses 3 boundaries (core shape + web extract + mobile WebView→RN bridge) AND the
+  shape was undesigned → COMPLEX. Split like 03a/b/c & 05a/b: **05c-1** core shape + pure normalizer (#46,
+  this — SPECCED) → **05c-2** web extraction + golden parity test (apps/web) → **05c-3** mobile
+  WebView-extract + RN bridge, device-bound (apps/mobile; the literal highlight-anchor parity payoff for #10).
+  **Design RESOLVED (user, 2026-06-10):** (1) per-item granularity — one entry per pdf.js TextContent item
+  carrying `str` + bbox + reading-order `index` (unit 10 resolves `(page,startChar,endChar)`→rects from these);
+  (2) coordinates normalized 0..1 of the page, top-left origin, y-down → web & mobile feeding the same pdf.js
+  output through the SAME core function produce identical geometry **by construction** (the parity property),
+  consistent with the reading-position relative-offset model. 05c-1 route = **standard** (single boundary
+  packages/core, no new dep, pure TS — no pdf.js/DOM import; input is a minimal `RawTextItem` projection,
+  mirroring the Hasher/SqliteDriver port pattern). Spec: specs/05c-core-text-geometry.md. Files: new
+  `packages/core/src/text-geometry.ts` (+ barrel line) + `src/tests/text-geometry.test.ts` (fixture-based,
+  no pdf.js). **05c-1 BUILT (2026-06-10) — PR #47 open, Closes #46.** TDD executor (Sonnet) → fresh-context
+  Opus review = APPROVE (nits only, none blocking). `normalizePageText()` + the promoted shape shipped;
+  15 fixture tests incl. the scale-independence parity property; typecheck/test(45)/lint all green; core
+  purity held (zero imports). Next: merge #47, then **05c-2** (web extraction + golden parity fixture).
 - **Unit 04c (#40) build context (historical — already MERGED, see above):**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
