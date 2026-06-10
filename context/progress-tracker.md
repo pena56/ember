@@ -312,8 +312,69 @@ Update after every meaningful change.
   set by the caller — `TextLayer.render()` alone is not enough.**
   **Unit 05a (#42) MERGED** — PR #43 merged to main (merge commit 26dd9b0), branch deleted, BROWSER-VERIFIED
   by user (render/scroll, paged toggle, text selection, paper/sepia/night, scanned PDF no-text-layer + no
-  error all ✓). **NEXT: Unit 05b — mobile reader (#5 umbrella): react-native-pdf render + headless pdf.js
-  text extraction; promote the shared text-layer shape to packages/core once both clients prove identical.**
+  error all ✓).
+- **Unit 05b SPECCED (2026-06-09) — mobile PDF reader (#44, umbrella #5), route standard.** Spec:
+  specs/05b-mobile-pdf-reader.md. **ENGINE PIVOT (user-confirmed this session): pdf.js in a
+  `react-native-webview`, NOT react-native-pdf.** Rationale: ONE engine for render+text = exact 05a parity
+  (unit-10 highlight anchors fall out free) + stays in Expo Go (webview is bundled there; react-native-pdf is
+  a native module → would have forced a custom dev client / EAS build). **Supersedes the architecture.md
+  `react-native-pdf` pin** — update that row + mark the mobile-text-extraction Open Question resolved IN THE
+  05b PR. **05 SPLIT FURTHER (user): 05b = render + reader UI only; 05c = structured text-geometry extraction
+  across the RN↔WebView bridge + promote the shared text-layer shape to packages/core (the unit-10 parity
+  piece).** 05b scope (apps/mobile only): tappable DocumentRow → expo-router `/reader/[id]` → ReaderScreen
+  (native uniwind toolbar: back/title/`page X of N`/mode/theme) hosting a WebView pdf.js reader (static
+  `assets/reader/` HTML, base64 bytes over postMessage, scroll default + paged toggle, reader theme
+  paper/sepia/night INSIDE the WebView — uniwind has no reader-theme axis, so native chrome stays app-themed).
+  Only store change: additive `getPdfBytes` on native-store (mirror 05a web-store). New deps: react-native-webview
+  (`expo install`, Expo-Go-bundled) + pdfjs-dist@6.0.227 (pin = web). Reader is real UI → no throwaway dev
+  harness; device-verify = open a PDF in Expo Go. Tests: native seams only (getPdfBytes + any pure helper) —
+  WebView/render is device-bound. Build-validate from official docs (not memory): the expo-asset/WebView
+  asset-loading mechanism, pdf.js worker in a WebView, base64 bridge size.
+  **STATUS: MERGED → done. BUILT (Sonnet executor, cut off by a session limit → orchestrator finished the gates)
+  → fresh-context review (Opus) = CHANGES-REQUESTED → fixed → re-review = B1/S1 RESOLVED → DEVICE-VERIFIED (user,
+  Expo Go, after the device-only fixes below) → committed/PR/merged. Gates: typecheck 9 ✓ · test 44 web +
+  34 mobile ✓ · lint 6 ✓ · `expo export -p android` → Exported: dist ✓.**
+  - **3 DEVICE-ONLY BUGS (none catchable by any local gate — WebView runtime only; found via the user's Expo Go
+    pass + the in-WebView error→RN instrumentation we added):**
+    1. **ES modules + blob workers do NOT run from an opaque origin.** `WebView source={{ html }}` loads the doc
+       with an `about:blank`/opaque origin; pdf.js v6 is ESM-only, so the `<script type=module>` (which posts
+       `ready`) was SILENTLY skipped → infinite spinner, no error. **Fix: give the doc a real origin —
+       `source={{ html, baseUrl: 'https://ember.reader/' }}`.** This also unblocks the blob-URL worker.
+       **Carry-forward: any react-native-webview hosting ESM/module scripts or blob workers MUST set a real
+       `baseUrl`; `source={{html}}` alone gives an opaque origin that silently skips modules.**
+    2. **Redeclaration crash.** `const { GlobalWorkerOptions, getDocument, TextLayer } = pdfjsLib` collided with
+       pdf.mjs's own top-level exported bindings of those names in the SAME inline-module scope → "Identifier
+       GlobalWorkerOptions has already been declared". **Fix: reference `pdfjsLib.<name>` directly; never
+       destructure pdf.mjs's exported names into local consts in the inlined module.**
+    3. **Silent hangs are undebuggable on device** → added an instrumentation layer (kept): a classic pre-module
+       `<script>` defines `postToRN` + global `error`/`unhandledrejection` handlers; the reader posts `stage`
+       messages (webview-booted→decoding→getDocument); RN has a 25s hang watchdog + shows the real failure reason
+       in the error notice. THIS is what surfaced bugs 1 & 2. **Carry-forward: instrument WebView readers to
+       report errors/stages back to RN — local gates can't see WebView-runtime failures.**
+    - Also hardened the worker (real module `Worker` via `workerPort`, fallback to `workerSrc`). Reminder: the
+      `bundle-pdfjs.mjs` comment + any code INSIDE the HTML template literal must avoid backticks/`${` (they
+      close the template) — bit us twice this session.
+  - **ASSET MECHANISM CHOSEN: inline pdf.js as a string, NOT expo-asset URIs.** `scripts/bundle-pdfjs.mjs`
+    (run by `predev` + `typecheck`) reads `node_modules/pdfjs-dist/build/{pdf,pdf.worker}.mjs` and writes them as
+    string consts into `src/reader/pdf-js-content.ts` (GITIGNORED, regenerated). `build-reader-html.ts` embeds
+    pdf.mjs as an inline `<script type=module>` + the worker as a Blob URL (`GlobalWorkerOptions.workerSrc`),
+    served via `WebView source={{ html }}`. No file:// URI resolution, no Metro asset config, fully offline.
+    Trade-off: ~3MB inlined → 11MB android bundle (acceptable; file-stream optimization deferred to 05c/perf).
+  - **BLOCKER found+fixed in review (B1 — would've shipped a permanent spinner): RN→WebView `postMessage` is
+    NOT queued; the in-page `message` listener only attaches AFTER the 3MB pdf.js module evaluates, so the
+    initial `load` raced and was dropped → no `ready` → stuck loading. Fix: a `bootReady` handshake — the page
+    posts `bootReady` once its listener is attached; RN gates all load/mode/theme posts on it and flushes on
+    receipt.** Carry-forward: ANY RN↔WebView bridge that posts INTO a WebView needs a readiness handshake — the
+    native postMessage has no queue. (S1: removed dead `onWebViewRef`/no-deps effect. NIT: in-HTML `setMode`
+    now stores the requested mode even pre-load so `loadPdf`→`applyMode` can open directly in paged later.)
+  - **Tooling fixes this unit:** eslint config — widened the mobile React-version pin glob to `mjs,cjs` so the
+    new Node build script skips the ESLint-10 react-version-detection crash; `.gitignore` += `src/reader/pdf-js-content.ts`.
+    **CI note (follow-up): `expo export` does NOT run `predev`, so any CI export step must run `bundle-pdfjs`
+    (or `typecheck`) first or a fresh clone exports against the missing generated file.**
+  - **NIT (deferred, WebView-local — fine per spec's invariant-#6 exception): sepia/night page-border hexes
+    (#D4C5A6 / #2A2420) in build-reader-html are invented (not in tokens/ui-context); paper border = the `line`
+    token. Could document in ui-context.md later.**
+- **Unit 04c (#40) build context (historical — already MERGED, see above):**
   Spec: specs/04c-mobile-import-library-list.md, route **standard**. Binds 04a ports to native: `BlobStore`→
   expo-file-system, `Hasher`→expo-crypto, `Repository`→existing SqliteRepository/expoSqliteDriver (03c),
   + kv-store-persisted HLC clock; bespoke uniwind Library screen (expo-document-picker PDF import, dedupe,
@@ -417,10 +478,10 @@ Update after every meaningful change.
   serif` in theme.css so both the variable and static packages resolve. Out of 02b's boundary.
 
 ## Open Questions (resolve before/at the relevant unit)
-- ~~**Mobile text-layer extraction** (unit 05)~~ **RESOLVED 2026-06-09 (user):** react-native-pdf renders
-  pixels; a **headless pdf.js extracts the text layer** (same engine as web) → identical extraction =
-  highlight-anchor parity across clients for free. Shared text-layer shape promoted to packages/core in 05b.
-  (Validate the exact headless-pdf.js-on-RN mechanism against official docs at 05b spec time.)
+- ~~**Mobile text-layer extraction** (unit 05)~~ **RESOLVED 2026-06-09 (user) + confirmed 05b build:**
+  Engine is **pdf.js inside a react-native-webview** (render AND text layer, same pdfjs-dist@6.0.227 as web).
+  One engine → exact 05a parity; selectable text layer ships in 05b; geometry extraction to RN core is 05c.
+  architecture.md updated: mobile PDF row changed from react-native-pdf to pdfjs-dist-in-WebView.
 - **Convex auth provider** (unit 11): which sign-in method(s) — email link, OAuth (Google/Apple)?
 - **Quota numbers** (unit 13): confirm defaults (e.g. 2GB/user, 100MB/file) and monetization path.
 - **Web reader leaf decisions**: font/scroll polish — safe to decide during build.
