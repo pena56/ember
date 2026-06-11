@@ -236,6 +236,20 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 06 SCORED COMPLEX → split by boundary (2026-06-11).** Build-plan 06 (Reading position + resume:
+  page+offset capture + Today "Continue Reading" card) crosses 4 boundaries (core position model + the
+  furthest-page conflict-merge, store syncable record, web UI + first Today surface, mobile UI) → COMPLEX.
+  Split like 04a/b/c & 05a/b/c: **06a** core `ReadingPosition` shape + `mergeReadingPosition` (first piece
+  of the shared conflict-merge engine, invariant #5) + store `saveReadingPosition`/`getReadingPosition`/
+  `listReadingPositions` (#52, this — BUILT, TDD green, Opus-reviewed APPROVE; PR open) → **06b** web reader capture/restore + Today card + tab nav
+  (UI unit → frontend-design + impeccable) → **06c** mobile (device-bound, WebView position bridge + native
+  Today). Route 06a = **standard** (core+store, pure TS, no new dep; mirrors 04a). Spec:
+  specs/06a-reading-position-model.md, branch feat/52-reading-position-model.
+  **Design RESOLVED (user, 2026-06-11):** (1) LOCAL save = last-write (literal current position, can move
+  backward → resume-where-you-left-off); furthest-page MERGE runs only at cross-device reconcile (unit 12).
+  (2) Merge tie-break: furthest page → greater within-page offset → HLC last-write-wins (each position
+  record carries an encoded-HLC `updatedAt`). Position record keyed by docId (one per document); each save
+  writes record + one outbox entry; scroll-save throttling deferred to 06b/06c UI.
 - **Unit 04a (#34) MERGED** — PR #35 merged to main (CI verify ✓ 52s), branch deleted. Shared
   document brain: core `Document`+`Hasher` port+identity, store `BlobStore` port+`MemoryBlobStore`+
   `importDocument` (dedupe-by-sha256, exactly-once outbox)+`listDocuments`. Spec:
