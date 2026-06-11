@@ -241,7 +241,7 @@ Update after every meaningful change.
   furthest-page conflict-merge, store syncable record, web UI + first Today surface, mobile UI) → COMPLEX.
   Split like 04a/b/c & 05a/b/c: **06a** core `ReadingPosition` shape + `mergeReadingPosition` (first piece
   of the shared conflict-merge engine, invariant #5) + store `saveReadingPosition`/`getReadingPosition`/
-  `listReadingPositions` (#52, this — BUILT, TDD green, Opus-reviewed APPROVE; PR open) → **06b** web reader capture/restore + Today card + tab nav
+  `listReadingPositions` (#52 — **MERGED**, PR #53, CI verify ✓ 57s, branch deleted) → **06b** web reader capture/restore + Today card + tab nav
   (UI unit → frontend-design + impeccable) → **06c** mobile (device-bound, WebView position bridge + native
   Today). Route 06a = **standard** (core+store, pure TS, no new dep; mirrors 04a). Spec:
   specs/06a-reading-position-model.md, branch feat/52-reading-position-model.
