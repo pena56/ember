@@ -236,14 +236,29 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 06b SPECCED (2026-06-11) — Issue #54, Closes #54, branch feat/54-web-reader-capture-restore,
+  spec specs/06b-web-reader-capture-restore.md. Route standard.** The umbrella "06b" bundle (web reader
+  capture/restore + Today card + tab nav) **scored COMPLEX → re-split**: ambiguity = 2 (Today's content is
+  blocked on session data that doesn't exist yet → streak ember / goal ring undefined; tab-nav router-vs-state
+  undecided) + two extra visible results beyond the reader wiring. Split like 04/05: **06b** = web reader
+  capture/restore ONLY (apps/web; wire 06a's saveReadingPosition/getReadingPosition into the reader — resume
+  on open, debounced last-write save on page/scroll change; no new dep; behavioral, no net-new visual surface
+  → standard executor + Opus review, NO frontend-design). Deferred: **06c** web Today tab + Continue Reading
+  card + tab-nav shell, **06d** mobile reader resume + native Today. **Open questions for 06c (resolve at its
+  spec time):** (1) what renders on Today now — Continue Reading card is ready (06b provides positions) but
+  streak ember + goal ring need the session log (later unit), so are they placeholders/omitted? (2) tab nav =
+  state-switch (current App.tsx style, no dep) vs react-router (new dep)? per ui-context web = sidebar/top nav.
+  06b contract resolved in-spec: offset = within-page 0..1 (scroll mode from page rect; paged mode = 0); save
+  debounced ≈600ms; resume once per docId after ready. Pure scroll-math helpers unit-tested headlessly
+  (jsdom = 0 layout); pixel accuracy browser-verified.
 - **Unit 06 SCORED COMPLEX → split by boundary (2026-06-11).** Build-plan 06 (Reading position + resume:
   page+offset capture + Today "Continue Reading" card) crosses 4 boundaries (core position model + the
   furthest-page conflict-merge, store syncable record, web UI + first Today surface, mobile UI) → COMPLEX.
   Split like 04a/b/c & 05a/b/c: **06a** core `ReadingPosition` shape + `mergeReadingPosition` (first piece
   of the shared conflict-merge engine, invariant #5) + store `saveReadingPosition`/`getReadingPosition`/
-  `listReadingPositions` (#52 — **MERGED**, PR #53, CI verify ✓ 57s, branch deleted) → **06b** web reader capture/restore + Today card + tab nav
-  (UI unit → frontend-design + impeccable) → **06c** mobile (device-bound, WebView position bridge + native
-  Today). Route 06a = **standard** (core+store, pure TS, no new dep; mirrors 04a). Spec:
+  `listReadingPositions` (#52 — **MERGED**, PR #53, CI verify ✓ 57s, branch deleted) → **06b** web reader
+  capture/restore → **06c** web Today tab + Continue Reading card + tab-nav shell → **06d** mobile
+  (device-bound, WebView position bridge + native Today). Route 06a = **standard** (core+store, pure TS, no new dep; mirrors 04a). Spec:
   specs/06a-reading-position-model.md, branch feat/52-reading-position-model.
   **Design RESOLVED (user, 2026-06-11):** (1) LOCAL save = last-write (literal current position, can move
   backward → resume-where-you-left-off); furthest-page MERGE runs only at cross-device reconcile (unit 12).
