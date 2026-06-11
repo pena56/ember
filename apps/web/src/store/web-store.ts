@@ -1,6 +1,6 @@
-import type { Document, Hasher } from '@ember/core';
+import type { Document, Hasher, ReadingPosition } from '@ember/core';
 import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { importDocument, listDocuments } from '@ember/store';
+import { getReadingPosition, importDocument, listDocuments, saveReadingPosition } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -11,6 +11,10 @@ export interface WebStore {
   listDocuments(): Promise<Document[]>;
   /** Read back the raw PDF bytes for a stored document by id. Returns undefined when the blob is not found. */
   getPdfBytes(id: string): Promise<Uint8Array | undefined>;
+  /** Upsert the current reading position for a document (last-write). */
+  saveReadingPosition(input: { docId: string; page: number; offset: number }): Promise<ReadingPosition>;
+  /** Return the stored reading position for a document, or undefined if none saved. */
+  getReadingPosition(docId: string): Promise<ReadingPosition | undefined>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -60,6 +64,17 @@ export function createWebStore(deps: {
 
     async getPdfBytes(id: string): Promise<Uint8Array | undefined> {
       return blobs.get(id);
+    },
+
+    async saveReadingPosition(input: { docId: string; page: number; offset: number }): Promise<ReadingPosition> {
+      return saveReadingPosition(
+        { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        input,
+      );
+    },
+
+    async getReadingPosition(docId: string): Promise<ReadingPosition | undefined> {
+      return getReadingPosition(repo, docId);
     },
   };
 }

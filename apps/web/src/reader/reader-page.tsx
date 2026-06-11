@@ -16,7 +16,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { PdfPage } from './pdf-page.js';
+import { computePageOffset, resumeScrollTop } from './reading-position.js';
 import { usePdfDocument } from './use-pdf-document.js';
+import { useReadingPosition } from './use-reading-position.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -129,12 +131,14 @@ function ScrollReader({
   displayWidth,
   currentPage,
   onPageChange,
+  onScroll,
 }: {
   pdf: import('pdfjs-dist').PDFDocumentProxy;
   numPages: number;
   displayWidth: number;
   currentPage: number;
   onPageChange: (p: number) => void;
+  onScroll?: () => void;
 }) {
   const pageRefs = useRef<Map<number, Element>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -185,6 +189,14 @@ function ScrollReader({
       pageRefs.current.delete(pageNumber);
     }
   }, []);
+
+  // Scroll listener — notifies parent to debounce-save position on scroll settle
+  useEffect(() => {
+    if (!onScroll) return;
+    const handler = onScroll;
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => { window.removeEventListener('scroll', handler); };
+  }, [onScroll]);
 
   return (
     <div className="flex flex-col items-center gap-8 py-8 px-4">
@@ -436,6 +448,17 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   });
   const currentPage =
     pageState.docId === docId ? pageState.page : 1;
+  const currentPageRef = useRef(currentPage);
+  const modeRef = useRef(mode);
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
   const setCurrentPage = (p: number) => {
     setPageState({ docId, page: p });
   };
@@ -458,6 +481,56 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
     observer.observe(el);
     return () => { observer.disconnect(); };
   }, []);
+
+  // ── Reading position helpers ─────────────────────────────────────────────────
+
+  /** Get the page wrapper element for a given 1-based page number. */
+  const getPageElement = useCallback((page: number): HTMLElement | null => {
+    return (containerRef.current?.querySelector(`[data-page="${page.toString()}"]`) as HTMLElement | null) ?? null;
+  }, []);
+
+  const getCurrent = useCallback((): { page: number; offset: number } => {
+    const page = currentPageRef.current;
+    if (modeRef.current === 'paged') {
+      return { page, offset: 0 };
+    }
+    // Scroll mode: compute within-page offset using viewport-relative rects
+    const pageEl = getPageElement(page);
+    if (!pageEl) return { page, offset: 0 };
+    const pageRect = pageEl.getBoundingClientRect();
+    const offset = computePageOffset({
+      pageTop: pageRect.top,
+      pageHeight: pageRect.height,
+      viewportTop: 0, // viewport top is 0 in viewport-relative coords
+    });
+    return { page, offset };
+  }, [getPageElement]);
+
+  const { scheduleSave } = useReadingPosition({
+    docId,
+    ready: status === 'ready',
+    getCurrent,
+    onResume: useCallback(
+      (saved) => {
+        setCurrentPage(saved.page);
+        if (modeRef.current === 'scroll') {
+          // Defer until the page element is mounted/measured
+          requestAnimationFrame(() => {
+            const pageEl = getPageElement(saved.page);
+            if (!pageEl) return;
+            const scrollTop = resumeScrollTop({
+              pageOffsetTop: pageEl.offsetTop,
+              pageHeight: pageEl.offsetHeight,
+              offset: saved.offset,
+            });
+            window.scrollTo({ top: scrollTop, behavior: 'instant' });
+          });
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [getPageElement],
+    ),
+  });
 
   return (
     // data-reader-theme drives the token CSS selectors in theme.css
@@ -492,7 +565,8 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 numPages={numPages}
                 displayWidth={displayWidth}
                 currentPage={currentPage}
-                onPageChange={setCurrentPage}
+                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); }}
+                onScroll={scheduleSave}
               />
             ) : (
               <PagedReader
@@ -500,7 +574,7 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 numPages={numPages}
                 displayWidth={displayWidth}
                 currentPage={currentPage}
-                onPageChange={setCurrentPage}
+                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); }}
               />
             )}
           </>

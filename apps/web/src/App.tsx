@@ -40,7 +40,9 @@ function ConnectedReader({
     return () => { cancelled = true; };
   }, [store, docId]);
 
-  return <ReaderPage docId={docId} title={title || docId} onClose={onClose} />;
+  // key={docId} forces a fresh mount per document so reader state (incl. the
+  // resume-once guard) never carries across a doc switch.
+  return <ReaderPage key={docId} docId={docId} title={title || docId} onClose={onClose} />;
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
