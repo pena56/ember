@@ -236,6 +236,15 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 06b MERGED (2026-06-11) — PR #55 squash-merged to main (7d031c4), #54 closed, branch deleted.**
+  Web reader resumes where you left off: wired 06a's saveReadingPosition/getReadingPosition into the reader
+  (web-store surface mirrors getPdfBytes; pure computePageOffset/resumeScrollTop helpers; useReadingPosition
+  hook — resume once-per-docId after ready, ≈600ms debounced last-write save, flush-on-unmount, errors
+  swallowed per invariant #1; reader-page getCurrent/onResume/scheduleSave for scroll+paged; key={docId}
+  remount per doc). Built TDD (Sonnet) → fresh-context Opus review = PASS; applied 2 review fixes pre-merge
+  (flush-on-unmount per spec wording; key={docId} stale-closure guard for 06c). Browser-verify green (user).
+  typecheck/test/lint clean (72 web tests); core+store byte-identical. listReadingPositions NOT exposed on
+  web-store yet (06c needs it). **Next: 06c** — must resolve its two open questions below first.
 - **Unit 06b SPECCED (2026-06-11) — Issue #54, Closes #54, branch feat/54-web-reader-capture-restore,
   spec specs/06b-web-reader-capture-restore.md. Route standard.** The umbrella "06b" bundle (web reader
   capture/restore + Today card + tab nav) **scored COMPLEX → re-split**: ambiguity = 2 (Today's content is
