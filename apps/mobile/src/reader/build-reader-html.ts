@@ -18,8 +18,12 @@
  *
  * Bridge messages:
  *   RN → WebView: { type:'load', bytesBase64 } | { type:'setMode', mode } |
- *                 { type:'setTheme', theme } | { type:'gotoPage', page }
+ *                 { type:'setTheme', theme } |
+ *                 { type:'gotoPage', page, offset? }
+ *                   scroll mode: scrolls to pageEl.offsetTop + offset * pageEl.offsetHeight
+ *                   paged mode:  offset ignored, navigates to the page
  *   WebView → RN: { type:'ready', numPages } | { type:'page', current } |
+ *                 { type:'position', page, offset }  (capture signal; debounced on scroll-settle)
  *                 { type:'error', message? } |
  *                 { type:'geometry', pageNumber, viewport:{width,height}, items }
  */
@@ -245,6 +249,7 @@ let renderingPages = new Set();
 let pageHeights = new Map(); // pageNum → natural CSS height
 let scrollObserver = null;
 let pendingPageInScroll = 1;
+let scrollSettleTimer = null; // debounce handle for position capture
 
 // Display width = viewport width minus padding
 function getDisplayWidth() {
@@ -381,6 +386,34 @@ function buildScrollPages() {
     }
   }, { threshold: 0.1 });
 
+  // Scroll-settle position capture: debounce on window scroll, post {type:'position'}
+  // ~150 ms after the last scroll event. Uses rAF for timing accuracy.
+  function onScrollSettle() {
+    if (scrollSettleTimer !== null) clearTimeout(scrollSettleTimer);
+    scrollSettleTimer = setTimeout(function () {
+      scrollSettleTimer = null;
+      // Find the topmost visible page element
+      const allPages = container.querySelectorAll('[data-page]');
+      let topPage = currentPage;
+      let topOffset = 0;
+      for (const el of allPages) {
+        const rect = el.getBoundingClientRect();
+        // Use the first page that overlaps the viewport top
+        if (rect.bottom > 0 && rect.top <= window.innerHeight) {
+          const p = parseInt(el.dataset.page, 10);
+          const elH = el.offsetHeight;
+          const scrolledIntoEl = Math.max(0, -rect.top);
+          const offset = elH > 0 ? Math.min(1, Math.max(0, scrolledIntoEl / elH)) : 0;
+          topPage = p;
+          topOffset = offset;
+          break;
+        }
+      }
+      postToRN({ type: 'position', page: topPage, offset: topOffset });
+    }, 150);
+  }
+  window.addEventListener('scroll', onScrollSettle, { passive: true });
+
   for (const el of entries) scrollObserver.observe(el);
 }
 
@@ -423,6 +456,7 @@ document.getElementById('prev-btn').addEventListener('click', () => {
     renderingPages.clear();
     buildPagedPage();
     postToRN({ type: 'page', current: currentPage });
+    postToRN({ type: 'position', page: currentPage, offset: 0 });
   }
 });
 document.getElementById('next-btn').addEventListener('click', () => {
@@ -431,6 +465,7 @@ document.getElementById('next-btn').addEventListener('click', () => {
     renderingPages.clear();
     buildPagedPage();
     postToRN({ type: 'page', current: currentPage });
+    postToRN({ type: 'position', page: currentPage, offset: 0 });
   }
 });
 
@@ -474,10 +509,17 @@ function handleMessage(event) {
         renderingPages.clear();
         buildPagedPage();
         postToRN({ type: 'page', current: currentPage });
+        // offset is ignored in paged mode (whole page in view, resume to page top)
       } else {
-        // Scroll to the page element
+        // Scroll mode: restore to the saved fractional offset within the page.
+        // pageEl.offsetTop gives the absolute scroll position of the page top;
+        // adding offset * offsetHeight lands the saved fraction at the viewport top.
         const el = document.querySelector('#scroll-container [data-page="' + p + '"]');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (el) {
+          const offset = typeof msg.offset === 'number' ? Math.min(1, Math.max(0, msg.offset)) : 0;
+          const targetY = el.offsetTop + offset * el.offsetHeight;
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+        }
       }
       break;
     }

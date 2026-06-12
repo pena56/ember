@@ -2,7 +2,7 @@
  * reader-webview.tsx — WebView wrapper for the pdf.js reader.
  *
  * Owns the WebView ref, posts bridge messages in (load/setMode/setTheme/gotoPage)
- * and parses onMessage events out (ready/page/error). The screen stays declarative —
+ * and parses onMessage events out (ready/page/position/error). The screen stays declarative —
  * all platform glue (ref, postMessage, message parsing) lives here.
  *
  * ASSET-LOADING MECHANISM: `source={{ html }}` with pdf.js inlined as script
@@ -35,6 +35,7 @@ export type WebViewInMessage =
   | { type: 'bootReady' }
   | { type: 'ready'; numPages: number }
   | { type: 'page'; current: number }
+  | { type: 'position'; page: number; offset: number }
   | { type: 'stage'; stage: string }
   | { type: 'error'; message?: string }
   | { type: 'geometry'; pageNumber: number; viewport: { width: number; height: number }; items: unknown[] };
@@ -54,6 +55,17 @@ export interface ReaderWebViewProps {
   onStage?: (stage: string) => void;
   /** Called once per page as the page renders; receives normalized geometry from the WebView. */
   onTextGeometry?: (geometry: PageTextGeometry) => void;
+  /**
+   * Called when the WebView reports the current reading position (scroll capture signal).
+   * Debounced by the WebView on scroll-settle (~150 ms). Use this to drive scheduleSave.
+   */
+  onPosition?: (page: number, offset: number) => void;
+  /**
+   * One-shot declarative resume command. When this value changes (set once per docId
+   * by the screen from onResume), an effect posts { type:'gotoPage', page, offset }
+   * to the WebView (gated on bootReady, like the other post effects).
+   */
+  resumeTo?: { page: number; offset: number } | undefined;
 }
 
 // ── HTML singleton (built once; pdf.js content is ~3MB) ──────────────────────
@@ -76,6 +88,8 @@ export function ReaderWebView({
   onError,
   onStage,
   onTextGeometry,
+  onPosition,
+  resumeTo,
 }: ReaderWebViewProps) {
   const webViewRef = useRef<WebView | null>(null);
   // The in-page pdf.js (~3MB) only attaches its `message` listener after it
@@ -115,6 +129,15 @@ export function ReaderWebView({
     webViewRef.current?.postMessage(JSON.stringify({ type: 'setTheme', theme: readerTheme }));
   }, [readerTheme]);
 
+  // Declarative resume: post gotoPage when resumeTo changes (set once per docId from onResume).
+  // Gated on bootReady like the other post effects.
+  useEffect(() => {
+    if (resumeTo === undefined || !bootReadyRef.current) return;
+    webViewRef.current?.postMessage(
+      JSON.stringify({ type: 'gotoPage', page: resumeTo.page, offset: resumeTo.offset }),
+    );
+  }, [resumeTo]);
+
   function handleMessage(event: WebViewMessageEvent) {
     let msg: WebViewInMessage;
     try {
@@ -137,6 +160,9 @@ export function ReaderWebView({
         break;
       case 'page':
         onPageChange(msg.current);
+        break;
+      case 'position':
+        onPosition?.(msg.page, msg.offset);
         break;
       case 'stage':
         onStage?.(msg.stage);
