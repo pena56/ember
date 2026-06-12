@@ -236,24 +236,26 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 06e SPECCED (2026-06-12) — Issue #60, Closes #60, branch feat/60-mobile-today-tab-nav,
-  spec specs/06e-mobile-today-tab-nav.md. Route standard** (single boundary apps/mobile; NO new dep —
-  expo-router is already the mobile router; net-new UI → frontend-design + impeccable → fresh-context Opus
-  review; device-bound like 02d/03c/05b/06d). The mobile mirror of 06c, final slice of umbrella Unit 06.
-  Gives apps/mobile a **bottom tab bar** (expo-router `Tabs`: Today + Library) + a native **Today** screen
-  whose **Continue Reading** card resumes the most-recently-read doc (06a/06d positions). Product carries
-  over from 06c (resolved 2026-06-11): Today = Continue Reading only (no streak/goal/%, await session log);
-  tabs = Today + Library only. Mobile specifics: tab nav = expo-router bottom Tabs (not react-router; web
-  used a TOP nav); ThemeControl stays in the Library header (no app-wide top chrome under a bottom-tab IA;
-  future Settings tab owns it app-wide); `selectContinueReading` DUPLICATED into apps/mobile (mirror web,
-  defer dedup-hoist — like native-clock/format-bytes) to keep this single-boundary. Build: native-store
-  `listReadingPositions` (06d deferred it); pure mobile `selectContinueReading` + use-continue-reading hook;
-  bespoke uniwind Today screen + Continue Reading card; expo-router restructure to `app/(tabs)/_layout.tsx`
-  (token-driven bottom Tabs via useResolveClassNames + @expo/vector-icons, bundled — no dep) +
-  `(tabs)/index.tsx` (Today) + `(tabs)/library.tsx` (relocated LibraryScreen), delete `app/index.tsx`,
-  reader stays a full-screen stack route OUTSIDE the tabs. Tests = pure seam only (mobile has no React test
-  renderer): `select-continue-reading.test.ts` + extend `native-store-reading-position.test.ts`; screens/
-  card/tab bar device-verified. **NEXT (separate command): dispatch.**
+- **Unit 06e MERGED (2026-06-12) — PR #61 squash-merged to main (2dfe1c0), #60 closed, branch deleted,
+  DEVICE-VERIFIED by user (Expo Go).** Issue #60, spec specs/06e-mobile-today-tab-nav.md. Route standard
+  (single boundary apps/mobile; net-new UI → impeccable design pass → fresh-context Opus review = APPROVE,
+  no blockers; device-bound like 02d/03c/05b/06d). The mobile mirror of 06c — **completes umbrella Unit 06.**
+  Shipped: expo-router **bottom Tabs** shell (`app/(tabs)/_layout.tsx` token-driven via useResolveClassNames
+  + `(tabs)/index.tsx` Today + `(tabs)/library.tsx` relocated LibraryScreen; deleted `app/index.tsx`; reader
+  stays a full-screen stack route OUTSIDE the tabs); native **Today** screen (time-of-day greeting +
+  Continue Reading card, vertically-centered composition) whose card resumes the most-recently-read doc
+  (06a/06d positions); native-store `listReadingPositions` (06d deferred it; delegates to @ember/store);
+  pure `selectContinueReading` (mirrors web — drop orphans, sort by recency) + `use-continue-reading` hook
+  (Promise.all, cancel-flag, swallows read errors per invariant #1); display-only `format-title` filename
+  cleanup on the Today card. Product carried over from 06c (Today = Continue Reading only — no streak/goal/%;
+  tabs = Today + Library only; ThemeControl stays in Library header). **Deviations from spec (justified):**
+  (a) `@expo/vector-icons` NOT installed → hand-rolled tab icons in `react-native-svg` (no new dep, the more
+  invariant-safe path — spec permits preferring a present pkg); (b) executor's `text-white` on the Resume
+  button corrected to the `on-accent` token (invariant #6) during dispatch. Design pass (this session, on the
+  device screenshot): cleaned the filename title, vertically-centered the composition to fill the void, refined
+  the Resume button (play glyph, proper rounded button vs flat pill). typecheck 9 ✓ · test (incl. new
+  select-continue-reading + format-title suites) ✓ · lint 6 ✓ · `expo export -p android` → "Exported: dist".
+  Tests pure `.ts` (mobile has no React test renderer); screens/card/tab bar device-verified.
 - **Dedup-hoist follow-up (own micro-unit, defer — do NOT widen 06e):** `selectContinueReading` +
   `ContinueReadingItem` now exist byte-identically in apps/web AND apps/mobile. Promote the pure selector to
   `packages/core` (or a shared today/ module) and have both clients import it, retiring both copies. Same
