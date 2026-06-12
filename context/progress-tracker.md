@@ -236,6 +236,29 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Active: Unit 06d — mobile reader resume + native Today (device-bound). Last slice of umbrella Unit 06;
+  not yet specced.**
+- **Unit 06c MERGED (2026-06-12) — Issue #56, branch feat/56-web-today-tab-and-router, spec
+  specs/06c-web-today-tab-and-router.md. Route standard (single boundary apps/web; net-new UI →
+  frontend-design + impeccable → fresh-context Opus review).** Web app now has a real navigation shell + a
+  habit-forward home. Both parked open questions were RESOLVED with user before speccing:
+  (1) **Today = Continue Reading card only** — streak ember + goal ring omitted until the session log exists
+  (no fake/dead UI); no "% through" (Document has no page count yet → card shows "Page N"). (2) **Tab nav
+  = react-router** (`react-router@7.17.0` exact pin, v7 unified pkg; URL tabs /today, /library, /read/:docId,
+  `/`→/today, catch-all→/today) — migrated the `openDocId` state switch onto routes. Built: exposed
+  `listReadingPositions` on web-store (delegates to @ember/store; 06b deferred it); pure `selectContinueReading`
+  selector (join position→doc by id, drop orphans, sort updatedAt desc); use-continue-reading hook (Promise.all,
+  cancel-flag, swallows read errors per invariant #1); TodayPage (time-of-day greeting + date line) +
+  ContinueReadingCard (bookmark-stripe aesthetic, Fraunces title + "Page N" + Resume; gentle empty-state nudge
+  to /library) + AppShell top-nav (Ember wordmark + Today/Library NavLinks w/ animated accent underline +
+  ThemeControl extracted to shared theme/theme-control.tsx). App holds only <Routes>+<Toaster/>; BrowserRouter
+  in main.tsx (tests inject MemoryRouter). ReaderRoute keeps key={docId} (06b resume-once guard). Router
+  migration churned app-navigation.test (wrap MemoryRouter) + library-page.test (theme assertion → app-shell.test).
+  Read-only — no merge/write path (mergeReadingPosition untouched; #2/#5). Built TDD (Sonnet) → frontend-design
+  + impeccable on the 3 net-new surfaces → fresh-context Opus review = APPROVE (token-only UI confirmed against
+  theme.css for light+dark; nit: redundant Wordmark aria, non-blocking). typecheck/test/lint clean (85 web
+  tests); core+store byte-identical. Browser-verify green (user). **Next: 06d** mobile reader resume + native
+  Today (device-bound, like 02d/03c).
 - **Unit 06b MERGED (2026-06-11) — PR #55 squash-merged to main (7d031c4), #54 closed, branch deleted.**
   Web reader resumes where you left off: wired 06a's saveReadingPosition/getReadingPosition into the reader
   (web-store surface mirrors getPdfBytes; pure computePageOffset/resumeScrollTop helpers; useReadingPosition
