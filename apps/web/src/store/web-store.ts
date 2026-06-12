@@ -1,6 +1,6 @@
 import type { Document, Hasher, ReadingPosition } from '@ember/core';
 import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, saveReadingPosition } from '@ember/store';
+import { getReadingPosition, importDocument, listDocuments, listReadingPositions, saveReadingPosition } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -15,6 +15,8 @@ export interface WebStore {
   saveReadingPosition(input: { docId: string; page: number; offset: number }): Promise<ReadingPosition>;
   /** Return the stored reading position for a document, or undefined if none saved. */
   getReadingPosition(docId: string): Promise<ReadingPosition | undefined>;
+  /** Return all saved reading positions (unsorted — sort/join is a UI concern). */
+  listReadingPositions(): Promise<ReadingPosition[]>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -75,6 +77,10 @@ export function createWebStore(deps: {
 
     async getReadingPosition(docId: string): Promise<ReadingPosition | undefined> {
       return getReadingPosition(repo, docId);
+    },
+
+    async listReadingPositions(): Promise<ReadingPosition[]> {
+      return listReadingPositions(repo);
     },
   };
 }

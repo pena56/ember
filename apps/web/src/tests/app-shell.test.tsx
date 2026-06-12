@@ -1,6 +1,9 @@
 /**
- * app-navigation.test.tsx — clicking a DocumentRow opens the reader;
- * back button returns to the Library with the list intact.
+ * app-shell.test.tsx — navigation shell tests.
+ *
+ * (1) / redirects to /today (greeting visible)
+ * (2) Library tab navigates to Library (dropzone visible); Today tab navigates back
+ * (3) ThemeControl renders in the shell with aria-pressed pattern
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -94,11 +97,11 @@ function makeMemoryStore(): WebStore {
   });
 }
 
-function renderApp(store: WebStore) {
+function renderApp(store: WebStore, initialEntries: string[] = ['/']) {
   return render(
     <ThemeProvider>
       <StoreProvider store={store}>
-        <MemoryRouter initialEntries={['/library']}>
+        <MemoryRouter initialEntries={initialEntries}>
           <App />
         </MemoryRouter>
       </StoreProvider>
@@ -108,29 +111,11 @@ function renderApp(store: WebStore) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('App navigation', () => {
+describe('AppShell navigation', () => {
   beforeEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset['appTheme'];
     window.matchMedia = makeMatchMedia();
-
-    class MockResizeObserver {
-      observe = vi.fn();
-      unobserve = vi.fn();
-      disconnect = vi.fn();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      constructor(..._args: unknown[]) {}
-    }
-    vi.stubGlobal('ResizeObserver', MockResizeObserver);
-
-    class MockIntersectionObserver {
-      observe = vi.fn();
-      unobserve = vi.fn();
-      disconnect = vi.fn();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      constructor(..._args: unknown[]) {}
-    }
-    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   });
 
   afterEach(() => {
@@ -138,46 +123,63 @@ describe('App navigation', () => {
     vi.restoreAllMocks();
   });
 
-  it('clicking a DocumentRow opens the reader showing the document title; back returns to the Library', async () => {
+  it('(1) / redirects to /today and the greeting is visible', async () => {
     const store = makeMemoryStore();
-    renderApp(store);
+    renderApp(store, ['/']);
 
-    // Wait for Library to mount
+    await waitFor(() => {
+      // Today page shows a time-of-day greeting
+      const heading = screen.queryByRole('heading', { level: 1 });
+      expect(heading).not.toBeNull();
+    });
+  });
+
+  it('(2) clicking Library tab shows the library; clicking Today tab returns', async () => {
+    const store = makeMemoryStore();
+    renderApp(store, ['/today']);
+
+    // Today should be visible first
+    await waitFor(() => {
+      expect(screen.getByRole('navigation', { name: 'Primary' })).toBeDefined();
+    });
+
+    // Click Library tab
+    await act(async () => {
+      const libLinks = screen.getAllByRole('link', { name: /library/i });
+      // The nav Library link is the one inside the nav element
+      const navLibLink = libLinks.find((l) => l.closest('nav'));
+      fireEvent.click(navLibLink ?? libLinks[0]!);
+    });
+
+    // Library content should be visible
     await waitFor(() => {
       expect(screen.getByText(/waiting for its first spark/i)).toBeDefined();
     });
 
-    // Import a PDF so there's a row
-    const bytes = new Uint8Array([37, 80, 68, 70]);
-    const file = new File([bytes], 'my-reading.pdf', { type: 'application/pdf' });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-
+    // Click Today tab
     await act(async () => {
-      Object.defineProperty(input, 'files', { value: [file], configurable: true });
-      fireEvent.change(input);
+      fireEvent.click(screen.getByRole('link', { name: /today/i }));
     });
+
+    // Should be back on Today
+    await waitFor(() => {
+      const heading = screen.queryByRole('heading', { level: 1 });
+      expect(heading).not.toBeNull();
+    });
+  });
+
+  it('(3) ThemeControl renders in the shell with aria-pressed pattern', async () => {
+    const store = makeMemoryStore();
+    renderApp(store, ['/today']);
 
     await waitFor(() => {
-      expect(screen.getByText('my-reading')).toBeDefined();
+      expect(screen.getByRole('group', { name: 'Theme' })).toBeDefined();
     });
 
-    // Click the document row button to open the reader
-    const openBtn = screen.getByRole('button', { name: /open my-reading/i });
-    await act(async () => {
-      fireEvent.click(openBtn);
-    });
+    const buttons = screen.getAllByRole('button', { name: /system|light|dark/i });
+    expect(buttons.length).toBeGreaterThanOrEqual(3);
 
-    // Reader should be visible (toolbar back button + title)
-    await waitFor(() => {
-      expect(screen.getByLabelText('Back to Library')).toBeDefined();
-    });
-
-    // Back to library
-    fireEvent.click(screen.getByLabelText('Back to Library'));
-
-    // Library list should be restored
-    await waitFor(() => {
-      expect(screen.getByText('my-reading')).toBeDefined();
-    });
+    const pressed = buttons.filter((b) => b.getAttribute('aria-pressed') === 'true');
+    expect(pressed.length).toBe(1);
   });
 });

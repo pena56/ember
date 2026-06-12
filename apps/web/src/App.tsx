@@ -1,36 +1,49 @@
 /**
- * App.tsx — top-level view switch between Library and Reader.
+ * App.tsx — route tree (no Router here — see main.tsx / MemoryRouter in tests).
  *
- * Navigation is state-based (openDocId). No react-router dep.
- * A tabbed Today/Library/Stats shell is a later infra unit; a single state
- * switch suffices for unit 05a.
+ * Shell layout route:
+ *   /           → redirect to /today
+ *   /today      → TodayPage
+ *   /library    → LibraryPage
+ *
+ * Outside the shell:
+ *   /read/:docId → ReaderRoute (full-screen)
+ *   *            → redirect to /today
  */
 
 import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router';
 
 import { Toaster } from '@/components/ui/sonner.js';
 
+import { AppShell } from './app-shell.js';
 import { LibraryPage } from './library/library-page.js';
 import { ReaderPage } from './reader/reader-page.js';
 import { useWebStore } from './store/store-context.js';
+import { TodayPage } from './today/today-page.js';
 
-// ── Connected reader wrapper ──────────────────────────────────────────────────
-// Looks up the document title before mounting the reader so the toolbar has
-// the correct title immediately (avoids a layout shift).
+// ── Library route wrapper ────────────────────────────────────────────────────
 
-function ConnectedReader({
-  docId,
-  onClose,
-}: {
-  docId: string;
-  onClose: () => void;
-}) {
-  // Use the store to look up the title (best-effort; falls back to id)
+function LibraryRoute() {
+  const navigate = useNavigate();
+  return (
+    <LibraryPage
+      onOpen={(id) => { void navigate(`/read/${id}`); }}
+    />
+  );
+}
+
+// ── Reader route wrapper ──────────────────────────────────────────────────────
+
+function ReaderRoute() {
+  const { docId } = useParams<{ docId: string }>();
+  const navigate = useNavigate();
   const store = useWebStore();
   const [title, setTitle] = useState<string>('');
 
   // Resolve the title for this docId (best-effort; toolbar falls back to id).
   useEffect(() => {
+    if (!docId) return;
     let cancelled = false;
     void store.listDocuments().then((docs) => {
       if (cancelled) return;
@@ -40,28 +53,42 @@ function ConnectedReader({
     return () => { cancelled = true; };
   }, [store, docId]);
 
+  if (!docId) {
+    return <Navigate to="/library" replace />;
+  }
+
   // key={docId} forces a fresh mount per document so reader state (incl. the
   // resume-once guard) never carries across a doc switch.
-  return <ReaderPage key={docId} docId={docId} title={title || docId} onClose={onClose} />;
+  return (
+    <ReaderPage
+      key={docId}
+      docId={docId}
+      title={title || docId}
+      onClose={() => { void navigate(-1); }}
+    />
+  );
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [openDocId, setOpenDocId] = useState<string | null>(null);
-
-  if (openDocId !== null) {
-    return (
-      <ConnectedReader
-        docId={openDocId}
-        onClose={() => { setOpenDocId(null); }}
-      />
-    );
-  }
-
   return (
     <>
-      <LibraryPage onOpen={setOpenDocId} />
+      <Routes>
+        {/* Shell layout — Today + Library share the top-nav chrome */}
+        <Route element={<AppShell />}>
+          <Route index element={<Navigate to="/today" replace />} />
+          <Route path="today" element={<TodayPage />} />
+          <Route path="library" element={<LibraryRoute />} />
+        </Route>
+
+        {/* Full-screen reader — outside the shell */}
+        <Route path="read/:docId" element={<ReaderRoute />} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/today" replace />} />
+      </Routes>
+
       <Toaster />
     </>
   );

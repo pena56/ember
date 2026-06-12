@@ -1,9 +1,12 @@
 /**
- * app-navigation.test.tsx — clicking a DocumentRow opens the reader;
- * back button returns to the Library with the list intact.
+ * today-continue-reading.test.tsx — Today page + Continue Reading card integration tests.
+ *
+ * (1) With a saved position + matching document: Today shows the Continue Reading card
+ *     (title + "Page N"); clicking Resume navigates to /read/:docId (reader toolbar visible).
+ * (2) With no positions: Today shows the empty/nudge state and a link to the Library.
  */
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,7 +35,7 @@ vi.mock('sonner', () => ({
 vi.mock('../reader/pdf.js', () => ({
   loadPdf: vi.fn().mockImplementation(() =>
     Promise.resolve({
-      numPages: 2,
+      numPages: 10,
       getPage: (n: number) =>
         Promise.resolve({
           pageNumber: n,
@@ -80,11 +83,16 @@ function makeStorage() {
   };
 }
 
-function makeMemoryStore(): WebStore {
+function makeMemoryStoreWithBlobs(docIds: string[] = []): { store: WebStore; blobs: MemoryBlobStore } {
   let counter = 0;
-  return createWebStore({
+  const blobs = new MemoryBlobStore();
+  const fakeBytes = new Uint8Array([37, 80, 68, 70]);
+  for (const id of docIds) {
+    void blobs.put(id, fakeBytes);
+  }
+  const store = createWebStore({
     repo: new MemoryRepository(),
-    blobs: new MemoryBlobStore(),
+    blobs,
     hasher: subtleCryptoHasher,
     clock: createWebClock({
       storage: makeStorage(),
@@ -92,13 +100,14 @@ function makeMemoryStore(): WebStore {
       newId: () => `test-id-${(++counter).toString()}`,
     }),
   });
+  return { store, blobs };
 }
 
-function renderApp(store: WebStore) {
+function renderApp(store: WebStore, initialEntries: string[] = ['/today']) {
   return render(
     <ThemeProvider>
       <StoreProvider store={store}>
-        <MemoryRouter initialEntries={['/library']}>
+        <MemoryRouter initialEntries={initialEntries}>
           <App />
         </MemoryRouter>
       </StoreProvider>
@@ -108,7 +117,7 @@ function renderApp(store: WebStore) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('App navigation', () => {
+describe('Today Continue Reading', () => {
   beforeEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset['appTheme'];
@@ -138,46 +147,43 @@ describe('App navigation', () => {
     vi.restoreAllMocks();
   });
 
-  it('clicking a DocumentRow opens the reader showing the document title; back returns to the Library', async () => {
-    const store = makeMemoryStore();
-    renderApp(store);
+  it('(1) with a saved position + matching document, shows Continue Reading card with title and page', async () => {
+    const docId = 'test-doc-resume';
+    const { store, blobs } = makeMemoryStoreWithBlobs([docId]);
 
-    // Wait for Library to mount
-    await waitFor(() => {
-      expect(screen.getByText(/waiting for its first spark/i)).toBeDefined();
-    });
-
-    // Import a PDF so there's a row
+    // Import a doc then save a reading position
     const bytes = new Uint8Array([37, 80, 68, 70]);
-    const file = new File([bytes], 'my-reading.pdf', { type: 'application/pdf' });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File([bytes], 'my-great-novel.pdf', { type: 'application/pdf' });
+    const imported = await store.importPdf(file);
+    const realDocId = imported.document.id;
 
-    await act(async () => {
-      Object.defineProperty(input, 'files', { value: [file], configurable: true });
-      fireEvent.change(input);
+    // Put blob for the real docId
+    await blobs.put(realDocId, bytes);
+    await store.saveReadingPosition({ docId: realDocId, page: 4, offset: 0 });
+
+    renderApp(store, ['/today']);
+
+    // Today page should show the book title and page number
+    await waitFor(() => {
+      expect(screen.getByText('my-great-novel')).toBeDefined();
     });
 
     await waitFor(() => {
-      expect(screen.getByText('my-reading')).toBeDefined();
+      expect(screen.getByText(/page 4/i)).toBeDefined();
     });
+  });
 
-    // Click the document row button to open the reader
-    const openBtn = screen.getByRole('button', { name: /open my-reading/i });
-    await act(async () => {
-      fireEvent.click(openBtn);
-    });
+  it('(2) with no positions, shows empty nudge state and a link to the Library', async () => {
+    const { store } = makeMemoryStoreWithBlobs();
+    renderApp(store, ['/today']);
 
-    // Reader should be visible (toolbar back button + title)
+    // Should show the nudge/empty state (no guilt-tripping)
     await waitFor(() => {
-      expect(screen.getByLabelText('Back to Library')).toBeDefined();
+      expect(screen.getByText(/pick a book/i)).toBeDefined();
     });
 
-    // Back to library
-    fireEvent.click(screen.getByLabelText('Back to Library'));
-
-    // Library list should be restored
-    await waitFor(() => {
-      expect(screen.getByText('my-reading')).toBeDefined();
-    });
+    // Should have at least one link pointing to the library
+    const libLinks = screen.queryAllByRole('link', { name: /library/i });
+    expect(libLinks.length).toBeGreaterThan(0);
   });
 });

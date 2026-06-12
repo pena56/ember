@@ -93,4 +93,24 @@ describe('WebStore reading-position surface', () => {
     const read = await store.getReadingPosition(docId);
     expect(read?.page).toBe(10);
   });
+
+  it('listReadingPositions returns all saved positions across distinct docs', async () => {
+    const { store } = makeWebStore();
+
+    // Save positions for two distinct docs
+    await store.saveReadingPosition({ docId: 'doc-a', page: 3, offset: 0.1 });
+    await store.saveReadingPosition({ docId: 'doc-b', page: 7, offset: 0.5 });
+
+    const positions = await store.listReadingPositions();
+    expect(positions).toHaveLength(2);
+
+    const ids = positions.map((p) => p.id).sort();
+    expect(ids).toEqual(['doc-a', 'doc-b']);
+  });
+
+  it('listReadingPositions returns [] when no positions saved', async () => {
+    const { store } = makeWebStore();
+    const positions = await store.listReadingPositions();
+    expect(positions).toEqual([]);
+  });
 });

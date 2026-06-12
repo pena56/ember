@@ -199,19 +199,5 @@ describe('LibraryPage', () => {
     expect(screen.getByText(/waiting for its first spark/i)).toBeDefined();
   });
 
-  it('preserves the theme control with aria-pressed pattern', async () => {
-    const store = makeMemoryStore();
-    renderLibrary(store);
-
-    await waitFor(() => {
-      expect(screen.getByRole('group', { name: 'Theme' })).toBeDefined();
-    });
-
-    const buttons = screen.getAllByRole('button', { name: /system|light|dark/i });
-    expect(buttons.length).toBeGreaterThanOrEqual(3);
-
-    // One button should be aria-pressed="true"
-    const pressed = buttons.filter((b) => b.getAttribute('aria-pressed') === 'true');
-    expect(pressed.length).toBe(1);
-  });
+  // NOTE: theme-control aria-pressed test moved to app-shell.test.tsx (ThemeControl now lives in the shell).
 });

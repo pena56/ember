@@ -1,50 +1,6 @@
-import type { ThemePreference } from '../theme/resolve-app-theme.js';
-import { useTheme } from '../theme/use-theme.js';
-
 import { DocumentRow } from './document-row.js';
 import { ImportDropzone } from './import-dropzone.js';
 import { useLibrary } from './use-library.js';
-
-// ── Theme control ─────────────────────────────────────────────────────────────
-
-const PREFERENCES: ThemePreference[] = ['system', 'warm-light', 'warm-dark'];
-const LABELS: Record<ThemePreference, string> = {
-  system: 'System',
-  'warm-light': 'Light',
-  'warm-dark': 'Dark',
-};
-
-function ThemeControl() {
-  const { preference, setPreference } = useTheme();
-
-  return (
-    <div
-      className="flex rounded-md overflow-hidden border border-line bg-surface-raised"
-      role="group"
-      aria-label="Theme"
-    >
-      {PREFERENCES.map((pref) => (
-        <button
-          key={pref}
-          type="button"
-          onClick={() => {
-            setPreference(pref);
-          }}
-          aria-pressed={preference === pref}
-          className={[
-            'font-sans text-sm px-3 py-1.5 transition-colors',
-            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            preference === pref
-              ? 'text-text border-b-2 border-accent font-medium'
-              : 'text-text-muted hover:text-text border-b-2 border-transparent',
-          ].join(' ')}
-        >
-          {LABELS[pref]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -119,19 +75,7 @@ export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
   const { documents, loading, importFiles } = useLibrary();
 
   return (
-    <div className="min-h-screen bg-surface text-text flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-surface border-b border-line">
-        <div className="mx-auto max-w-2xl px-6 py-4 flex items-center justify-between gap-4">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-text">
-            Ember
-          </h1>
-          <ThemeControl />
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="flex-1 mx-auto w-full max-w-2xl px-6 py-8 flex flex-col gap-6">
+    <div className="flex flex-col gap-6 mx-auto w-full max-w-2xl px-6 py-8">
         {/* Page title */}
         <div className="flex flex-col gap-1">
           <h2 className="font-serif text-3xl font-semibold text-text">Library</h2>
@@ -159,7 +103,6 @@ export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
         ) : (
           <DocumentList documents={documents} onOpen={onOpen ?? (() => undefined)} />
         )}
-      </main>
     </div>
   );
 }
