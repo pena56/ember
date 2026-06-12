@@ -7,8 +7,9 @@
  *  - Loading / error / missing states (warm DocumentNotice voice + EmberFlame motif)
  *
  * Reader theme (paper/sepia/night) and mode (scroll/paged) are local state,
- * default scroll + paper, NOT persisted (matches 05a). Reading-position capture
- * is unit 06.
+ * default scroll + paper, NOT persisted (matches 05a). Reading-position
+ * capture/restore (resume where you left off) is wired here via
+ * useReadingPosition (unit 06d).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

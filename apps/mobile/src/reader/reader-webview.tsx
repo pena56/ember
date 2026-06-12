@@ -2,7 +2,7 @@
  * reader-webview.tsx — WebView wrapper for the pdf.js reader.
  *
  * Owns the WebView ref, posts bridge messages in (load/setMode/setTheme/gotoPage)
- * and parses onMessage events out (ready/page/error). The screen stays declarative —
+ * and parses onMessage events out (ready/page/position/error). The screen stays declarative —
  * all platform glue (ref, postMessage, message parsing) lives here.
  *
  * ASSET-LOADING MECHANISM: `source={{ html }}` with pdf.js inlined as script
