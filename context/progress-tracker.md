@@ -236,13 +236,13 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 08a BUILT — PR #69 open, awaiting merge (2026-06-12). Issue #68, branch feat/68-streak-goal-engine,
-  spec specs/08a-streak-goal-engine.md. Route standard.** Dispatched Sonnet TDD executor → fresh-context Opus
-  review (**APPROVE**, no blocking/should-fix; algorithm hand-traced, invariants #1–#4 verified). 205 tests
-  green (113 core / 92 store); typecheck + lint clean. Built: core `streak.ts` (`deriveStreak` /
+- **Unit 08a MERGED (2026-06-12) — PR #69, Issue #68 closed, spec specs/08a-streak-goal-engine.md.
+  Route standard.** Dispatched Sonnet TDD executor → fresh-context Opus review (**APPROVE**, no
+  blocking/should-fix; algorithm hand-traced, invariants #1–#4 verified). 205 tests green (113 core /
+  92 store); typecheck + lint clean; CI verify pass. Built: core `streak.ts` (`deriveStreak` /
   `deriveTodayGoal` / `deriveHabitSummary` / `nextLocalDay` / `activeMsByDay`) + store `goal-config.ts`
-  (`getGoalConfig`/`setGoalConfig`). **Next:** merge #69, then spec/build **08b** (web Today goal ring +
-  streak ember — UI unit → frontend-design + impeccable before review), then 08c (mobile, device-bound).
+  (`getGoalConfig`/`setGoalConfig`). **Next:** spec/build **08b** (web Today goal ring + streak ember
+  — UI unit → frontend-design + impeccable before review), then 08c (mobile, device-bound).
   Umbrella **Unit 08 (Streaks + daily goal + freezes)**
   SCORED COMPLEX → split by boundary like 03/04/05/06/07: **08a** shared brain (core derivation + store
   goal config — this) → **08b** web Today goal ring + streak ember → **08c** mobile Today goal ring + streak
