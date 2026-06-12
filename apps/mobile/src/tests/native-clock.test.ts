@@ -90,4 +90,35 @@ describe('createNativeClock', () => {
     const clock = createNativeClock({ storage, now: () => 42_000, newId: fakeNewId });
     expect(clock.now()).toBe(42_000);
   });
+
+  it('newId() returns the injected generator value', () => {
+    const storage = makeStorage();
+    idCounter = 0;
+    const clock = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    // The first call to newId was consumed to generate the device id,
+    // so subsequent calls return the next values.
+    const a = clock.newId();
+    const b = clock.newId();
+    expect(typeof a).toBe('string');
+    expect(typeof b).toBe('string');
+    expect(a).not.toBe(b);
+  });
+
+  it('newId() does not perturb the HLC clock (nextStamp unaffected by newId calls)', () => {
+    const storage = makeStorage();
+    idCounter = 0;
+    const clock = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    const s1 = clock.nextStamp();
+    // Call newId several times between stamps
+    clock.newId();
+    clock.newId();
+    clock.newId();
+    const s2 = clock.nextStamp();
+    // s2 must be strictly after s1 (counter or wall advances)
+    if (s2.wall === s1.wall) {
+      expect(s2.counter).toBeGreaterThan(s1.counter);
+    } else {
+      expect(s2.wall).toBeGreaterThan(s1.wall);
+    }
+  });
 });

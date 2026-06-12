@@ -236,6 +236,25 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 07c IN PR (2026-06-12) — PR #67 open, Issue #66, branch feat/66-mobile-reader-session-tracking,
+  spec specs/07c-mobile-reader-session-tracking.md.** Standard route dispatched: Sonnet TDD executor →
+  fresh-context Opus reviewer = **APPROVE** (zero blocking/should-fix; invariants #1–#4, boundary purity, RN
+  hook hazards all checked). typecheck ✓ · test ✓ (mobile 82, web 103; new: session-tracker.test.ts,
+  native-store-session.test.ts, native-clock newId) · lint ✓. Implementation = exactly the spec: pure
+  `session-tracker.ts` (@ember/core only) + `use-session-tracking.ts` shell hook (15s heartbeat, AppState
+  gating, tz capture, fire-and-forget recordSession) + native-store `recordSession(flushed)` + native-clock
+  `newId()` + additive taps in reader-screen. **Next:** user device-verify in Expo Go (per spec §Device-verify)
+  → squash-merge #67, close #66, delete branch → umbrella Unit 07 COMPLETE.
+- **Unit 07c SPECCED (2026-06-12) — Issue #66, branch feat/66-mobile-reader-session-tracking (not yet cut),
+  spec specs/07c-mobile-reader-session-tracking.md.** Standard route (single boundary apps/mobile, no new dep,
+  behavioral). Final slice of umbrella Unit 07. Mirrors 07b but: `AppState` replaces `visibilitychange`
+  (foreground=visible; background/inactive caps+pauses, foreground resumes); NO `pagehide` (effect-cleanup is
+  the sole, reliable flush path); the shell hook `use-session-tracking.ts` is **device-verified in Expo Go, not
+  unit-tested** (no headless RN renderer — same precedent as `use-reading-position` 06d). Touches: native-clock
+  (+`newId()`), native-store (+`recordSession(flushed)` surface), new pure `session-tracker.ts` (copy of web's,
+  imports only `@ember/core`), new shell hook, additive taps in reader-screen (`handlePageChange`→`onPage`,
+  `handlePosition`→`onActivity`). Tests: pure tracker suite + native-clock `newId` + native-store-session
+  (no hook test). **Next:** dispatch (Sonnet TDD executor → fresh-context Opus reviewer).
 - **Unit 07b MERGED (2026-06-12) — PR #65 squash-merged to main (cb84159), #64 closed, branch deleted.**
   Branch feat/64-web-reader-session-tracking. Standard route: Sonnet TDD executor → fresh-context Opus review
   (APPROVE, no blockers) → user browser-verify green → squash-merge. Wired 07a's pure `reduce` + store

@@ -1,6 +1,6 @@
-import type { Document, Hasher, ReadingPosition } from '@ember/core';
+import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
 import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, listReadingPositions, saveReadingPosition } from '@ember/store';
+import { getReadingPosition, importDocument, listDocuments, listReadingPositions, recordSession, saveReadingPosition } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -36,6 +36,12 @@ export interface NativeStore {
   getReadingPosition(docId: string): Promise<ReadingPosition | undefined>;
   /** Return all stored reading positions (unsorted; the selector handles ordering). */
   listReadingPositions(): Promise<ReadingPosition[]>;
+  /**
+   * Persist a flushed reading session and enqueue one HLC-stamped outbox entry.
+   * Append-only: id is a fresh uuid per call (invariant #3).
+   * Writes exactly one ReadingSession record + one outbox entry per call (invariant #2).
+   */
+  recordSession(flushed: FlushedSession): Promise<ReadingSession>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -93,6 +99,13 @@ export function createNativeStore(deps: {
 
     async listReadingPositions(): Promise<ReadingPosition[]> {
       return listReadingPositions(repo);
+    },
+
+    async recordSession(flushed: FlushedSession): Promise<ReadingSession> {
+      return recordSession(
+        { repo, newId: () => clock.newId(), newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        flushed,
+      );
     },
   };
 }

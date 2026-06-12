@@ -22,6 +22,8 @@ export interface NativeClock {
   deviceId: string;
   /** Advance the clock, persist it, and return the new HLC stamp. */
   nextStamp(): Hlc;
+  /** Returns a fresh unique id suitable for session records. */
+  newId(): string;
   /** Returns a fresh unique id suitable for outbox entries. */
   newOutboxId(): string;
   /** Returns current wall-clock time in ms. */
@@ -101,6 +103,10 @@ export function createNativeClock(deps?: {
       clock = tick(clock, nowFn());
       storage.setItem(HLC_KEY, encode(clock));
       return clock;
+    },
+
+    newId(): string {
+      return newId();
     },
 
     newOutboxId(): string {

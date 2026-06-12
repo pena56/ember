@@ -27,6 +27,7 @@ import { useNativeStore } from '../store/store-context.js';
 import type { ReadMode } from './reader-webview.js';
 import { ReaderWebView } from './reader-webview.js';
 import { useReadingPosition } from './use-reading-position.js';
+import { useSessionTracking } from './use-session-tracking.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -270,6 +271,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   const lastStageRef = useRef<string>('mount');
   // Latest position reported by the WebView capture signal (scroll/paged)
   const latestPosRef = useRef<{ page: number; offset: number }>({ page: 1, offset: 0 });
+  // Current page ref — kept in sync with setCurrentPage so getPage() reads the live page.
+  const currentPageRef = useRef(1);
 
   // onResume: called by the controller when a saved position is found. Sets the
   // toolbar page indicator and triggers the one-shot declarative resumeTo prop.
@@ -287,6 +290,12 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
     ready: status === 'ready',
     getCurrent: () => latestPosRef.current,
     onResume,
+  });
+
+  const tracking = useSessionTracking({
+    docId,
+    ready: status === 'ready',
+    getPage: () => currentPageRef.current,
   });
 
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
@@ -348,6 +357,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
 
   function handlePageChange(page: number) {
     setCurrentPage(page);
+    currentPageRef.current = page;
+    tracking.onPage(page);
   }
 
   function handlePosition(page: number, offset: number) {
@@ -356,6 +367,7 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
     // 'page' signal), not this — they're separate bridge signals.
     latestPosRef.current = { page, offset };
     scheduleSave();
+    tracking.onActivity();
   }
 
   function handleWebViewStage(stage: string) {
