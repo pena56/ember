@@ -236,24 +236,23 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Next: Unit 06e — mobile native Today + tab nav** (the deferred half of umbrella 06d's split; net-new UI →
+  frontend-design + impeccable; expo-router restructure; device-bound). Completes umbrella Unit 06 (#6) for mobile.
+  Not yet specced.
+- **Unit 06d MERGED (2026-06-12) — PR #59 squash-merged to main, #58 closed, branch deleted.** Mobile reader
+  capture/restore (mirror of 06b). Shipped: native-store `saveReadingPosition`/`getReadingPosition` (listReadingPositions
+  deferred to 06e like 06b→06c); a PURE `reading-position-controller` (resume-once + generation-token stale guard +
+  debounced save, injected timers — mobile has no React test renderer, so logic is headless-testable) under a thin
+  device-verified `use-reading-position` hook; WebView bridge capture `{type:'position',page,offset}` (offset math IN the
+  WebView) + restore via extended `{type:'gotoPage',page,offset}`; reader-webview `onPosition` + one-shot `resumeTo`
+  prop; reader-screen wiring. 14 new headless tests (store seam + pure controller), red-before-green. Route standard:
+  Sonnet TDD → fresh-context Opus review = APPROVE (no blockers; 2 doc-comment nits fixed). Gates green incl.
+  `expo export -p android`; invariants #1/#2/#5 held; core/store/web byte-identical. Device-verified (Expo Go): scroll
+  mid-doc → reopen resumes page+offset; paged resumes page; never-read → page 1; force-quit/relaunch still resumes.
 - **Umbrella "06d mobile reader resume + native Today" SCORED COMPLEX → split by visible result (2026-06-12),
   exactly like the web 06b/06c split.** It bundled two visible results in apps/mobile: (a) reader capture/restore
-  (behavioral, WebView bridge) + (b) native Today screen + tab-nav shell (net-new UI + expo-router restructure).
-  Split into: **06d** mobile reader capture/restore (this — SPECCED) → **06e** mobile native Today + tab nav (deferred;
-  net-new UI → frontend-design + impeccable; device-bound). Mobile completes umbrella Unit 06 (#6) after 06e.
-- **Active: Unit 06d SPECCED (2026-06-12) — Issue #58, Closes #58, branch feat/58-mobile-reader-capture-restore,
-  spec specs/06d-mobile-reader-capture-restore.md. Route standard** (single boundary apps/mobile; behavioral wiring on
-  the existing WebView reader; no net-new visual surface → frontend-design does NOT apply; no new dep). Mobile mirror of
-  06b. Contract inherited from 06a/06b (no new product ambiguity): local save = last-write; page + offset 0..1; debounce
-  ≈600ms; resume once per docId after ready; mergeReadingPosition stays unused (#5). Plan: extend native-store with
-  saveReadingPosition/getReadingPosition (mirror getPdfBytes; defer listReadingPositions to 06e like 06b→06c); a PURE
-  reading-position-controller (resume-once + debounced save, injected timers — mobile has no React test renderer, so the
-  logic is headless-testable, with a thin device-verified use-reading-position hook over it); WebView bridge gains
-  capture `{type:'position',page,offset}` (offset math runs IN the WebView: window.scrollY vs page rect) + restore via
-  extended `{type:'gotoPage',page,offset}`; reader-webview adds onPosition + one-shot resumeTo command prop; reader-screen
-  wires the hook (latestPosRef ← onPosition, onResume → setCurrentPage + resumeTo). Device-bound (WebView scroll). Tests:
-  native-store seam + pure controller (timing/resume-once/error-swallow); pixel-accurate restore device-verified.
-  Gates incl. `expo export -p android` (05b/05c WebView bundle gate). core/store/web byte-identical (apps/mobile-only).
+  (behavioral, WebView bridge — shipped as 06d) + (b) native Today screen + tab-nav shell (net-new UI + expo-router
+  restructure — deferred as 06e).
 - **Unit 06c MERGED (2026-06-12) — PR #57 squash-merged to main (044b464), #56 closed, branch deleted.
   Issue #56, spec specs/06c-web-today-tab-and-router.md. Route standard (single boundary apps/web; net-new UI →
   frontend-design + impeccable → fresh-context Opus review).** Web app now has a real navigation shell + a
