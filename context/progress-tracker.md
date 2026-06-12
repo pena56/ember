@@ -236,28 +236,18 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 07b PR OPEN — awaiting browser-verify + merge (2026-06-12) — PR #65, Issue #64, branch
-  feat/64-web-reader-session-tracking.** Dispatched standard route: Sonnet TDD executor → fresh-context Opus
-  review (**APPROVE, no blockers**). Built exactly as specced: pure `session-tracker.ts` seam + `use-session-tracking.ts`
-  shell hook + additive `reader-page` taps + web-store `recordSession`/web-clock `newId()`. 103/103 tests pass
-  (18 new across 4 files), typecheck + lint clean. core/store unchanged except the additive web-store surface.
-  **Next:** user browser-verifies (sessions rows in IndexedDB with right localDay/pages/activeMs; idle>60s splits
-  bouts) → squash-merge #65 → then 07c (mobile reader event wiring, device-bound WebView bridge).
-- **Unit 07b SPECCED (2026-06-12) — Issue #64, branch feat/64-web-reader-session-tracking, spec
-  specs/07b-web-reader-session-tracking.md. Route standard** (single boundary apps/web; behavioral — no
-  net-new visual surface, like 06b → standard executor + Opus review, NO frontend-design). Second slice of
-  umbrella Unit 07, after 07a (#62, MERGED). Wires 07a's already-shipped pure `reduce` + store `recordSession`
-  into the web reader: a pure `session-tracker.ts` seam (holds `TrackerState`, applies `reduce`, routes each
-  flushed session to `onFlush` — injected clock, no DOM/timers) under a `use-session-tracking.ts` platform-shell
-  hook (15s heartbeat while visible; `visibilitychange` caps/resumes the bout; `close()` flushes on unmount +
-  `pagehide`; tz = `-getTimezoneOffset()`; `recordSession` fire-and-forget, errors swallowed per invariant #1).
-  Additive to 06b's position-save seams (`onScroll`/`onPageChange` in reader-page). Web-store gains a
-  `recordSession(flushed)` surface; web-clock gains `newId()` (session record id, distinct from `newOutboxId`).
-  No new dep; core/store unchanged except the additive web-store surface. Tests: pure tracker (event→onFlush
-  sequencing, idle/page/close, fake clock) + web-store-session (append-only, one outbox entry) + a lean
-  fake-timers hook test (heartbeat/visibility/teardown/swallow). Browser-verify = sessions rows appear in
-  IndexedDB with right localDay/pages/activeMs. **Next:** build 07b (TDD executor → fresh-context Opus review),
-  then 07c (mobile reader event wiring, device-bound).
+- **Unit 07b MERGED (2026-06-12) — PR #65 squash-merged to main (cb84159), #64 closed, branch deleted.**
+  Branch feat/64-web-reader-session-tracking. Standard route: Sonnet TDD executor → fresh-context Opus review
+  (APPROVE, no blockers) → user browser-verify green → squash-merge. Wired 07a's pure `reduce` + store
+  `recordSession` into the web reader: a pure `session-tracker.ts` seam (holds `TrackerState`, applies `reduce`,
+  routes each flushed session to `onFlush` — injected clock, no DOM/timers) under a `use-session-tracking.ts`
+  platform-shell hook (15s heartbeat while visible; `visibilitychange` caps/resumes the bout; `close()` flushes
+  on unmount + `pagehide` (best-effort); tz = `-getTimezoneOffset()`; `recordSession` fire-and-forget, errors
+  swallowed per invariant #1). Additive to 06b's position-save seams in reader-page. Web-store gained a
+  `recordSession(flushed)` surface; web-clock gained `newId()` (session record id, distinct from `newOutboxId`).
+  No new dep; core/store unchanged except the additive web-store surface. 103/103 tests (18 new across 4 files),
+  typecheck + lint clean. **Next:** Unit 07c — mobile reader event wiring (device-bound, WebView bridge), the
+  final slice of umbrella Unit 07.
 - **Unit 07a MERGED (2026-06-12) — PR #63 squash-merged to main (785c7da), #62 closed, branch deleted.**
   Branch feat/62-session-tracking-engine. TDD executor (Sonnet) → fresh-context Opus review
   = **APPROVE WITH NITS, no blockers**; all 3 nits applied (defensive `pages` copy in `finalize`,
