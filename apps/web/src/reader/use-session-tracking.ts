@@ -125,6 +125,9 @@ export function useSessionTracking({
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // ── pagehide listener (tab close / bfcache) ────────────────────────────────
+    // Best-effort: close() enqueues an async IndexedDB write that may not commit
+    // before a hard tab close tears the page down. The unmount cleanup below is the
+    // reliable flush path; pagehide just maximizes capture for bfcache/navigation.
 
     function handlePageHide(): void {
       tracker.close();
