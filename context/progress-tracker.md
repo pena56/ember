@@ -236,6 +236,21 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08b SPECCED (2026-06-12) — Issue #70, branch feat/70-web-today-habit (not yet cut), spec
+  specs/08b-web-today-habit.md. Route standard, UI unit.** Second slice of umbrella Unit 08, after 08a
+  (#69 MERGED). Wires 08a's `deriveHabitSummary` into the web **Today** tab: a **streak ember**
+  (current streak + lit/at-risk/broken + banked freezes) and **today's goal ring** (active min vs 20-min
+  target), rendered above Continue Reading. Boundary apps/web ONLY — no new dep, no write path (read-only:
+  exposes `listSessions`/`getGoalConfig` on web-store, NOT `setGoalConfig` — that's Settings/17). New:
+  pure `present-habit.ts` (headless-testable view-mapper — clamp ring, round minutes, pluralize, warm
+  non-guilt copy) + `use-habit-summary.ts` hook (today = `localDayOf(Date.now(), -getTimezoneOffset())`,
+  Promise.all sessions+goal, swallow read errors → neutral broken/empty view per invariant #1) +
+  `streak-ember.tsx`/`goal-ring.tsx`/`habit-header.tsx` components, wired into today-page.tsx. Longest
+  streak/heatmap/time-of-day stay OUT (Stats/09). streak-lit/streak-risk tokens already in packages/tokens
+  (verified — no tokens change). UI unit → **frontend-design** (net-new ember+ring) → **impeccable** →
+  fresh-context **code-review**. Tests: pure present-habit suite + jsdom TodayPage render (inject store
+  stub, mirror today-continue-reading.test harness). **Next:** dispatch (Sonnet TDD executor →
+  fresh-context Opus reviewer), then 08c (mobile, device-bound).
 - **Unit 08a MERGED (2026-06-12) — PR #69, Issue #68 closed, spec specs/08a-streak-goal-engine.md.
   Route standard.** Dispatched Sonnet TDD executor → fresh-context Opus review (**APPROVE**, no
   blocking/should-fix; algorithm hand-traced, invariants #1–#4 verified). 205 tests green (113 core /
