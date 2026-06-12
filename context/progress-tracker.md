@@ -236,15 +236,19 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 07c IN PR (2026-06-12) — PR #67 open, Issue #66, branch feat/66-mobile-reader-session-tracking,
-  spec specs/07c-mobile-reader-session-tracking.md.** Standard route dispatched: Sonnet TDD executor →
-  fresh-context Opus reviewer = **APPROVE** (zero blocking/should-fix; invariants #1–#4, boundary purity, RN
-  hook hazards all checked). typecheck ✓ · test ✓ (mobile 82, web 103; new: session-tracker.test.ts,
-  native-store-session.test.ts, native-clock newId) · lint ✓. Implementation = exactly the spec: pure
-  `session-tracker.ts` (@ember/core only) + `use-session-tracking.ts` shell hook (15s heartbeat, AppState
-  gating, tz capture, fire-and-forget recordSession) + native-store `recordSession(flushed)` + native-clock
-  `newId()` + additive taps in reader-screen. **Next:** user device-verify in Expo Go (per spec §Device-verify)
-  → squash-merge #67, close #66, delete branch → umbrella Unit 07 COMPLETE.
+- **Umbrella Unit 07 (session/idle tracking engine) COMPLETE (2026-06-12).** 07a (#62/#63, shared brain) →
+  07b (#64/#65, web wiring) → 07c (#66/#67, mobile wiring) all MERGED to main. The reader now produces a real
+  append-only session log on both clients; stats/aggregation are downstream concerns (units 08/09). **Next:**
+  pick up the next unit (stats/streaks surface — confirm scope before speccing).
+- **Unit 07c MERGED (2026-06-12) — PR #67 squash-merged to main (d442c88), #66 closed, branch deleted.**
+  Standard route: Sonnet TDD executor → fresh-context Opus reviewer = **APPROVE** (zero blocking/should-fix;
+  invariants #1–#4, boundary purity, RN hook hazards all checked) → user device-verify in Expo Go green
+  (idle split on >60s background, same-bout on <60s flip, final-bout flush on back-out) → CI green → squash-merge.
+  Implementation = exactly the spec: pure `session-tracker.ts` (@ember/core only) + `use-session-tracking.ts`
+  shell hook (15s heartbeat, AppState gating replacing visibilitychange, tz capture, fire-and-forget
+  recordSession) + native-store `recordSession(flushed)` + native-clock `newId()` + additive taps in
+  reader-screen. No `pagehide` (effect-cleanup is the sole flush path); shell hook device-verified, not
+  unit-tested (no headless RN renderer — 06d precedent). test ✓ (mobile 82, web 103) · typecheck ✓ · lint ✓.
 - **Unit 07c SPECCED (2026-06-12) — Issue #66, branch feat/66-mobile-reader-session-tracking (not yet cut),
   spec specs/07c-mobile-reader-session-tracking.md.** Standard route (single boundary apps/mobile, no new dep,
   behavioral). Final slice of umbrella Unit 07. Mirrors 07b but: `AppState` replaces `visibilitychange`
