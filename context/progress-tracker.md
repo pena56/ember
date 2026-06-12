@@ -236,10 +236,23 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08a SPECCED (2026-06-12) — Issue #68, branch feat/68-streak-goal-engine (not yet cut), spec
+  specs/08a-streak-goal-engine.md. Route standard.** Umbrella **Unit 08 (Streaks + daily goal + freezes)**
+  SCORED COMPLEX → split by boundary like 03/04/05/06/07: **08a** shared brain (core derivation + store
+  goal config — this) → **08b** web Today goal ring + streak ember → **08c** mobile Today goal ring + streak
+  ember (device-bound). **Design RESOLVED (user, 2026-06-12):** (1) streak rule = **any reading** (any local
+  day with a real session extends the streak; goal-independent; ring is separate exceedable progress);
+  (2) daily goal = **20 min active reading** default, stored as a syncable `GoalConfig` record (HLC LWW),
+  configurable later in Settings (17); (3) freezes = **banked, auto-consumed**, both **derived** from session
+  history (no mutable counter) — defaulted rule: earn 1 per 5 consecutive read-days, cap 2, a missed non-today
+  day auto-consumes one, today-unread is pending (no break/consume). 08a = pure core `deriveStreak` /
+  `deriveTodayGoal` / `deriveHabitSummary` over `ReadingSession[]` + a caller-supplied `today` local-day (no
+  clock in core, mirrors 07a) + store `getGoalConfig`/`setGoalConfig` (single mutable record + one outbox
+  entry). Fully headless-testable; mirrors 07a's core+store shape. **Next:** dispatch (Sonnet TDD executor →
+  fresh-context Opus review), then 08b.
 - **Umbrella Unit 07 (session/idle tracking engine) COMPLETE (2026-06-12).** 07a (#62/#63, shared brain) →
   07b (#64/#65, web wiring) → 07c (#66/#67, mobile wiring) all MERGED to main. The reader now produces a real
-  append-only session log on both clients; stats/aggregation are downstream concerns (units 08/09). **Next:**
-  pick up the next unit (stats/streaks surface — confirm scope before speccing).
+  append-only session log on both clients; stats/aggregation are downstream concerns (units 08/09).
 - **Unit 07c MERGED (2026-06-12) — PR #67 squash-merged to main (d442c88), #66 closed, branch deleted.**
   Standard route: Sonnet TDD executor → fresh-context Opus reviewer = **APPROVE** (zero blocking/should-fix;
   invariants #1–#4, boundary purity, RN hook hazards all checked) → user device-verify in Expo Go green

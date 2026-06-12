@@ -18,3 +18,4 @@ export * from './memory-blob-store.js';
 export * from './documents.js';
 export * from './reading-positions.js';
 export * from './sessions.js';
+export * from './goal-config.js';
