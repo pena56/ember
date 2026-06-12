@@ -236,6 +236,13 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 07b PR OPEN — awaiting browser-verify + merge (2026-06-12) — PR #65, Issue #64, branch
+  feat/64-web-reader-session-tracking.** Dispatched standard route: Sonnet TDD executor → fresh-context Opus
+  review (**APPROVE, no blockers**). Built exactly as specced: pure `session-tracker.ts` seam + `use-session-tracking.ts`
+  shell hook + additive `reader-page` taps + web-store `recordSession`/web-clock `newId()`. 103/103 tests pass
+  (18 new across 4 files), typecheck + lint clean. core/store unchanged except the additive web-store surface.
+  **Next:** user browser-verifies (sessions rows in IndexedDB with right localDay/pages/activeMs; idle>60s splits
+  bouts) → squash-merge #65 → then 07c (mobile reader event wiring, device-bound WebView bridge).
 - **Unit 07b SPECCED (2026-06-12) — Issue #64, branch feat/64-web-reader-session-tracking, spec
   specs/07b-web-reader-session-tracking.md. Route standard** (single boundary apps/web; behavioral — no
   net-new visual surface, like 06b → standard executor + Opus review, NO frontend-design). Second slice of
