@@ -238,8 +238,8 @@ Update after every meaningful change.
 ## Current Goal
 - **Active: Unit 06d — mobile reader resume + native Today (device-bound). Last slice of umbrella Unit 06;
   not yet specced.**
-- **Unit 06c MERGED (2026-06-12) — Issue #56, branch feat/56-web-today-tab-and-router, spec
-  specs/06c-web-today-tab-and-router.md. Route standard (single boundary apps/web; net-new UI →
+- **Unit 06c MERGED (2026-06-12) — PR #57 squash-merged to main (044b464), #56 closed, branch deleted.
+  Issue #56, spec specs/06c-web-today-tab-and-router.md. Route standard (single boundary apps/web; net-new UI →
   frontend-design + impeccable → fresh-context Opus review).** Web app now has a real navigation shell + a
   habit-forward home. Both parked open questions were RESOLVED with user before speccing:
   (1) **Today = Continue Reading card only** — streak ember + goal ring omitted until the session log exists
