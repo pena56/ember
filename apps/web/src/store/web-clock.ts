@@ -12,6 +12,8 @@ export interface WebClock {
   deviceId: string;
   /** Advance the clock, persist it, and return the new stamp. */
   nextStamp(): Hlc;
+  /** Returns a fresh unique id for session records (distinct from outbox ids). */
+  newId(): string;
   /** Returns a fresh unique id for outbox entries. */
   newOutboxId(): string;
   /** Returns current wall-clock time in ms. */
@@ -62,6 +64,10 @@ export function createWebClock(deps?: {
       clock = tick(clock, nowFn());
       storage.setItem(HLC_KEY, encode(clock));
       return clock;
+    },
+
+    newId(): string {
+      return newId();
     },
 
     newOutboxId(): string {

@@ -19,6 +19,7 @@ import { PdfPage } from './pdf-page.js';
 import { computePageOffset, resumeScrollTop } from './reading-position.js';
 import { usePdfDocument } from './use-pdf-document.js';
 import { useReadingPosition } from './use-reading-position.js';
+import { useSessionTracking } from './use-session-tracking.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -532,6 +533,12 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
     ),
   });
 
+  const tracking = useSessionTracking({
+    docId,
+    ready: status === 'ready',
+    getPage: () => currentPageRef.current,
+  });
+
   return (
     // data-reader-theme drives the token CSS selectors in theme.css
     <div
@@ -565,8 +572,8 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 numPages={numPages}
                 displayWidth={displayWidth}
                 currentPage={currentPage}
-                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); }}
-                onScroll={scheduleSave}
+                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); tracking.onPage(p); }}
+                onScroll={() => { scheduleSave(); tracking.onActivity(); }}
               />
             ) : (
               <PagedReader
@@ -574,7 +581,7 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 numPages={numPages}
                 displayWidth={displayWidth}
                 currentPage={currentPage}
-                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); }}
+                onPageChange={(p) => { setCurrentPage(p); scheduleSave(); tracking.onPage(p); }}
               />
             )}
           </>
