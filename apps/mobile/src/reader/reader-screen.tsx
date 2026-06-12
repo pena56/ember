@@ -11,12 +11,13 @@
  * is unit 06.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ColorValue } from 'react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
+import type { ReadingPosition } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { EmberFlame } from '../library/ember-flame.js';
@@ -24,6 +25,7 @@ import { useNativeStore } from '../store/store-context.js';
 
 import type { ReadMode } from './reader-webview.js';
 import { ReaderWebView } from './reader-webview.js';
+import { useReadingPosition } from './use-reading-position.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -258,11 +260,33 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   // reason or the last stage reached on a timeout). Surfaced so a device-only
   // failure is reportable instead of an opaque infinite spinner.
   const [errorDetail, setErrorDetail] = useState<string | undefined>(undefined);
+  // One-shot resume target: set from onResume, passed to <ReaderWebView resumeTo=…/>
+  const [resumeTo, setResumeTo] = useState<{ page: number; offset: number } | undefined>(undefined);
 
   // Cancel guard — track the active load so stale async ops don't update state
   const loadIdRef = useRef(0);
   // Last progress stage the WebView reported, for the hang watchdog's message.
   const lastStageRef = useRef<string>('mount');
+  // Latest position reported by the WebView capture signal (scroll/paged)
+  const latestPosRef = useRef<{ page: number; offset: number }>({ page: 1, offset: 0 });
+
+  // onResume: called by the controller when a saved position is found. Sets the
+  // toolbar page indicator and triggers the one-shot declarative resumeTo prop.
+  // useCallback so the ref inside useReadingPosition sees a stable identity.
+  const onResume = useCallback(
+    (saved: ReadingPosition) => {
+      setCurrentPage(saved.page);
+      setResumeTo({ page: saved.page, offset: saved.offset });
+    },
+    [],
+  );
+
+  const { scheduleSave } = useReadingPosition({
+    docId,
+    ready: status === 'ready',
+    getCurrent: () => latestPosRef.current,
+    onResume,
+  });
 
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
@@ -282,6 +306,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
       setCurrentPage(1);
       setNumPages(0);
       setErrorDetail(undefined);
+      setResumeTo(undefined);
+      latestPosRef.current = { page: 1, offset: 0 };
       try {
         const result = await store.getPdfBytes(docId);
         if (loadId !== loadIdRef.current) return; // stale
@@ -321,6 +347,14 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
 
   function handlePageChange(page: number) {
     setCurrentPage(page);
+  }
+
+  function handlePosition(page: number, offset: number) {
+    // Update the latest position ref (getCurrent reads this) and trigger a
+    // debounced save. The toolbar indicator is driven by handlePageChange (the
+    // 'page' signal), not this — they're separate bridge signals.
+    latestPosRef.current = { page, offset };
+    scheduleSave();
   }
 
   function handleWebViewStage(stage: string) {
@@ -392,6 +426,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                 onPageChange={handlePageChange}
                 onError={handleWebViewError}
                 onStage={handleWebViewStage}
+                onPosition={handlePosition}
+                resumeTo={resumeTo}
               />
             </View>
           )}
