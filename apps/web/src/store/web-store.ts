@@ -1,6 +1,6 @@
-import type { Document, Hasher, ReadingPosition } from '@ember/core';
+import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
 import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, listReadingPositions, saveReadingPosition } from '@ember/store';
+import { getReadingPosition, importDocument, listDocuments, listReadingPositions, recordSession, saveReadingPosition } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -17,6 +17,8 @@ export interface WebStore {
   getReadingPosition(docId: string): Promise<ReadingPosition | undefined>;
   /** Return all saved reading positions (unsorted — sort/join is a UI concern). */
   listReadingPositions(): Promise<ReadingPosition[]>;
+  /** Append one immutable ReadingSession + one outbox entry. */
+  recordSession(flushed: FlushedSession): Promise<ReadingSession>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -81,6 +83,13 @@ export function createWebStore(deps: {
 
     async listReadingPositions(): Promise<ReadingPosition[]> {
       return listReadingPositions(repo);
+    },
+
+    async recordSession(flushed: FlushedSession): Promise<ReadingSession> {
+      return recordSession(
+        { repo, newId: () => clock.newId(), newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        flushed,
+      );
     },
   };
 }

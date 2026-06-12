@@ -110,4 +110,50 @@ describe('createWebClock', () => {
     t = 10_000;
     expect(clock.now()).toBe(10_000);
   });
+
+  it('newId() uses the injected generator and returns distinct values', () => {
+    const storage = makeStorage();
+    let counter = 0;
+    const clock = createWebClock({ storage, newId: () => `uid-${++counter}`, now: () => 1000 });
+
+    // First call to newId went to deviceId; subsequent calls go to newId()
+    const id1 = clock.newId();
+    const id2 = clock.newId();
+    expect(id1).not.toBe(id2);
+    // Both must come from the injected generator
+    expect(id1).toMatch(/^uid-\d+$/);
+    expect(id2).toMatch(/^uid-\d+$/);
+  });
+
+  it('newId() and newOutboxId() draw from the same injected generator but are distinct methods', () => {
+    const storage = makeStorage();
+    const generated: string[] = [];
+    const clock = createWebClock({
+      storage,
+      newId: () => {
+        const id = `gen-${generated.length.toString()}`;
+        generated.push(id);
+        return id;
+      },
+      now: () => 1000,
+    });
+
+    const sessionId = clock.newId();
+    const outboxId = clock.newOutboxId();
+
+    expect(sessionId).not.toBe(outboxId); // distinct values
+    expect(generated.length).toBeGreaterThanOrEqual(2); // both called the generator
+  });
+
+  it('newId() does not perturb the HLC clock (stamps stay monotonic)', () => {
+    const storage = makeStorage();
+    let counter = 0;
+    const clock = createWebClock({ storage, newId: () => `uid-${++counter}`, now: () => 5000 });
+
+    const s1 = clock.nextStamp();
+    clock.newId(); // must not affect clock state
+    const s2 = clock.nextStamp();
+
+    expect(s2.counter).toBeGreaterThan(s1.counter);
+  });
 });
