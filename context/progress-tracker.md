@@ -236,9 +236,35 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Next: Unit 06e — mobile native Today + tab nav** (the deferred half of umbrella 06d's split; net-new UI →
-  frontend-design + impeccable; expo-router restructure; device-bound). Completes umbrella Unit 06 (#6) for mobile.
-  Not yet specced.
+- **Unit 06e SPECCED (2026-06-12) — Issue #60, Closes #60, branch feat/60-mobile-today-tab-nav,
+  spec specs/06e-mobile-today-tab-nav.md. Route standard** (single boundary apps/mobile; NO new dep —
+  expo-router is already the mobile router; net-new UI → frontend-design + impeccable → fresh-context Opus
+  review; device-bound like 02d/03c/05b/06d). The mobile mirror of 06c, final slice of umbrella Unit 06.
+  Gives apps/mobile a **bottom tab bar** (expo-router `Tabs`: Today + Library) + a native **Today** screen
+  whose **Continue Reading** card resumes the most-recently-read doc (06a/06d positions). Product carries
+  over from 06c (resolved 2026-06-11): Today = Continue Reading only (no streak/goal/%, await session log);
+  tabs = Today + Library only. Mobile specifics: tab nav = expo-router bottom Tabs (not react-router; web
+  used a TOP nav); ThemeControl stays in the Library header (no app-wide top chrome under a bottom-tab IA;
+  future Settings tab owns it app-wide); `selectContinueReading` DUPLICATED into apps/mobile (mirror web,
+  defer dedup-hoist — like native-clock/format-bytes) to keep this single-boundary. Build: native-store
+  `listReadingPositions` (06d deferred it); pure mobile `selectContinueReading` + use-continue-reading hook;
+  bespoke uniwind Today screen + Continue Reading card; expo-router restructure to `app/(tabs)/_layout.tsx`
+  (token-driven bottom Tabs via useResolveClassNames + @expo/vector-icons, bundled — no dep) +
+  `(tabs)/index.tsx` (Today) + `(tabs)/library.tsx` (relocated LibraryScreen), delete `app/index.tsx`,
+  reader stays a full-screen stack route OUTSIDE the tabs. Tests = pure seam only (mobile has no React test
+  renderer): `select-continue-reading.test.ts` + extend `native-store-reading-position.test.ts`; screens/
+  card/tab bar device-verified. **NEXT (separate command): dispatch.**
+- **Dedup-hoist follow-up (own micro-unit, defer — do NOT widen 06e):** `selectContinueReading` +
+  `ContinueReadingItem` now exist byte-identically in apps/web AND apps/mobile. Promote the pure selector to
+  `packages/core` (or a shared today/ module) and have both clients import it, retiring both copies. Same
+  class as the deferred native-clock/format-bytes dedup.
+- **Import-time title normalization follow-up (own micro-unit, defer — do NOT widen 06e):** imported
+  `Document.title` is the raw filename (e.g. `_OceanofPDF.com_The_Forgotten_Trinity_-_James_R_White`). 06e's
+  design pass added a DISPLAY-ONLY `apps/mobile/src/today/format-title.ts` (strip download-site prefix,
+  underscores→spaces, ` - `→em-dash, drop `.pdf`) used only on the mobile Today card — so Library/reader (web
+  AND mobile) still show the ugly filename. Proper fix: normalize the title at IMPORT time in
+  `importDocument` (packages/store, with the pure transform in packages/core) so every surface benefits and
+  the per-client display helper can be retired. Touches core+store (a second boundary) → its own unit, not 06e.
 - **Unit 06d MERGED (2026-06-12) — PR #59 squash-merged to main, #58 closed, branch deleted.** Mobile reader
   capture/restore (mirror of 06b). Shipped: native-store `saveReadingPosition`/`getReadingPosition` (listReadingPositions
   deferred to 06e like 06b→06c); a PURE `reading-position-controller` (resume-once + generation-token stale guard +

@@ -1,6 +1,6 @@
 import type { Document, Hasher, ReadingPosition } from '@ember/core';
 import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, saveReadingPosition } from '@ember/store';
+import { getReadingPosition, importDocument, listDocuments, listReadingPositions, saveReadingPosition } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -34,6 +34,8 @@ export interface NativeStore {
    * Used by the reader to resume where the user left off.
    */
   getReadingPosition(docId: string): Promise<ReadingPosition | undefined>;
+  /** Return all stored reading positions (unsorted; the selector handles ordering). */
+  listReadingPositions(): Promise<ReadingPosition[]>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -87,6 +89,10 @@ export function createNativeStore(deps: {
 
     async getReadingPosition(docId: string): Promise<ReadingPosition | undefined> {
       return getReadingPosition(repo, docId);
+    },
+
+    async listReadingPositions(): Promise<ReadingPosition[]> {
+      return listReadingPositions(repo);
     },
   };
 }
