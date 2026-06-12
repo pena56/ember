@@ -236,8 +236,14 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 08a SPECCED (2026-06-12) — Issue #68, branch feat/68-streak-goal-engine (not yet cut), spec
-  specs/08a-streak-goal-engine.md. Route standard.** Umbrella **Unit 08 (Streaks + daily goal + freezes)**
+- **Unit 08a BUILT — PR #69 open, awaiting merge (2026-06-12). Issue #68, branch feat/68-streak-goal-engine,
+  spec specs/08a-streak-goal-engine.md. Route standard.** Dispatched Sonnet TDD executor → fresh-context Opus
+  review (**APPROVE**, no blocking/should-fix; algorithm hand-traced, invariants #1–#4 verified). 205 tests
+  green (113 core / 92 store); typecheck + lint clean. Built: core `streak.ts` (`deriveStreak` /
+  `deriveTodayGoal` / `deriveHabitSummary` / `nextLocalDay` / `activeMsByDay`) + store `goal-config.ts`
+  (`getGoalConfig`/`setGoalConfig`). **Next:** merge #69, then spec/build **08b** (web Today goal ring +
+  streak ember — UI unit → frontend-design + impeccable before review), then 08c (mobile, device-bound).
+  Umbrella **Unit 08 (Streaks + daily goal + freezes)**
   SCORED COMPLEX → split by boundary like 03/04/05/06/07: **08a** shared brain (core derivation + store
   goal config — this) → **08b** web Today goal ring + streak ember → **08c** mobile Today goal ring + streak
   ember (device-bound). **Design RESOLVED (user, 2026-06-12):** (1) streak rule = **any reading** (any local
@@ -248,8 +254,7 @@ Update after every meaningful change.
   day auto-consumes one, today-unread is pending (no break/consume). 08a = pure core `deriveStreak` /
   `deriveTodayGoal` / `deriveHabitSummary` over `ReadingSession[]` + a caller-supplied `today` local-day (no
   clock in core, mirrors 07a) + store `getGoalConfig`/`setGoalConfig` (single mutable record + one outbox
-  entry). Fully headless-testable; mirrors 07a's core+store shape. **Next:** dispatch (Sonnet TDD executor →
-  fresh-context Opus review), then 08b.
+  entry). Fully headless-testable; mirrors 07a's core+store shape.
 - **Umbrella Unit 07 (session/idle tracking engine) COMPLETE (2026-06-12).** 07a (#62/#63, shared brain) →
   07b (#64/#65, web wiring) → 07c (#66/#67, mobile wiring) all MERGED to main. The reader now produces a real
   append-only session log on both clients; stats/aggregation are downstream concerns (units 08/09).
