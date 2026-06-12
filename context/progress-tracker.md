@@ -236,12 +236,13 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 07a BUILT — PR #63 OPEN (2026-06-12), awaiting merge.** Issue #62, branch
-  feat/62-session-tracking-engine, commit 85f8c0a. TDD executor (Sonnet) → fresh-context Opus review
+- **Unit 07a MERGED (2026-06-12) — PR #63 squash-merged to main (785c7da), #62 closed, branch deleted.**
+  Branch feat/62-session-tracking-engine. TDD executor (Sonnet) → fresh-context Opus review
   = **APPROVE WITH NITS, no blockers**; all 3 nits applied (defensive `pages` copy in `finalize`,
-  dead-branch cleanup, stronger close-purity test). Verify green: core 87 tests (26 new session),
-  store 86 (10 new), web/mobile untouched; typecheck 9/9, lint 6/6. **Next:** merge #63, then build 07b
-  (web reader event wiring → `reduce`/`recordSession`), then 07c (mobile).
+  dead-branch cleanup, stronger close-purity test). CI `verify` green. Shipped: core `session.ts`
+  (`reduce`/`localDayOf`/`makeReadingSession`) + store `sessions.ts` (`recordSession`/`listSessions`),
+  core 87 tests / store 86. **Next:** build 07b (web reader event wiring → `reduce`/`recordSession`),
+  then 07c (mobile).
 - **Unit 07a SPECCED (2026-06-12) — Issue #62, branch feat/62-session-tracking-engine, spec
   specs/07a-session-tracking-engine.md. Route standard.** Umbrella **Unit 07 (session/idle tracking
   engine)** SCORED COMPLEX → split by boundary like 03/04/05/06: **07a** shared brain (core session
