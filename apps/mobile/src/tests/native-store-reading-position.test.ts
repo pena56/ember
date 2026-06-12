@@ -108,3 +108,43 @@ describe('saveReadingPosition', () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe('listReadingPositions', () => {
+  it('returns all saved positions across distinct docs', async () => {
+    const { store } = makeDeps();
+
+    await store.saveReadingPosition({ docId: 'doc-a', page: 1, offset: 0.1 });
+    await store.saveReadingPosition({ docId: 'doc-b', page: 5, offset: 0.5 });
+    await store.saveReadingPosition({ docId: 'doc-c', page: 10, offset: 0.9 });
+
+    const positions = await store.listReadingPositions();
+
+    expect(positions).toHaveLength(3);
+    const ids = positions.map((p) => p.id).sort();
+    expect(ids).toEqual(['doc-a', 'doc-b', 'doc-c']);
+  });
+
+  it('returns empty array when no positions have been saved', async () => {
+    const { store } = makeDeps();
+    const positions = await store.listReadingPositions();
+    expect(positions).toEqual([]);
+  });
+
+  it('returns the latest position for each doc (last-write wins per doc)', async () => {
+    const { store } = makeDeps();
+
+    // Save twice for doc-a — second write wins
+    await store.saveReadingPosition({ docId: 'doc-a', page: 50, offset: 0.9 });
+    await store.saveReadingPosition({ docId: 'doc-a', page: 10, offset: 0.1 });
+    await store.saveReadingPosition({ docId: 'doc-b', page: 7, offset: 0.7 });
+
+    const positions = await store.listReadingPositions();
+
+    // Two distinct docs
+    expect(positions).toHaveLength(2);
+
+    const posA = positions.find((p) => p.id === 'doc-a');
+    expect(posA).toBeDefined();
+    expect(posA!.page).toBe(10); // last-write wins
+  });
+});
