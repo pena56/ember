@@ -17,3 +17,4 @@ export * from './blob-store.js';
 export * from './memory-blob-store.js';
 export * from './documents.js';
 export * from './reading-positions.js';
+export * from './sessions.js';

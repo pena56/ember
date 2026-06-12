@@ -236,6 +236,26 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 07a BUILT — PR #63 OPEN (2026-06-12), awaiting merge.** Issue #62, branch
+  feat/62-session-tracking-engine, commit 85f8c0a. TDD executor (Sonnet) → fresh-context Opus review
+  = **APPROVE WITH NITS, no blockers**; all 3 nits applied (defensive `pages` copy in `finalize`,
+  dead-branch cleanup, stronger close-purity test). Verify green: core 87 tests (26 new session),
+  store 86 (10 new), web/mobile untouched; typecheck 9/9, lint 6/6. **Next:** merge #63, then build 07b
+  (web reader event wiring → `reduce`/`recordSession`), then 07c (mobile).
+- **Unit 07a SPECCED (2026-06-12) — Issue #62, branch feat/62-session-tracking-engine, spec
+  specs/07a-session-tracking-engine.md. Route standard.** Umbrella **Unit 07 (session/idle tracking
+  engine)** SCORED COMPLEX → split by boundary like 03/04/05/06: **07a** shared brain (core session
+  model + idle/active-time reducer + local-day stamping + store append-only persistence — this) →
+  **07b** web reader event wiring → **07c** mobile reader event wiring (device-bound, WebView bridge).
+  **Design RESOLVED (user, 2026-06-12):** (1) idle threshold = **60s** (gap >60s ends a bout);
+  (2) one record **per reading bout** (continuous engaged reading), not a fine-grained event log;
+  (3) a bout crossing local midnight **splits into one record per local day** (invariant #4). Plus a
+  defaulted rule (noted in spec): **zero-active slices dropped** (open→close with no engaged time is
+  not a session). 07a = pure `reduce(state, event)` reducer (open/activity/page/close; caller supplies
+  wall ms + tz offset + a ~15s heartbeat — no clock/timers in core) emitting `FlushedSession`s, a
+  `makeReadingSession` HLC factory, and store `recordSession` (append-only, uuid-keyed, one outbox
+  entry) / `listSessions(filter?)`. Fully headless-testable; mirrors 06a's core+store shape. Next:
+  build 07a (TDD executor → fresh-context Opus review), then 07b.
 - **Unit 06e MERGED (2026-06-12) — PR #61 squash-merged to main (2dfe1c0), #60 closed, branch deleted,
   DEVICE-VERIFIED by user (Expo Go).** Issue #60, spec specs/06e-mobile-today-tab-nav.md. Route standard
   (single boundary apps/mobile; net-new UI → impeccable design pass → fresh-context Opus review = APPROVE,
