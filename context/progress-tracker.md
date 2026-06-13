@@ -276,8 +276,18 @@ Update after every meaningful change.
   `resolveAnchorRects` (one rect/overlapped item, between canvas + text layer); (4) `selection-toolbar.tsx` +
   `use-annotations.ts` + `web-store.createAnnotation`/`listAnnotations` (one mutation = one HLC `put`, invariant
   #2). UI unit → frontend-design + impeccable before review. First verifiable result: select text → tap color →
-  highlight paints → reload → still there. **Next:** dispatch 10b (Sonnet TDD executor → frontend-design +
-  impeccable → fresh-context Opus reviewer), then 10c. Awaiting user "dispatch".
+  highlight paints → reload → still there.
+- **Unit 10b DISPATCHED + PR OPEN (2026-06-13) — PR #89 (Closes #88), branch feat/88-web-highlight-create-render.**
+  Built TDD (Sonnet executor): tokens (`highlights` registry + `--color-highlight-*` in both CSS files + parity
+  test), pure `selection-anchor.ts` (DOM Range→`buildPageText` offsets, canonical `quote`), `highlight-layer.tsx`
+  (rects between canvas + text layer), floating 4-swatch `selection-toolbar.tsx`, `use-annotations.ts`,
+  `web-store.createAnnotation`/`listAnnotations` (one HLC `put`). Fresh-context Opus review **REQUEST CHANGES** →
+  one should-fix: highlights invisible on the **night** theme (hardcoded `mix-blend-multiply` crushes the tint to
+  black). **Fixed** with a theme-driven `--highlight-blend` token (multiply on paper/sepia, screen on night) — only
+  the blend flips, palette stays single-sourced (invariant #6); nits addressed. `pnpm -w typecheck` ✓ · `test` ✓
+  (web 225 / +36, tokens 28 / +5, core 224, store 108, mobile 156) · `lint` ✓. Invariants #1/#2/#6 + core purity
+  verified. **Next:** merge PR #89, then spec 10c (web edit/recolor/delete + standalone notes + pins). Awaiting
+  user "merge".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
