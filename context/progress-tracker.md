@@ -236,16 +236,25 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 09b SPECCED (2026-06-13) — Issue #76 (umbrella #9), branch feat/76-web-reader-pagecount (not yet
-  cut), spec specs/09b-web-reader-pagecount.md. Route standard** (single boundary apps/web, no product fork,
-  no new dep). Web reader persists pdfjs `numPages` via 09a's `setDocumentPageCount`. Investigated:
-  `usePdfDocument` ALREADY surfaces `numPages` on `ready` (no pdfjs plumbing needed). Design (mechanical):
-  (1) WebStore facade gains `setDocumentPageCount(docId, n)` delegating to `@ember/store` with clock deps
-  `{ repo, newOutboxId, hlc }` (mirrors `saveReadingPosition`); (2) new `useCapturePageCount` hook —
-  fire-exactly-once-per-docId guard ref, fires on `ready && numPages>0`, fire-and-forget, swallows errors
-  (invariant #1), re-arms on docId change (mirrors `useSessionTracking`); (3) wire into `reader-page.tsx`
-  beside the other reader hooks. **No UI** (page-count is headless metadata → no frontend-design/impeccable
-  pass). Tests: web-store-page-count surface + use-capture-page-count hook. **Awaiting user "dispatch".**
+- **Unit 09c SPECCED (2026-06-13) — Issue #78 (umbrella #9), branch feat/78-mobile-reader-pagecount (not yet
+  cut), spec specs/09c-mobile-reader-pagecount.md. Route standard** (single boundary apps/mobile, no product
+  fork, no new dep). Mobile twin of 09b. Investigated: the WebView pdf.js bridge ALREADY posts
+  `{ type:'ready', numPages }` → `onReady` → `reader-screen` `numPages` state (no bridge plumbing needed).
+  Design (mechanical, mirrors 09b): (1) NativeStore facade gains `setDocumentPageCount(docId, n)` delegating
+  to `@ember/store` with clock deps `{ repo, newOutboxId, hlc }` (mirrors `saveReadingPosition`); (2) new
+  mobile `useCapturePageCount` hook — fire-once-per-docId guard ref, fires on `ready && numPages>0`,
+  fire-and-forget, swallows errors (invariant #1), re-arms on docId change; reads store via
+  `useNativeStore()` with `?.` (null-store guard, like the session/position hooks); (3) wire into
+  `reader-screen.tsx` beside the other reader hooks. **No UI.** Tests: native-store-page-count **surface
+  only** — mobile has NO headless React test renderer (the existing use-session-tracking/use-reading-position
+  hooks carry no .test.tsx and are Expo-Go-verified); the hook follows that precedent (the one intended
+  divergence from 09b, driven by test infra not scope). **Awaiting user "dispatch".**
+- **Unit 09b DONE + MERGED (2026-06-13) — PR #77 squashed to main (e0b59a5), Issue #76 closed.** Sonnet TDD
+  executor → fresh-context Opus reviewer = **APPROVE, no changes**. Diff (apps/web only): WebStore
+  `setDocumentPageCount` facade + new `useCapturePageCount` fire-once hook + reader-page wiring; `usePdfDocument`
+  untouched (already surfaced `numPages`). Tests: web-store-page-count (3) + use-capture-page-count (6). Verify
+  green: typecheck 9 ✓ · test 133 web ✓ · lint 6 ✓. Reviewer validated the numPages 0→N effect-edge is correct.
+  **Next: 09c (mobile reader → pdf.js bridge numPages).**
 - **Unit 09a DONE + MERGED (2026-06-13) — PR #75 squashed to main (fac8873), Issue #74 closed.** Sonnet TDD
   executor → fresh-context Opus reviewer = **APPROVE, no changes**. Diff: `Document.pageCount?` + pure
   `withDocumentPageCount` (core), `setDocumentPageCount` set-once/idempotent use-case (store) + tests.

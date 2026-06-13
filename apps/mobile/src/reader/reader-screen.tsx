@@ -26,6 +26,7 @@ import { useNativeStore } from '../store/store-context.js';
 
 import type { ReadMode } from './reader-webview.js';
 import { ReaderWebView } from './reader-webview.js';
+import { useCapturePageCount } from './use-capture-page-count.js';
 import { useReadingPosition } from './use-reading-position.js';
 import { useSessionTracking } from './use-session-tracking.js';
 
@@ -297,6 +298,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
     ready: status === 'ready',
     getPage: () => currentPageRef.current,
   });
+
+  useCapturePageCount({ docId, ready: status === 'ready', numPages });
 
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
