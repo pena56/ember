@@ -236,6 +236,21 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08c BUILT — PR open (Closes #72), branch feat/72-mobile-today-habit, awaiting device-verify + merge
+  (2026-06-13).** Built inline by fully-context-loaded Opus (TDD on the seam; net-new RN ember+ring mirrored
+  from 08b's polished components + a11y) → fresh-context Opus review = **APPROVE** (no invariant violations,
+  no token leaks, presenter byte-identical). native-store gained read-only `listSessions`/`getGoalConfig`
+  delegations only (no write/outbox — #2/#5 untouched); pure `present-habit.ts` is a verbatim copy of 08b's
+  (17 Vitest cases) + new `native-store-habit.test.ts` seam test (3 cases); `use-habit-summary.ts` gates on
+  `ready`/`store` + swallows read errors → neutral default view (#1); `streak-ember`/`goal-ring`/`habit-header`
+  use react-native-svg + `useResolveClassNames`→ColorValue (no className colors / no arbitrary-value classes —
+  #6); RN-native halo glow replaces web's CSS drop-shadow (shipped static, no motion dep). Derived on read
+  never stored (#3). **Review-driven fix:** today-screen no longer full-screen-gates on `useContinueReading`
+  loading — greeting + separator + HabitHeader (own skeleton) render immediately; only the Continue Reading
+  card shows a scoped inline spinner (spec's "don't couple the two loading states"). typecheck ✓ · mobile
+  test 15 files/102 ✓ · lint ✓ · web/core/store/tokens byte-identical to main. **DEVICE-VERIFY (user, Expo
+  Go, before merge):** no-sessions dim ember + `0/20` ring; read a PDF → ring fills + ember lights; light/dark;
+  freeze pips after a ≥5-day run; habit header coexists with Continue Reading (independent loading).
 - **Unit 08c SPECCED (2026-06-13) — Issue #72, branch feat/72-mobile-today-habit (not yet cut), spec
   specs/08c-mobile-today-habit.md. Route standard, UI unit, DEVICE-BOUND.** Final slice of umbrella Unit 08:
   mirrors 08b onto the Expo/uniwind Today screen, reading the same 08a `deriveHabitSummary`. native-store gains

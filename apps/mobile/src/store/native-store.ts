@@ -1,6 +1,6 @@
 import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
-import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, listReadingPositions, recordSession, saveReadingPosition } from '@ember/store';
+import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
+import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -42,6 +42,18 @@ export interface NativeStore {
    * Writes exactly one ReadingSession record + one outbox entry per call (invariant #2).
    */
   recordSession(flushed: FlushedSession): Promise<ReadingSession>;
+  /**
+   * Return the full session log (no filter) for habit derivation.
+   * Read-only: feeds `deriveHabitSummary` on the Today tab (08c). Streaks/goal
+   * are always derived on read, never stored (invariant #3).
+   */
+  listSessions(): Promise<ReadingSession[]>;
+  /**
+   * Return the stored daily-goal config, or the unpersisted 20-min default when
+   * unset (per 08a). Read-only — editing the target is the Settings unit (17),
+   * so no write/outbox path lives here (invariants #2/#5 untouched).
+   */
+  getGoalConfig(): Promise<GoalConfigRecord>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -106,6 +118,14 @@ export function createNativeStore(deps: {
         { repo, newId: () => clock.newId(), newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
         flushed,
       );
+    },
+
+    async listSessions(): Promise<ReadingSession[]> {
+      return listSessions(repo);
+    },
+
+    async getGoalConfig(): Promise<GoalConfigRecord> {
+      return getGoalConfig(repo);
     },
   };
 }

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
 import { ContinueReadingCard } from './continue-reading-card.js';
+import { HabitHeader } from './habit-header.js';
 import { useContinueReading } from './use-continue-reading.js';
 
 // ── Greeting helpers (mirrors web today-page.tsx logic verbatim) ──────────────
@@ -64,51 +65,60 @@ export function TodayScreen() {
     // Page bg on a core View — uniwind className is a no-op on SafeAreaView (02d carry-forward)
     <View className="flex-1 bg-surface">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        {loading ? (
-          <View
-            className="flex-1 items-center justify-center"
-            accessibilityRole="none"
-            accessibilityState={{ busy: true }}
-            accessibilityLabel="Loading your reading progress"
-          >
-            <ActivityIndicator size="small" color={accent} accessibilityElementsHidden />
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-            showsVerticalScrollIndicator={false}
-          >
-            <View className="px-6 py-10 gap-9">
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="px-6 py-10 gap-9">
 
-              {/* Greeting block */}
-              <View className="gap-2">
-                {/* Date — quiet, muted, contextual */}
-                <Text className="font-sans text-xs font-medium uppercase tracking-widest text-text-muted">
-                  {formatDate()}
-                </Text>
+            {/* Greeting block */}
+            <View className="gap-2">
+              {/* Date — quiet, muted, contextual */}
+              <Text className="font-sans text-xs font-medium uppercase tracking-widest text-text-muted">
+                {formatDate()}
+              </Text>
 
-                {/* Greeting headline — Fraunces, emotional anchor */}
-                <Text
-                  className="font-serif text-4xl text-text leading-tight"
-                  accessibilityRole="header"
-                >
-                  {greeting}
-                </Text>
+              {/* Greeting headline — Fraunces, emotional anchor */}
+              <Text
+                className="font-serif text-4xl text-text leading-tight"
+                accessibilityRole="header"
+              >
+                {greeting}
+              </Text>
 
-                {/* Subtitle */}
+              {/* Subtitle — only once Continue Reading has resolved (avoids a wrong copy flash) */}
+              {!loading && (
                 <Text className="font-sans text-sm text-text-muted mt-0.5">
                   {getSubtitle(items.length > 0)}
                 </Text>
-              </View>
+              )}
+            </View>
 
-              {/* Thin separator — matches web rhythm */}
+            {/* Thin separator — matches web rhythm */}
+            <View
+              className="h-px w-12 bg-line"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+
+            {/* Habit header — streak ember + today's goal ring. Owns its own
+                loading (skeleton) via useHabitSummary, independent of the
+                Continue Reading read below (spec 08c: don't couple the two). */}
+            <View accessibilityLabel="Reading habit" accessibilityRole="none">
+              <HabitHeader />
+            </View>
+
+            {/* Continue Reading section — scoped inline loading, never a full-screen gate */}
+            {loading ? (
               <View
-                className="h-px w-12 bg-line"
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              />
-
-              {/* Continue Reading section */}
+                className="items-center justify-center py-12"
+                accessibilityRole="none"
+                accessibilityState={{ busy: true }}
+                accessibilityLabel="Loading your reading progress"
+              >
+                <ActivityIndicator size="small" color={accent} accessibilityElementsHidden />
+              </View>
+            ) : (
               <View accessibilityLabel="Continue reading" accessibilityRole="none">
                 <ContinueReadingCard
                   item={topItem}
@@ -116,10 +126,10 @@ export function TodayScreen() {
                   onBrowseLibrary={handleBrowseLibrary}
                 />
               </View>
+            )}
 
-            </View>
-          </ScrollView>
-        )}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
