@@ -236,19 +236,32 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 09c SPECCED (2026-06-13) — Issue #78 (umbrella #9), branch feat/78-mobile-reader-pagecount (not yet
-  cut), spec specs/09c-mobile-reader-pagecount.md. Route standard** (single boundary apps/mobile, no product
-  fork, no new dep). Mobile twin of 09b. Investigated: the WebView pdf.js bridge ALREADY posts
-  `{ type:'ready', numPages }` → `onReady` → `reader-screen` `numPages` state (no bridge plumbing needed).
-  Design (mechanical, mirrors 09b): (1) NativeStore facade gains `setDocumentPageCount(docId, n)` delegating
-  to `@ember/store` with clock deps `{ repo, newOutboxId, hlc }` (mirrors `saveReadingPosition`); (2) new
-  mobile `useCapturePageCount` hook — fire-once-per-docId guard ref, fires on `ready && numPages>0`,
-  fire-and-forget, swallows errors (invariant #1), re-arms on docId change; reads store via
-  `useNativeStore()` with `?.` (null-store guard, like the session/position hooks); (3) wire into
-  `reader-screen.tsx` beside the other reader hooks. **No UI.** Tests: native-store-page-count **surface
-  only** — mobile has NO headless React test renderer (the existing use-session-tracking/use-reading-position
-  hooks carry no .test.tsx and are Expo-Go-verified); the hook follows that precedent (the one intended
-  divergence from 09b, driven by test infra not scope). **Awaiting user "dispatch".**
+- **Unit 09d DONE — Issue #80 (umbrella #9), branch feat/80-core-analytics-engine, spec
+  specs/09d-core-analytics-engine.md. Route standard.** Sonnet TDD executor → fresh-context Opus reviewer
+  (re-ran all 3 suites himself, analytics tests verified **uncached** 49/49) = **APPROVE, no changes.**
+  **Phase 2 (analytics), first slice.** Diff (packages/core only): new pure `analytics.ts` of `derive*`
+  functions over `ReadingSession[]` (+ `Document.pageCount` from Phase 1, + `ReadingPosition` furthest page),
+  reusing `activeMsByDay`/`nextLocalDay`, no `Date.now()`; barrel line; new exhaustive `analytics.test.ts`.
+  Surface (the contract 09e/09f import): `hourOf`, `deriveTotals` (activeMs/pagesTurned/daysRead/sessions),
+  `deriveSpeed` (pagesPerHour/msPerPage, `null` on no data), `deriveTimeOfDay`+`dayPartOfHour` (4 day-parts —
+  morning 05–11/afternoon 12–16/evening 17–21/night 22–04, by local start hour), `buildHeatmap(sessions,
+  fromDay, toDay)` (dense zero-filled inclusive series; `fromDay>toDay`→[]), `deriveBookProgress` (per-doc
+  furthestPage from ReadingPosition→max session page→0; progressRatio clamped/pagesRemaining/etaMs `null`
+  when pageCount unknown; ETA speed per-book→global→null), `deriveAnalytics` composition (heatmap kept
+  separate — needs a window). **Product decisions (resolved with user 2026-06-13):** one engine unit;
+  4 day-parts; ETA per-book-fall-back-to-global; progress basis = furthest reading-position page / pageCount
+  (invariant #5). No store change — list seams already existed. Verify green: typecheck 9 ✓ · test 170 core
+  (49 new) ✓ · lint 6 ✓. Invariants #1 (pure on-device, no Convex/I/O) + #3 (stats DERIVED, never stored)
+  intact. **PR pending — awaiting user merge.** Next: Phase 2 → 09e web Stats tab UI (needs frontend-design
+  + impeccable).
+- **Unit 09c DONE + MERGED (2026-06-13) — PR #79 squashed to main (2f6283a), Issue #78 closed.** Sonnet TDD
+  executor → fresh-context Opus reviewer (re-ran all 3 suites himself) = **APPROVE, no changes**. Diff
+  (apps/mobile only): NativeStore `setDocumentPageCount` facade + new `useCapturePageCount` fire-once hook
+  (`?.` null-store guard) + reader-screen wiring; WebView bridge untouched (already surfaced `numPages`).
+  Test: native-store-page-count (3, surface only — no renderHook, mobile has no headless renderer, hook
+  Expo-Go-verified per session-tracking precedent). Verify green: typecheck 9 ✓ · test 105 mobile ✓ · lint 6 ✓.
+  **Phase 1 (page-count capture) COMPLETE** — 09a (core/store #74) + 09b (web #76) + 09c (mobile #78); every
+  opened document now carries `pageCount` on both platforms. **Next: Phase 2 → 09d core analytics engine.**
 - **Unit 09b DONE + MERGED (2026-06-13) — PR #77 squashed to main (e0b59a5), Issue #76 closed.** Sonnet TDD
   executor → fresh-context Opus reviewer = **APPROVE, no changes**. Diff (apps/web only): WebStore
   `setDocumentPageCount` facade + new `useCapturePageCount` fire-once hook + reader-page wiring; `usePdfDocument`

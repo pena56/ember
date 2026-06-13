@@ -9,3 +9,4 @@ export * from './text-geometry.js';
 export * from './reading-position.js';
 export * from './session.js';
 export * from './streak.js';
+export * from './analytics.js';
