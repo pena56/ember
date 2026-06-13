@@ -236,23 +236,27 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 09f SPECCED (2026-06-13) — Issue #84 (umbrella #9), branch feat/84-mobile-stats-tab (not yet cut),
-  spec specs/09f-mobile-stats-tab.md. Route standard + UI** (single boundary apps/mobile; net-new UI →
-  executor runs **frontend-design** then **impeccable** before code-review; pure presenter built test-first).
-  **Phase 2 (analytics), final slice — completes umbrella Unit 09.** The **mobile** Stats tab: a third
-  bottom tab (`app/(tabs)/stats.tsx` + `<Tabs.Screen name="stats">` + a new `StatsIcon` in `_layout.tsx`)
-  rendering the 09d engine + 08a streak behind the existing `NativeStore` reads — no core/store/dep change.
-  Mobile twin of 09e; same six-section "full glance", same 3 product decisions (full glance · trailing-365
-  heatmap · all-books-with-sessions most-recent-first — carried, not re-litigated). Mirrors the mobile Today
-  pattern: pure `present-stats.ts` (**verbatim copy of web 09e's** — per-platform presenter house style,
-  keeps the boundary at apps/mobile) → `use-stats.ts` hook (`{store,ready}` gate + cancel flag, swallow read
-  errors → neutral `defaultView()`, invariant #1) → section components (uniwind + `react-native-svg`) →
-  `stats-screen.tsx` (`SafeAreaView`+`ScrollView` shell like `today-screen.tsx`). **RN platform-reality
-  adaptations (mechanical, mirror 08c/09c):** token colors via `useResolveClassNames`→`ColorValue` (never
-  `var()`/className on SVG); heatmap ramp = accent `ColorValue` + per-level **opacity** (no `color-mix`);
-  heatmap in a **horizontal ScrollView**; **no headless RN renderer** → only `present-stats.test.ts` is
-  unit-tested (hook/screen/components verified in **Expo Go**). All four read seams already on `NativeStore`.
-  **Awaiting user "dispatch".**
+- **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
+  Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
+  09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
+  from on-device sessions (invariant #3). The reading-habit layer (streak + goal ring + Stats) is in
+  place across both apps. Umbrella issue #9 closed.
+- **Unit 09f DONE + MERGED (2026-06-13) — PR #85 squashed to main (8bde947), Issue #84 closed.** Mobile
+  Stats tab: third bottom tab (`app/(tabs)/stats.tsx` + `<Tabs.Screen name="stats">` + bespoke token-
+  colored `StatsIcon` in `_layout.tsx`) → pure `present-stats.ts` (**verbatim port of web 09e's**, 51 tests
+  — byte-identical, confirmed by reviewer `diff`) → `use-stats.ts` (`{store,ready}` gate + cancel flag,
+  swallow read errors → neutral `defaultView()`, invariant #1) → six section components (uniwind +
+  `react-native-svg`) → `stats-screen.tsx` (`SafeAreaView`+`ScrollView` shell). RN adaptations: token
+  colors via `useResolveClassNames`→`ColorValue`; heatmap ramp = accent `ColorValue` + per-level opacity
+  (no `color-mix`) in a horizontal `ScrollView`; loading skeleton + warm empty state. apps/mobile-only, no
+  core/store/dep change. **Executor (Sonnet) hit a session limit mid-build (had the presenter+51 tests,
+  hook, 4/7 sections); finished inline** (book-progress list/row, screen, route, tab wiring) mirroring the
+  audited web 09e + mobile Today idioms; fixed RN `DimensionValue` percentage-width typing + import order.
+  Fresh-context Opus reviewer = **APPROVED**, no blockers (invariants #1/#3/#6 verified, verbatim port
+  confirmed). Non-blocking note (first literal `text-streak-*` use) closed defensively by adding those
+  tokens to the `@source inline(...)` safelist in `global.css`. typecheck ✓ · mobile test 156 (incl. 51
+  present-stats) ✓ · lint ✓. Screen/hook/components device-verified in **Expo Go** (no headless RN
+  renderer — 08c/09c precedent). **Phase 2 final slice (mobile UI) COMPLETE — umbrella Unit 09 done.**
 - **Unit 09e DONE + MERGED (2026-06-13) — PR #83 squashed to main (f60f457), Issue #82 closed.** Web Stats
   tab: `/stats` route + nav Tab, pure `present-stats.ts` (51 tests) → `use-stats.ts` (swallow→neutral view)
   → six section components → `stats-page.tsx`; apps/web-only, no core/store/dep change. Sonnet TDD executor
