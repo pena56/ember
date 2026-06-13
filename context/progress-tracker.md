@@ -236,6 +236,18 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08c SPECCED (2026-06-13) — Issue #72, branch feat/72-mobile-today-habit (not yet cut), spec
+  specs/08c-mobile-today-habit.md. Route standard, UI unit, DEVICE-BOUND.** Final slice of umbrella Unit 08:
+  mirrors 08b onto the Expo/uniwind Today screen, reading the same 08a `deriveHabitSummary`. native-store gains
+  read-only `listSessions`/`getGoalConfig` delegations (no `setGoalConfig` — #2/#5 untouched); pure
+  `present-habit.ts` is a verbatim copy of 08b's (Vitest-tested) + `use-habit-summary.ts` (gates on `ready`/
+  `store`, read errors → neutral view, #1) + `streak-ember`/`goal-ring`/`habit-header` (react-native-svg +
+  uniwind `useResolveClassNames` token colors, #6) wired into today-screen.tsx. Derived on read never stored
+  (#3). Platform deltas from 08b: useResolveClassNames not className colors; `{store,ready}` store; no CSS
+  drop-shadow/blur on RN; **hook + components device-verified, not render-tested** (no headless RN renderer —
+  same precedent as 07c/06d). Dispatch route: Sonnet TDD (present-habit + native-store seam) → frontend-design
+  (net-new RN ember+ring) → impeccable → fresh-context Opus review → branch/commit/PR "Closes #72" →
+  Device-verify (Expo Go) before merge. **Awaiting user "dispatch".**
 - **Unit 08b MERGED (2026-06-13) — PR #71 squashed to main (8eec4be), Issue #70 closed, browser-verified
   by user.** Web Today tab now renders 08a's `deriveHabitSummary` above Continue Reading: streak ember
   (lit/at-risk/broken + banked freezes) + today's goal ring (active min vs 20-min target). Built test-first
