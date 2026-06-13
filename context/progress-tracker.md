@@ -244,8 +244,9 @@ Update after every meaningful change.
   note) + standalone anchored `note` (required text, no fill); (3) **text-anchored only this umbrella** —
   pixel-rect fallback for scanned PDFs **deferred to its own later unit**. Split: **10a** shared brain
   (core model + pure `resolveAnchorRects`/`buildPageText` + store `saveAnnotation`/`listAnnotations`/
-  `deleteAnnotation`) → **10b** web reader highlight+notes UI (frontend-design + impeccable; adds the 4
-  highlight tokens) → **10c** mobile reader highlight+notes UI (WebView selection bridge, device-bound).
+  `deleteAnnotation`) → web reader UI → mobile reader UI. **Web slice re-split (2026-06-13) once examined:**
+  **10b** web create+render (tokens + selection→anchor + render + create) / **10c** web edit-recolor-delete +
+  standalone notes / **10d** mobile reader highlight+notes UI (WebView selection bridge, device-bound).
 - **Unit 10a SPECCED (2026-06-13) — Issue #86 (umbrella #10 open), branch feat/86-annotation-model-anchor-resolver
   (not yet cut), spec specs/10a-annotation-model-anchor-resolver.md. Route standard** (single shared brain
   packages/core+packages/store, no new dep, no UI, ambiguity resolved — mirrors 04a/07a/08a/09d). Core: new
@@ -263,8 +264,20 @@ Update after every meaningful change.
   invariants #1/#2/#3/#5 hold, resolver math + char-accounting verified, outbox one-entry-per-mutation, pure).
   One optional nit (empty-string-clears-highlight-note untested) closed with an added assertion. Verify clean:
   `pnpm -w typecheck` / `test` (core 224, store 108, web 188, mobile 156, tokens 23) / `lint` all green.
-  **Next:** spec 10b (web reader highlight+notes UI — UI unit: frontend-design + impeccable, adds the 4
-  `--color-highlight-*` tokens), then 10c (mobile). Awaiting user "spec 10b".
+  Unit 10a **MERGED** (PR #87, squash) — branch deleted, Issue #86 closed, main at 9b00a38.
+- **Unit 10b SPECCED (2026-06-13) — Issue #88 (umbrella #10 open), branch feat/88-web-highlight-create-render
+  (not yet cut), spec specs/10b-web-highlight-create-render.md. Route standard** (one web boundary + tokens leaf;
+  the DOM-selection→char-offset unknown isolated in a pure jsdom-tested helper — mirrors 09e). **Product forks
+  resolved with user:** selection affordance = **floating 4-swatch toolbar** (Note button + standalone notes →
+  10c); **edit/recolor/delete deferred to 10c**; text-anchored only; single-page anchors. Scope: (1) `packages/
+  tokens` — `highlights` registry + `--color-highlight-{yellow,green,blue,pink}` in theme.css + theme.uniwind.css
+  + parity test; (2) `selection-anchor.ts` (pure) DOM Range→`(page,startChar,endChar,quote)` via `buildPageText`,
+  `quote` canonical, collapsed/reversed/cross-page handled; (3) `highlight-layer.tsx` paints saved highlights via
+  `resolveAnchorRects` (one rect/overlapped item, between canvas + text layer); (4) `selection-toolbar.tsx` +
+  `use-annotations.ts` + `web-store.createAnnotation`/`listAnnotations` (one mutation = one HLC `put`, invariant
+  #2). UI unit → frontend-design + impeccable before review. First verifiable result: select text → tap color →
+  highlight paints → reload → still there. **Next:** dispatch 10b (Sonnet TDD executor → frontend-design +
+  impeccable → fresh-context Opus reviewer), then 10c. Awaiting user "dispatch".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
