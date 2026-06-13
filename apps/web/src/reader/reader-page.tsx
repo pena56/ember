@@ -13,10 +13,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { Annotation, PageTextGeometry } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { PdfPage } from './pdf-page.js';
 import { computePageOffset, resumeScrollTop } from './reading-position.js';
+import { SelectionToolbar } from './selection-toolbar.js';
+import { useAnnotations } from './use-annotations.js';
 import { useCapturePageCount } from './use-capture-page-count.js';
 import { usePdfDocument } from './use-pdf-document.js';
 import { useReadingPosition } from './use-reading-position.js';
@@ -134,6 +137,9 @@ function ScrollReader({
   currentPage,
   onPageChange,
   onScroll,
+  annotationsByPage,
+  pageGeometries,
+  onTextGeometry,
 }: {
   pdf: import('pdfjs-dist').PDFDocumentProxy;
   numPages: number;
@@ -141,6 +147,9 @@ function ScrollReader({
   currentPage: number;
   onPageChange: (p: number) => void;
   onScroll?: () => void;
+  annotationsByPage: Map<number, Annotation[]>;
+  pageGeometries: Map<number, PageTextGeometry>;
+  onTextGeometry: (pageNumber: number, geometry: PageTextGeometry) => void;
 }) {
   const pageRefs = useRef<Map<number, Element>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -215,6 +224,9 @@ function ScrollReader({
               pageNumber={pageNum}
               displayWidth={displayWidth}
               active={isActive}
+              annotations={annotationsByPage.get(pageNum) ?? []}
+              geometry={pageGeometries.get(pageNum)}
+              onTextGeometry={(geo) => { onTextGeometry(pageNum, geo); }}
             />
           </div>
         );
@@ -231,12 +243,18 @@ function PagedReader({
   displayWidth,
   currentPage,
   onPageChange,
+  annotationsByPage,
+  pageGeometries,
+  onTextGeometry,
 }: {
   pdf: import('pdfjs-dist').PDFDocumentProxy;
   numPages: number;
   displayWidth: number;
   currentPage: number;
   onPageChange: (p: number) => void;
+  annotationsByPage: Map<number, Annotation[]>;
+  pageGeometries: Map<number, PageTextGeometry>;
+  onTextGeometry: (pageNumber: number, geometry: PageTextGeometry) => void;
 }) {
   const goNext = () => { onPageChange(Math.min(currentPage + 1, numPages)); };
   const goPrev = () => { onPageChange(Math.max(currentPage - 1, 1)); };
@@ -264,6 +282,9 @@ function PagedReader({
         pageNumber={currentPage}
         displayWidth={displayWidth}
         active
+        annotations={annotationsByPage.get(currentPage) ?? []}
+        geometry={pageGeometries.get(currentPage)}
+        onTextGeometry={(geo) => { onTextGeometry(currentPage, geo); }}
       />
 
       {/* Prev / Next buttons */}
@@ -439,6 +460,16 @@ function ReaderToolbar({
 
 export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   const { status, pdf, numPages } = usePdfDocument(docId);
+  const { annotationsByPage, createHighlight } = useAnnotations(docId);
+
+  // Page geometry map — filled via onTextGeometry from each PdfPage render.
+  const [pageGeometries, setPageGeometries] = useState<Map<number, PageTextGeometry>>(new Map());
+  const pageGeometriesRef = useRef<Map<number, PageTextGeometry>>(new Map());
+
+  const handleTextGeometry = useCallback((pageNumber: number, geometry: PageTextGeometry) => {
+    pageGeometriesRef.current = new Map(pageGeometriesRef.current).set(pageNumber, geometry);
+    setPageGeometries(pageGeometriesRef.current);
+  }, []);
 
   const [mode, setMode] = useState<ReadMode>('scroll');
   const [readerTheme, setReaderTheme] = useState<ReaderThemeName>('paper');
@@ -548,6 +579,12 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
       data-reader-theme={readerTheme}
       className="min-h-screen flex flex-col bg-reader-bg text-reader-text"
     >
+      {/* Floating highlight swatch toolbar — rendered once at reader level */}
+      <SelectionToolbar
+        pageGeometries={pageGeometries}
+        onCreate={createHighlight}
+      />
+
       <ReaderToolbar
         title={title}
         currentPage={currentPage}
@@ -577,6 +614,9 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 currentPage={currentPage}
                 onPageChange={(p) => { setCurrentPage(p); scheduleSave(); tracking.onPage(p); }}
                 onScroll={() => { scheduleSave(); tracking.onActivity(); }}
+                annotationsByPage={annotationsByPage}
+                pageGeometries={pageGeometries}
+                onTextGeometry={handleTextGeometry}
               />
             ) : (
               <PagedReader
@@ -585,6 +625,9 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 displayWidth={displayWidth}
                 currentPage={currentPage}
                 onPageChange={(p) => { setCurrentPage(p); scheduleSave(); tracking.onPage(p); }}
+                annotationsByPage={annotationsByPage}
+                pageGeometries={pageGeometries}
+                onTextGeometry={handleTextGeometry}
               />
             )}
           </>

@@ -4,6 +4,7 @@ import {
   TOKENS_VERSION,
   ember,
   fonts,
+  highlights,
   radii,
   readerThemes,
   themes,
@@ -86,6 +87,41 @@ describe('@ember/tokens', () => {
     it('exports night theme', () => {
       expect(readerThemes.night.bg).toBe('#14110e');
       expect(readerThemes.night.text).toBe('#c9bead');
+    });
+  });
+
+  describe('highlights', () => {
+    it('exports highlights with 4 keys matching HighlightColor union', () => {
+      expect(highlights.yellow).toBe('#f4d06f');
+      expect(highlights.green).toBe('#9fc08a');
+      expect(highlights.blue).toBe('#93b7d4');
+      expect(highlights.pink).toBe('#e3a7be');
+    });
+
+    it('every highlight hex appears in theme.css', () => {
+      for (const [color, hex] of Object.entries(highlights)) {
+        expect(themeCss, `Missing highlights.${color} value ${hex} in theme.css`).toContain(hex);
+      }
+    });
+
+    it('every highlight hex appears in theme.uniwind.css', () => {
+      for (const [color, hex] of Object.entries(highlights)) {
+        expect(themeUniwndCss, `Missing highlights.${color} value ${hex} in theme.uniwind.css`).toContain(hex);
+      }
+    });
+
+    it('--color-highlight-* property names declared in theme.css', () => {
+      expect(themeCss).toMatch(/--color-highlight-yellow\s*:/);
+      expect(themeCss).toMatch(/--color-highlight-green\s*:/);
+      expect(themeCss).toMatch(/--color-highlight-blue\s*:/);
+      expect(themeCss).toMatch(/--color-highlight-pink\s*:/);
+    });
+
+    it('--color-highlight-* property names declared in theme.uniwind.css', () => {
+      expect(themeUniwndCss).toMatch(/--color-highlight-yellow\s*:/);
+      expect(themeUniwndCss).toMatch(/--color-highlight-green\s*:/);
+      expect(themeUniwndCss).toMatch(/--color-highlight-blue\s*:/);
+      expect(themeUniwndCss).toMatch(/--color-highlight-pink\s*:/);
     });
   });
 

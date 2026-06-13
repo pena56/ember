@@ -1,6 +1,7 @@
-import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
+import type { Annotation, AnnotationKind, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
+import { makeAnnotation } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition, setDocumentPageCount } from '@ember/store';
+import { getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -26,6 +27,19 @@ export interface WebStore {
   /** Persist a document's total page count (set-once / idempotent — see 09a). Returns the
    *  updated record, or null when the document isn't found. */
   setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null>;
+  /**
+   * Create a new annotation (highlight or note), write one record + one HLC-stamped
+   * outbox entry (invariant #2), and return the persisted Annotation.
+   */
+  createAnnotation(input: {
+    docId: string;
+    kind: AnnotationKind;
+    anchor: TextAnchor;
+    color?: HighlightColor;
+    note?: string;
+  }): Promise<Annotation>;
+  /** Return all saved annotations for a document (sorted by createdAt ascending). */
+  listAnnotations(docId: string): Promise<Annotation[]>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -113,6 +127,34 @@ export function createWebStore(deps: {
         docId,
         pageCount,
       );
+    },
+
+    async createAnnotation(input: {
+      docId: string;
+      kind: AnnotationKind;
+      anchor: TextAnchor;
+      color?: HighlightColor;
+      note?: string;
+    }): Promise<Annotation> {
+      const hlc = clock.nextStamp();
+      const annotation = makeAnnotation(
+        {
+          id: clock.newId(),
+          docId: input.docId,
+          kind: input.kind,
+          anchor: input.anchor,
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.note !== undefined ? { note: input.note } : {}),
+          createdAt: clock.now(),
+        },
+        { hlc },
+      );
+      return saveAnnotation({ repo, newOutboxId: () => clock.newOutboxId(), hlc }, annotation);
+    },
+
+    async listAnnotations(docId: string): Promise<Annotation[]> {
+      const list = await listAnnotations(repo, docId);
+      return [...list].sort((a, b) => a.createdAt - b.createdAt);
     },
   };
 }
