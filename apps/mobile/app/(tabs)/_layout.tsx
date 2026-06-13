@@ -1,8 +1,8 @@
 /**
  * app/(tabs)/_layout.tsx — bottom tab bar shell.
  *
- * Two tabs: Today (index) + Library (library). Reader stays outside the tabs as
- * a full-screen Stack route (reader/[id]).
+ * Three tabs: Today (index) + Library (library) + Stats (stats). Reader stays
+ * outside the tabs as a full-screen Stack route (reader/[id]).
  *
  * Token-driven tab bar (invariant #6): colors resolved via useResolveClassNames
  * so the tab bar re-themes live with light/dark. Icons: inline SVG via
@@ -73,6 +73,27 @@ function LibraryIcon({ color, size }: { color: ColorValue; size: number }) {
   );
 }
 
+function StatsIcon({ color, size }: { color: ColorValue; size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Three ascending bars — a quiet activity motif */}
+      <Path
+        d="M6 20v-5M12 20V9M18 20V5"
+        stroke={color}
+        strokeWidth={1.75}
+        strokeLinecap="round"
+      />
+      {/* Base line */}
+      <Path
+        d="M3 20h18"
+        stroke={color}
+        strokeWidth={1.75}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 export default function TabsLayout() {
@@ -110,6 +131,13 @@ export default function TabsLayout() {
         options={{
           title: 'Library',
           tabBarIcon: ({ color, size }) => <LibraryIcon color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: 'Stats',
+          tabBarIcon: ({ color, size }) => <StatsIcon color={color} size={size} />,
         }}
       />
     </Tabs>

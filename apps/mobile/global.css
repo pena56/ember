@@ -7,5 +7,7 @@
    Tailwind's content scan would otherwise drop them. Without this, the class is
    un-compiled, `useResolveClassNames` returns undefined, and react-native-svg falls
    back to a black fill (invisible flame on a dark surface). Invariant #6: still
-   token-driven — these only surface the existing theme colors, no hardcoded values. */
-@source inline("bg-streak-lit bg-streak-risk bg-text-muted");
+   token-driven — these only surface the existing theme colors, no hardcoded values.
+   The `text-streak-*` pair is emitted defensively for the Stats streak numeral (09f),
+   which is the first literal-className use of those tokens. */
+@source inline("bg-streak-lit bg-streak-risk bg-text-muted text-streak-lit text-streak-risk");
