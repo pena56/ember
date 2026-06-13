@@ -96,7 +96,7 @@ describe('presentHabit — streak status sublabels', () => {
     expect(view.streakStatus).toBe('at-risk');
   });
 
-  it('broken (non-zero count) → warm broken copy', () => {
+  it('broken (zero count) → warm broken copy', () => {
     const view = presentHabit(makeSummary({ current: 0, status: 'broken' }));
     expect(view.streakSublabel).toBe('A few minutes is all it takes');
   });

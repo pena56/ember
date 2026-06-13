@@ -76,7 +76,7 @@ export function StreakEmber({ view }: StreakEmberProps) {
     <div
       className="flex items-start gap-3"
       aria-label={ariaLabel}
-      role="region"
+      role="img"
     >
       {/* Flame + glow container */}
       <div className="relative flex shrink-0 items-center justify-center">

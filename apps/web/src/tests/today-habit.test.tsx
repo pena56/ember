@@ -183,7 +183,7 @@ describe('Today habit header', () => {
 
     // Streak ember announces a 3-day, lit streak
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: /3 days reading streak, lit today/i })).toBeDefined();
+      expect(screen.getByRole('img', { name: /3 days reading streak, lit today/i })).toBeDefined();
     });
 
     // Goal ring announces "met"
@@ -212,7 +212,7 @@ describe('Today habit header', () => {
     renderApp(makeStubStore({ failSessions: true }));
 
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: /start your streak/i })).toBeDefined();
+      expect(screen.getByRole('img', { name: /start your streak/i })).toBeDefined();
     });
 
     // Empty ring: 0 of 20 minutes, not met
