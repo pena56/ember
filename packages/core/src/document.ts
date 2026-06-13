@@ -9,6 +9,9 @@ export type Document = {
   byteSize: number;
   contentType: string;
   importedAt: number; // physical ms supplied by caller — no Date.now() in core
+  /** total number of pages, set once a reader has loaded the PDF (pdfjs numPages). Intrinsic to the
+   *  bytes → same docId yields the same count on every device. Absent until a reader fills it in. */
+  pageCount?: number;
 };
 
 /**
@@ -26,6 +29,18 @@ export interface Hasher {
  */
 export async function computeDocumentId(bytes: Uint8Array, hasher: Hasher): Promise<string> {
   return hasher.sha256Hex(bytes);
+}
+
+/**
+ * Return a copy of `doc` with `pageCount` set. Validates: pageCount must be an integer >= 1
+ * (RangeError otherwise). Pure — never mutates the input. Idempotent in value: setting the same
+ * count yields an equal record.
+ */
+export function withDocumentPageCount(doc: Document, pageCount: number): Document {
+  if (!Number.isInteger(pageCount) || pageCount < 1) {
+    throw new RangeError(`pageCount must be an integer >= 1, got ${pageCount}`);
+  }
+  return { ...doc, pageCount };
 }
 
 /**
