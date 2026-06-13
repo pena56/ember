@@ -236,10 +236,19 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 09a DONE (2026-06-13) — built + reviewed, PR open. Issue #74 (umbrella #9), branch
-  feat/74-document-page-count-model, spec specs/09a-document-page-count-model.md. Route standard.** Sonnet TDD
-  executor (test-first) → fresh-context Opus reviewer = **APPROVE, no changes**. Diff: `Document.pageCount?`
-  + pure `withDocumentPageCount` (core), `setDocumentPageCount` set-once/idempotent use-case (store) + tests.
+- **Unit 09b SPECCED (2026-06-13) — Issue #76 (umbrella #9), branch feat/76-web-reader-pagecount (not yet
+  cut), spec specs/09b-web-reader-pagecount.md. Route standard** (single boundary apps/web, no product fork,
+  no new dep). Web reader persists pdfjs `numPages` via 09a's `setDocumentPageCount`. Investigated:
+  `usePdfDocument` ALREADY surfaces `numPages` on `ready` (no pdfjs plumbing needed). Design (mechanical):
+  (1) WebStore facade gains `setDocumentPageCount(docId, n)` delegating to `@ember/store` with clock deps
+  `{ repo, newOutboxId, hlc }` (mirrors `saveReadingPosition`); (2) new `useCapturePageCount` hook —
+  fire-exactly-once-per-docId guard ref, fires on `ready && numPages>0`, fire-and-forget, swallows errors
+  (invariant #1), re-arms on docId change (mirrors `useSessionTracking`); (3) wire into `reader-page.tsx`
+  beside the other reader hooks. **No UI** (page-count is headless metadata → no frontend-design/impeccable
+  pass). Tests: web-store-page-count surface + use-capture-page-count hook. **Awaiting user "dispatch".**
+- **Unit 09a DONE + MERGED (2026-06-13) — PR #75 squashed to main (fac8873), Issue #74 closed.** Sonnet TDD
+  executor → fresh-context Opus reviewer = **APPROVE, no changes**. Diff: `Document.pageCount?` + pure
+  `withDocumentPageCount` (core), `setDocumentPageCount` set-once/idempotent use-case (store) + tests.
   Verify all green: typecheck 9 ✓ · test 467 (121 core + 97 store + 124 web + 102 mobile + 23 tokens) ✓ ·
   lint 6 ✓. apps/web, apps/mobile, packages/tokens byte-identical. **Next: 09b (web reader → pdfjs numPages).**
   Umbrella **Unit 09 (Rich analytics

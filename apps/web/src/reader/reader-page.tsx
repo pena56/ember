@@ -17,6 +17,7 @@ import type { ReaderThemeName } from '@ember/tokens';
 
 import { PdfPage } from './pdf-page.js';
 import { computePageOffset, resumeScrollTop } from './reading-position.js';
+import { useCapturePageCount } from './use-capture-page-count.js';
 import { usePdfDocument } from './use-pdf-document.js';
 import { useReadingPosition } from './use-reading-position.js';
 import { useSessionTracking } from './use-session-tracking.js';
@@ -538,6 +539,8 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
     ready: status === 'ready',
     getPage: () => currentPageRef.current,
   });
+
+  useCapturePageCount({ docId, ready: status === 'ready', numPages });
 
   return (
     // data-reader-theme drives the token CSS selectors in theme.css
