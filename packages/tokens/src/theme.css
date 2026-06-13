@@ -31,6 +31,17 @@
   --color-reader-bg:   #fbf6ec;
   --color-reader-text: #2a2422;
 
+  /* ── Highlight colors (theme-independent — one tint palette, all reader themes) ── */
+  --color-highlight-yellow: #f4d06f;
+  --color-highlight-green:  #9fc08a;
+  --color-highlight-blue:   #93b7d4;
+  --color-highlight-pink:   #e3a7be;
+  /* Blend mode the highlight tint composites with against the page. `multiply` darkens the
+     hue into light paper/sepia (ink reads through); flipped to `screen` on the dark night
+     surface so the same palette lightens and stays legible. Only the blend varies per reader
+     theme — the colors stay single-sourced (invariant #6). Default: paper/sepia. */
+  --highlight-blend: multiply;
+
   /* ── Typography ─────────────────────────────────────────────────────────── */
   --font-serif: 'Fraunces Variable', 'Fraunces', serif;
   --font-sans:  'Inter', sans-serif;
@@ -70,4 +81,7 @@
 .night {
   --color-reader-bg:   #14110e;
   --color-reader-text: #c9bead;
+  /* On the near-black page, multiply would crush the tint to black (invisible). Screen
+     lightens the same hue so the highlight reads against the dark surface. */
+  --highlight-blend: screen;
 }

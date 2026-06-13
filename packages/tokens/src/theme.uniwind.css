@@ -17,6 +17,10 @@
   --color-line:           #e7ddcb;
   --color-reader-bg:   #fbf6ec;   /* default reader = paper; per-reader-theme switching is unit 05 */
   --color-reader-text: #2a2422;
+  --color-highlight-yellow: #f4d06f;
+  --color-highlight-green:  #9fc08a;
+  --color-highlight-blue:   #93b7d4;
+  --color-highlight-pink:   #e3a7be;
   --font-serif: 'Fraunces Variable', 'Fraunces', serif;
   --font-sans:  'Inter', sans-serif;
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;

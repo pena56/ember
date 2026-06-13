@@ -14,8 +14,9 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { TextLayer } from 'pdfjs-dist';
 import { useEffect, useRef, useState } from 'react';
 
-import type { PageTextGeometry } from '@ember/core';
+import type { Annotation, PageTextGeometry } from '@ember/core';
 
+import { HighlightLayer } from './highlight-layer.js';
 import { extractPageGeometry } from './page-geometry.js';
 import { placeholderHeight } from './page-visibility.js';
 
@@ -34,15 +35,21 @@ interface PdfPageProps {
    * No-op when unset. Geometry failure never breaks canvas/text-layer rendering.
    */
   onTextGeometry?: (geometry: PageTextGeometry) => void;
+  /** Annotations to paint on this page (already filtered to pageNumber). */
+  annotations?: Annotation[];
+  /** Normalized geometry for this page (for highlight rect resolution). */
+  geometry?: PageTextGeometry | undefined;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry }: PdfPageProps) {
+export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry, annotations = [], geometry }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   // Natural page size for the placeholder box
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  // CSS height of the rendered canvas (needed to scale highlight rects).
+  const [pageHeightPx, setPageHeightPx] = useState<number>(0);
 
   // Probe natural size once (cheap — no render) so placeholders are sized correctly
   useEffect(() => {
@@ -94,7 +101,9 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry 
         canvas!.width = viewport.width;
         canvas!.height = viewport.height;
         canvas!.style.width = `${displayWidth.toString()}px`;
-        canvas!.style.height = `${(viewport.height / devicePixelRatio).toString()}px`;
+        const cssHeight = viewport.height / devicePixelRatio;
+        canvas!.style.height = `${cssHeight.toString()}px`;
+        if (!cancelled) setPageHeightPx(cssHeight);
 
         const ctx = canvas!.getContext('2d');
         if (!ctx || cancelled) return;
@@ -175,6 +184,13 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry 
       style={{ width: displayWidth }}
     >
       <canvas ref={canvasRef} className="block" />
+      {/* Highlight layer — between canvas and text layer so text stays selectable. */}
+      <HighlightLayer
+        annotations={annotations}
+        geometry={geometry}
+        pageWidth={displayWidth}
+        pageHeight={pageHeightPx}
+      />
       {/* Text layer — transparent, selectable glyphs over the canvas.
           The `textLayer` class (styles.css) supplies pdf.js's structural
           positioning + transparent color; --total-scale-factor is set at

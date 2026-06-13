@@ -73,3 +73,14 @@ export const readerThemes: Record<ReaderThemeName, { bg: string; text: string }>
   sepia: { bg: '#f2e5cc', text: '#4a3f2f' },
   night: { bg: '#14110e', text: '#c9bead' },
 } as const;
+
+// ── Highlight colors (theme-independent) ──────────────────────────────────────
+// Keys match the HighlightColor union in @ember/core annotation model.
+// Single-sourced here; both CSS files declare the same values as --color-highlight-*.
+
+export const highlights = {
+  yellow: '#f4d06f',
+  green:  '#9fc08a',
+  blue:   '#93b7d4',
+  pink:   '#e3a7be',
+} as const;

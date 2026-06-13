@@ -119,6 +119,8 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     getReadingPosition: notUsed('getReadingPosition') as WebStore['getReadingPosition'],
     recordSession: notUsed('recordSession') as WebStore['recordSession'],
     setDocumentPageCount: notUsed('setDocumentPageCount') as WebStore['setDocumentPageCount'],
+    createAnnotation: notUsed('createAnnotation') as WebStore['createAnnotation'],
+    listAnnotations: notUsed('listAnnotations') as WebStore['listAnnotations'],
   };
 }
 
