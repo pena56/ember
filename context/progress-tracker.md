@@ -236,6 +236,18 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08b IN REVIEW (2026-06-13) — PR #71 (Closes #70), branch feat/70-web-today-habit.** Built
+  test-first (Sonnet executor) + frontend-design (net-new ember+ring) + impeccable, then fresh-context
+  Opus **code-review = APPROVE** (no blockers; applied its one substantive nit — ember `role="region"`
+  → `role="img"` to match the ring, plus a test-name fix). Shipped exactly the spec: web-store gains
+  read-only `listSessions`/`getGoalConfig` (NO `setGoalConfig` — #2/#5 untouched); pure `present-habit.ts`
+  + `use-habit-summary.ts` (swallows read errors → neutral view, #1) + `streak-ember`/`goal-ring`/
+  `habit-header` components wired into today-page.tsx. Numbers derived on read, never stored (#3);
+  token-only styling (#6); a11y (role=img + aria-label, decorative SVG aria-hidden, motion-safe arc).
+  Verify GREEN: typecheck ✓ · test 124 web ✓ · lint ✓; diff apps/web-only (core/store/mobile/tokens
+  byte-identical). **Next:** user BROWSER-VERIFY (`pnpm --filter @ember/web dev` — dim ember/empty ring
+  with no sessions; ring fills + ember lights after reading; light/dark; freeze pips after 5-day run) →
+  merge #71 → 08c (mobile Today, device-bound — final slice of umbrella Unit 08).
 - **Unit 08b SPECCED (2026-06-12) — Issue #70, branch feat/70-web-today-habit (not yet cut), spec
   specs/08b-web-today-habit.md. Route standard, UI unit.** Second slice of umbrella Unit 08, after 08a
   (#69 MERGED). Wires 08a's `deriveHabitSummary` into the web **Today** tab: a **streak ember**
