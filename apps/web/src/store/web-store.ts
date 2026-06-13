@@ -1,6 +1,6 @@
 import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition } from '@ember/store';
+import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -23,6 +23,9 @@ export interface WebStore {
   listSessions(): Promise<ReadingSession[]>;
   /** Return the stored goal config, or the unpersisted 20-min default when unset. */
   getGoalConfig(): Promise<GoalConfigRecord>;
+  /** Persist a document's total page count (set-once / idempotent — see 09a). Returns the
+   *  updated record, or null when the document isn't found. */
+  setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -102,6 +105,14 @@ export function createWebStore(deps: {
 
     async getGoalConfig(): Promise<GoalConfigRecord> {
       return getGoalConfig(repo);
+    },
+
+    async setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null> {
+      return setDocumentPageCount(
+        { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        docId,
+        pageCount,
+      );
     },
   };
 }

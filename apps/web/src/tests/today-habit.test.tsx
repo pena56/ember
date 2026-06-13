@@ -112,6 +112,7 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     saveReadingPosition: notUsed('saveReadingPosition') as WebStore['saveReadingPosition'],
     getReadingPosition: notUsed('getReadingPosition') as WebStore['getReadingPosition'],
     recordSession: notUsed('recordSession') as WebStore['recordSession'],
+    setDocumentPageCount: notUsed('setDocumentPageCount') as WebStore['setDocumentPageCount'],
   };
 }
 
