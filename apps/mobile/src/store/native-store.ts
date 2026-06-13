@@ -1,6 +1,6 @@
 import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition } from '@ember/store';
+import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -54,6 +54,13 @@ export interface NativeStore {
    * so no write/outbox path lives here (invariants #2/#5 untouched).
    */
   getGoalConfig(): Promise<GoalConfigRecord>;
+  /**
+   * Persist a document's total page count (set-once / idempotent — see 09a). Writes the updated
+   * Document record + exactly one HLC-stamped outbox entry only when the count actually changes;
+   * a no-op (no write) when the stored count already matches. Returns the updated record, or null
+   * when the document isn't found. Called by the reader (09c) when pdf.js reports numPages.
+   */
+  setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -126,6 +133,14 @@ export function createNativeStore(deps: {
 
     async getGoalConfig(): Promise<GoalConfigRecord> {
       return getGoalConfig(repo);
+    },
+
+    async setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null> {
+      return setDocumentPageCount(
+        { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        docId,
+        pageCount,
+      );
     },
   };
 }
