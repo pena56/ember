@@ -19,3 +19,4 @@ export * from './documents.js';
 export * from './reading-positions.js';
 export * from './sessions.js';
 export * from './goal-config.js';
+export * from './annotations.js';
