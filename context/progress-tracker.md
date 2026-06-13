@@ -236,6 +236,20 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 08c MERGED (2026-06-13) — PR #73 squashed to main (545ff44), Issue #72 closed, device-verified by
+  user (Expo Go). Umbrella Unit 08 (Streaks + daily goal + freezes) COMPLETE** across all three slices:
+  08a engine (#69) → 08b web (#71) → 08c mobile (#73). Mobile Today now renders 08a's `deriveHabitSummary`
+  above Continue Reading: status-aware streak ember (lit/at-risk/broken + banked freeze pips) + today's goal
+  ring (active min vs 20-min target). native-store has read-only `listSessions`/`getGoalConfig` only (#2/#5
+  untouched); pure `present-habit.ts` byte-identical to 08b; `use-habit-summary.ts` gates ready/store + read
+  errors → neutral view (#1); RN-svg + `useResolveClassNames` token colors (#6); derived on read never stored
+  (#3). **Device-verify gotcha + fix (carry-forward):** token colors referenced ONLY via
+  `useResolveClassNames(...)` (never as a literal `className`) are dropped by Tailwind's content scan → the
+  class is un-compiled → `useResolveClassNames` returns undefined → react-native-svg falls back to a BLACK
+  fill (invisible on dark). Fix: `@source inline("bg-streak-lit bg-streak-risk bg-text-muted")` in
+  `apps/mobile/global.css` to force-emit them; restart Expo with `--clear`. **Any future RN token resolved
+  only through useResolveClassNames must be safelisted this way.** Next: umbrella Unit 09 (Stats — longest
+  streak / heatmap / time-of-day), not yet specced.
 - **Unit 08c BUILT — PR open (Closes #72), branch feat/72-mobile-today-habit, awaiting device-verify + merge
   (2026-06-13).** Built inline by fully-context-loaded Opus (TDD on the seam; net-new RN ember+ring mirrored
   from 08b's polished components + a11y) → fresh-context Opus review = **APPROVE** (no invariant violations,
