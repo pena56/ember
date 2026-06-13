@@ -236,6 +236,35 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 10 (Highlights + notes) SCORED COMPLEX → split by boundary (2026-06-13), like 03/04/05/06/07/08/09.**
+  Crosses 4 boundaries: core (annotation model + anchor→rect resolver over 05c's `PageTextGeometry`), store
+  (new syncable type, outbox/HLC LWW), apps/web reader UI, apps/mobile reader UI. **Product forks resolved
+  with user (2026-06-13):** (1) **4-color palette** yellow/green/blue/pink (new `--color-highlight-*` tokens
+  land in 10b where first rendered, not 10a); (2) **two annotation kinds** — colored `highlight` (optional
+  note) + standalone anchored `note` (required text, no fill); (3) **text-anchored only this umbrella** —
+  pixel-rect fallback for scanned PDFs **deferred to its own later unit**. Split: **10a** shared brain
+  (core model + pure `resolveAnchorRects`/`buildPageText` + store `saveAnnotation`/`listAnnotations`/
+  `deleteAnnotation`) → **10b** web reader highlight+notes UI (frontend-design + impeccable; adds the 4
+  highlight tokens) → **10c** mobile reader highlight+notes UI (WebView selection bridge, device-bound).
+- **Unit 10a SPECCED (2026-06-13) — Issue #86 (umbrella #10 open), branch feat/86-annotation-model-anchor-resolver
+  (not yet cut), spec specs/10a-annotation-model-anchor-resolver.md. Route standard** (single shared brain
+  packages/core+packages/store, no new dep, no UI, ambiguity resolved — mirrors 04a/07a/08a/09d). Core: new
+  `annotation.ts` (`Annotation` UUID-keyed mutable record, `kind` highlight|note, `TextAnchor`
+  {page,startChar,endChar,quote}, `makeAnnotation`/`editAnnotation` pure+validated, caller supplies id/time/
+  hlc) + new `anchor-resolver.ts` (`buildPageText` = canonical separator-free page-text concat; pure
+  `resolveAnchorRects` char-range→one NormalizedBox per overlapped 05c item, uniform-advance partial slice).
+  Store: new `annotations.ts` (`saveAnnotation` upsert+1 put outbox; `deleteAnnotation` delete+1 tombstone
+  outbox; `listAnnotations(docId?)`). Annotations are mutable+deletable (unlike append-only sessions) → LWW
+  via `updatedAt` HLC, but the real merge is unit-12's reconciler (invariant #5 — 10a invents no merge logic).
+  Fully headless-testable (no DOM/pdf.js/clock in core).
+- **Unit 10a BUILT + REVIEWED + MERGE-READY (2026-06-13) — Issue #86, branch feat/86-annotation-model-anchor-resolver,
+  PR opened.** Sonnet TDD executor built test-first (core `annotation.ts`+`anchor-resolver.ts`, store
+  `annotations.ts`, barrels) → 50 new tests; fresh-context Opus reviewer verdict **APPROVE** (spec-conformant,
+  invariants #1/#2/#3/#5 hold, resolver math + char-accounting verified, outbox one-entry-per-mutation, pure).
+  One optional nit (empty-string-clears-highlight-note untested) closed with an added assertion. Verify clean:
+  `pnpm -w typecheck` / `test` (core 224, store 108, web 188, mobile 156, tokens 23) / `lint` all green.
+  **Next:** spec 10b (web reader highlight+notes UI — UI unit: frontend-design + impeccable, adds the 4
+  `--color-highlight-*` tokens), then 10c (mobile). Awaiting user "spec 10b".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived

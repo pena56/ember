@@ -10,3 +10,5 @@ export * from './reading-position.js';
 export * from './session.js';
 export * from './streak.js';
 export * from './analytics.js';
+export * from './annotation.js';
+export * from './anchor-resolver.js';
