@@ -236,8 +236,28 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 09d DONE — Issue #80 (umbrella #9), branch feat/80-core-analytics-engine, spec
-  specs/09d-core-analytics-engine.md. Route standard.** Sonnet TDD executor → fresh-context Opus reviewer
+- **Unit 09e SPECCED (2026-06-13) — Issue #82 (umbrella #9), branch feat/82-web-stats-tab (not yet cut),
+  spec specs/09e-web-stats-tab.md. Route standard + UI** (single boundary apps/web; net-new UI → executor
+  runs **frontend-design** then **impeccable** before code-review; pure presenter built test-first).
+  **Phase 2 (analytics), second slice.** The web **Stats tab**: new `/stats` route + nav Tab rendering the
+  09d engine + 08a streak behind the existing seams (`listSessions`/`listDocuments`/`listReadingPositions`/
+  `getGoalConfig`) — no core/store/dep change. Mirrors the Today pattern exactly: pure presenter
+  (`present-stats.ts`) → fetch/derive/swallow hook (`use-stats.ts`, swallows read errors → neutral view,
+  invariant #1) → section components → `stats-page.tsx`; all new under `apps/web/src/stats/`.
+  **v1 = "full glance" (6 sections, resolved with user 2026-06-13):** (1) streak current+longest
+  (`deriveHabitSummary`), (2) activity heatmap **trailing 365 days** week-column grid (`buildHeatmap`,
+  `fromDay = localDayOf(now−364d, tz)`, token accent ramp, scroll-safe), (3) totals active/pages/days/
+  sessions (`deriveTotals`), (4) reading speed pages/hour (`deriveSpeed`, "—" on no data), (5) time-of-day
+  4 day-parts bars (`deriveTimeOfDay`), (6) per-book progress+ETA — **all books with ≥1 session, most-recent
+  `endedAt` first** (`deriveBookProgress` + presentation-layer join/sort; finished→"Finished",
+  pageCount-unknown→null labels). `presentStats` owns all formatting/binning/ordering (no Date/DOM/React);
+  hook computes today/window/last-read from the clock. Wiring: add `stats` Route in App.tsx + `<Tab
+  to="/stats">` in app-shell.tsx; extend app-shell.test.tsx nav case. Tests: present-stats.test.ts (TDD
+  core — duration/ETA/progress fmt, heatmap binning, totals/speed plural, time-of-day, book join/sort,
+  hasData empty, purity) + stats-page.test.tsx (seeded render, empty state, rejecting-read still renders) +
+  shell nav. **Product decisions resolved:** full glance · trailing-365 heatmap · all-books-with-sessions
+  most-recent-first. **Awaiting user "dispatch".**
+- **Unit 09d DONE + MERGED (2026-06-13) — PR #81 squashed to main (22719e6), Issue #80 closed.** Sonnet TDD executor → fresh-context Opus reviewer
   (re-ran all 3 suites himself, analytics tests verified **uncached** 49/49) = **APPROVE, no changes.**
   **Phase 2 (analytics), first slice.** Diff (packages/core only): new pure `analytics.ts` of `derive*`
   functions over `ReadingSession[]` (+ `Document.pageCount` from Phase 1, + `ReadingPosition` furthest page),
@@ -252,8 +272,8 @@ Update after every meaningful change.
   4 day-parts; ETA per-book-fall-back-to-global; progress basis = furthest reading-position page / pageCount
   (invariant #5). No store change — list seams already existed. Verify green: typecheck 9 ✓ · test 170 core
   (49 new) ✓ · lint 6 ✓. Invariants #1 (pure on-device, no Convex/I/O) + #3 (stats DERIVED, never stored)
-  intact. **PR pending — awaiting user merge.** Next: Phase 2 → 09e web Stats tab UI (needs frontend-design
-  + impeccable).
+  intact. **Phase 2 first slice (core engine) COMPLETE.** Next: Phase 2 → 09e web Stats tab UI (specced;
+  needs frontend-design + impeccable).
 - **Unit 09c DONE + MERGED (2026-06-13) — PR #79 squashed to main (2f6283a), Issue #78 closed.** Sonnet TDD
   executor → fresh-context Opus reviewer (re-ran all 3 suites himself) = **APPROVE, no changes**. Diff
   (apps/mobile only): NativeStore `setDocumentPageCount` facade + new `useCapturePageCount` fire-once hook

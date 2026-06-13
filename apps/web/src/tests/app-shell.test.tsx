@@ -168,7 +168,34 @@ describe('AppShell navigation', () => {
     });
   });
 
-  it('(3) ThemeControl renders in the shell with aria-pressed pattern', async () => {
+  it('(3) clicking Stats tab navigates to /stats and a Stats heading is visible; / still redirects to Today', async () => {
+    const store = makeMemoryStore();
+    renderApp(store, ['/today']);
+
+    await waitFor(() => {
+      expect(screen.getByRole('navigation', { name: 'Primary' })).toBeDefined();
+    });
+
+    // Stats link must exist in the nav
+    const statsLink = screen.getByRole('link', { name: /stats/i });
+    expect(statsLink).toBeDefined();
+
+    // Click Stats tab
+    await act(async () => {
+      fireEvent.click(statsLink);
+    });
+
+    // Stats page heading appears
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1 })).toBeDefined();
+    });
+
+    // / redirects to Today — today and library links still work
+    expect(screen.getByRole('link', { name: /today/i })).toBeDefined();
+    expect(screen.getByRole('link', { name: /library/i })).toBeDefined();
+  });
+
+  it('(4) ThemeControl renders in the shell with aria-pressed pattern', async () => {
     const store = makeMemoryStore();
     renderApp(store, ['/today']);
 
