@@ -109,6 +109,7 @@ export function AppShell() {
           <nav aria-label="Primary" className="flex items-center gap-5 flex-1">
             <Tab to="/today">Today</Tab>
             <Tab to="/library">Library</Tab>
+            <Tab to="/stats">Stats</Tab>
           </nav>
 
           {/* Theme control */}

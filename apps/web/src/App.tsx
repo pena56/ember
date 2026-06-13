@@ -19,6 +19,7 @@ import { Toaster } from '@/components/ui/sonner.js';
 import { AppShell } from './app-shell.js';
 import { LibraryPage } from './library/library-page.js';
 import { ReaderPage } from './reader/reader-page.js';
+import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
 import { TodayPage } from './today/today-page.js';
 
@@ -80,6 +81,7 @@ export default function App() {
           <Route index element={<Navigate to="/today" replace />} />
           <Route path="today" element={<TodayPage />} />
           <Route path="library" element={<LibraryRoute />} />
+          <Route path="stats" element={<StatsPage />} />
         </Route>
 
         {/* Full-screen reader — outside the shell */}
