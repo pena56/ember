@@ -51,6 +51,17 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
   // CSS height of the rendered canvas (needed to scale highlight rects).
   const [pageHeightPx, setPageHeightPx] = useState<number>(0);
 
+  // Hold the latest geometry callback in a ref so the render effect does NOT
+  // depend on its identity. Callers pass a fresh inline closure each render
+  // (e.g. `(geo) => onTextGeometry(pageNum, geo)`); listing it as a dep would
+  // re-run the canvas render on every parent re-render — and since this effect
+  // itself triggers a setState in the parent (the geometry map), that is an
+  // infinite render/repaint loop. The ref decouples the two.
+  const onTextGeometryRef = useRef(onTextGeometry);
+  useEffect(() => {
+    onTextGeometryRef.current = onTextGeometry;
+  }, [onTextGeometry]);
+
   // Probe natural size once (cheap — no render) so placeholders are sized correctly
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +134,7 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
             // Fire geometry callback (runs even for text-empty pages so unit 10
             // can anchor against any page). Must be before the items.length guard.
             const vp1 = pageHandle.getViewport({ scale: 1 });
-            onTextGeometry?.(
+            onTextGeometryRef.current?.(
               extractPageGeometry(pageNumber, { width: vp1.width, height: vp1.height }, textContent),
             );
 
@@ -162,7 +173,8 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
       textLayerHandle?.cancel();
       pageHandle?.cleanup();
     };
-  }, [pdf, pageNumber, displayWidth, active, onTextGeometry]);
+    // onTextGeometry is intentionally read via ref (see above) — not a dep.
+  }, [pdf, pageNumber, displayWidth, active]);
 
   const placeholderH = naturalSize
     ? placeholderHeight(naturalSize.w, naturalSize.h, displayWidth)
