@@ -1,6 +1,6 @@
 import type { Document, FlushedSession, Hasher, ReadingPosition, ReadingSession } from '@ember/core';
-import type { BlobStore, ImportResult, Repository } from '@ember/store';
-import { getReadingPosition, importDocument, listDocuments, listReadingPositions, recordSession, saveReadingPosition } from '@ember/store';
+import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
+import { getGoalConfig, getReadingPosition, importDocument, listDocuments, listReadingPositions, listSessions, recordSession, saveReadingPosition } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -19,6 +19,10 @@ export interface WebStore {
   listReadingPositions(): Promise<ReadingPosition[]>;
   /** Append one immutable ReadingSession + one outbox entry. */
   recordSession(flushed: FlushedSession): Promise<ReadingSession>;
+  /** Return all reading sessions (unfiltered — derivation needs the whole log). */
+  listSessions(): Promise<ReadingSession[]>;
+  /** Return the stored goal config, or the unpersisted 20-min default when unset. */
+  getGoalConfig(): Promise<GoalConfigRecord>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -90,6 +94,14 @@ export function createWebStore(deps: {
         { repo, newId: () => clock.newId(), newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
         flushed,
       );
+    },
+
+    async listSessions(): Promise<ReadingSession[]> {
+      return listSessions(repo);
+    },
+
+    async getGoalConfig(): Promise<GoalConfigRecord> {
+      return getGoalConfig(repo);
     },
   };
 }
