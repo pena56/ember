@@ -11,6 +11,7 @@
 import { useNavigate } from 'react-router';
 
 import { ContinueReadingCard } from './continue-reading-card.js';
+import { HabitHeader } from './habit-header.js';
 import { useContinueReading } from './use-continue-reading.js';
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
@@ -87,6 +88,11 @@ export function TodayPage() {
 
       {/* Thin section separator */}
       <div className="h-px w-12 bg-line" aria-hidden="true" />
+
+      {/* Habit header — streak ember + today's goal ring */}
+      <section aria-label="Reading habit">
+        <HabitHeader />
+      </section>
 
       {/* Continue Reading */}
       {loading ? (
