@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { initialClock, tick } from '@ember/core';
-import type { Hasher } from '@ember/core';
+import type { Document, Hasher } from '@ember/core';
 
-import { DOCUMENTS_COLLECTION, importDocument, listDocuments } from '../documents.js';
+import { DOCUMENTS_COLLECTION, importDocument, listDocuments, setDocumentPageCount } from '../documents.js';
 import { MemoryBlobStore } from '../memory-blob-store.js';
 import { MemoryRepository } from '../memory-repository.js';
 
@@ -190,5 +190,87 @@ describe('listDocuments', () => {
     const repo = new MemoryRepository();
     const docs = await listDocuments(repo);
     expect(docs).toEqual([]);
+  });
+});
+
+describe('setDocumentPageCount', () => {
+  async function seedDoc(deps: ReturnType<typeof makeTestDeps>) {
+    const result = await importDocument(deps, {
+      bytes: new Uint8Array([5, 6, 7]),
+      filename: 'seed.pdf',
+      contentType: 'application/pdf',
+    });
+    return result.document;
+  }
+
+  it('missing doc → returns null, no write, no new outbox entry', async () => {
+    const deps = makeTestDeps();
+    const entriesBefore = await deps.repo.unacked();
+    const result = await setDocumentPageCount(deps, 'nonexistent-id', 10);
+    expect(result).toBeNull();
+    const entriesAfter = await deps.repo.unacked();
+    expect(entriesAfter).toHaveLength(entriesBefore.length);
+  });
+
+  it('fresh set → returns updated doc; repo.get reflects it; exactly one new outbox entry', async () => {
+    const deps = makeTestDeps();
+    const doc = await seedDoc(deps);
+    const entriesBefore = await deps.repo.unacked();
+
+    const result = await setDocumentPageCount(deps, doc.id, 300);
+
+    expect(result).not.toBeNull();
+    expect(result!.pageCount).toBe(300);
+
+    const stored = await deps.repo.get(DOCUMENTS_COLLECTION, doc.id);
+    expect(stored).toEqual(result);
+
+    const entriesAfter = await deps.repo.unacked();
+    const newEntries = entriesAfter.slice(entriesBefore.length);
+    expect(newEntries).toHaveLength(1);
+    expect(newEntries[0]!.op).toBe('put');
+    expect(newEntries[0]!.recordId).toBe(doc.id);
+    expect(newEntries[0]!.payload).toEqual(result);
+  });
+
+  it('idempotent → same count again returns record, adds no further outbox entry', async () => {
+    const deps = makeTestDeps();
+    const doc = await seedDoc(deps);
+
+    await setDocumentPageCount(deps, doc.id, 200);
+    const entriesAfterFirst = await deps.repo.unacked();
+
+    const result = await setDocumentPageCount(deps, doc.id, 200);
+    const entriesAfterSecond = await deps.repo.unacked();
+
+    expect(result!.pageCount).toBe(200);
+    expect(entriesAfterSecond).toHaveLength(entriesAfterFirst.length);
+  });
+
+  it('change → different valid count overwrites and enqueues one more outbox entry', async () => {
+    const deps = makeTestDeps();
+    const doc = await seedDoc(deps);
+
+    await setDocumentPageCount(deps, doc.id, 100);
+    const entriesAfterFirst = await deps.repo.unacked();
+
+    const result = await setDocumentPageCount(deps, doc.id, 150);
+    const entriesAfterSecond = await deps.repo.unacked();
+
+    expect(result!.pageCount).toBe(150);
+    expect(entriesAfterSecond).toHaveLength(entriesAfterFirst.length + 1);
+  });
+
+  it('invalid count (0) on a doc with no stored count → throws RangeError, writes nothing', async () => {
+    const deps = makeTestDeps();
+    const doc = await seedDoc(deps);
+    const entriesBefore = await deps.repo.unacked();
+
+    await expect(setDocumentPageCount(deps, doc.id, 0)).rejects.toThrow(RangeError);
+
+    const stored = await deps.repo.get<Document>(DOCUMENTS_COLLECTION, doc.id);
+    expect(stored?.pageCount).toBeUndefined();
+    const entriesAfter = await deps.repo.unacked();
+    expect(entriesAfter).toHaveLength(entriesBefore.length);
   });
 });

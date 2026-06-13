@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeDocumentId, makeDocument } from '../document.js';
+import { computeDocumentId, makeDocument, withDocumentPageCount } from '../document.js';
 import type { Hasher } from '../document.js';
 
 describe('makeDocument', () => {
@@ -90,5 +90,52 @@ describe('computeDocumentId', () => {
     };
     await computeDocumentId(bytes, fakeHasher);
     expect(capturedBytes).toBe(bytes);
+  });
+});
+
+describe('withDocumentPageCount', () => {
+  const baseDoc = makeDocument({
+    id: 'abc123',
+    filename: 'book.pdf',
+    byteSize: 1024,
+    contentType: 'application/pdf',
+    importedAt: 1000,
+  });
+
+  it('sets pageCount and returns a new object (does not mutate input)', () => {
+    const result = withDocumentPageCount(baseDoc, 42);
+    expect(result.pageCount).toBe(42);
+    expect(result).not.toBe(baseDoc);
+    expect(baseDoc.pageCount).toBeUndefined();
+  });
+
+  it('overwriting an existing pageCount returns the new value', () => {
+    const withCount = withDocumentPageCount(baseDoc, 10);
+    const overwritten = withDocumentPageCount(withCount, 99);
+    expect(overwritten.pageCount).toBe(99);
+  });
+
+  it('throws RangeError for 0', () => {
+    expect(() => withDocumentPageCount(baseDoc, 0)).toThrow(RangeError);
+  });
+
+  it('throws RangeError for -1', () => {
+    expect(() => withDocumentPageCount(baseDoc, -1)).toThrow(RangeError);
+  });
+
+  it('throws RangeError for 1.5', () => {
+    expect(() => withDocumentPageCount(baseDoc, 1.5)).toThrow(RangeError);
+  });
+
+  it('throws RangeError for NaN', () => {
+    expect(() => withDocumentPageCount(baseDoc, NaN)).toThrow(RangeError);
+  });
+
+  it('throws RangeError for Infinity', () => {
+    expect(() => withDocumentPageCount(baseDoc, Infinity)).toThrow(RangeError);
+  });
+
+  it('makeDocument output has pageCount === undefined', () => {
+    expect(baseDoc.pageCount).toBeUndefined();
   });
 });

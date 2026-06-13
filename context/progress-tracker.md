@@ -236,6 +236,27 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 09a DONE (2026-06-13) — built + reviewed, PR open. Issue #74 (umbrella #9), branch
+  feat/74-document-page-count-model, spec specs/09a-document-page-count-model.md. Route standard.** Sonnet TDD
+  executor (test-first) → fresh-context Opus reviewer = **APPROVE, no changes**. Diff: `Document.pageCount?`
+  + pure `withDocumentPageCount` (core), `setDocumentPageCount` set-once/idempotent use-case (store) + tests.
+  Verify all green: typecheck 9 ✓ · test 467 (121 core + 97 store + 124 web + 102 mobile + 23 tokens) ✓ ·
+  lint 6 ✓. apps/web, apps/mobile, packages/tokens byte-identical. **Next: 09b (web reader → pdfjs numPages).**
+  Umbrella **Unit 09 (Rich analytics
+  rollups / Stats tab)** SCORED COMPLEX → split by boundary like 03/04/05/06/07/08. **Product fork resolved
+  (user, 2026-06-13):** per-book % + finish-ETA need a **total page count per Document**, which doesn't exist
+  yet (`Document` has no `pageCount` — 04a deferred it; unit 05 never added it). User chose **"pageCount unit
+  first"** (not defer) → Unit 09 now has **two sub-phases**: *Phase 1 — page-count capture (prerequisite):*
+  **09a** core `Document.pageCount` + store `setDocumentPageCount` (this) → **09b** web reader captures pdfjs
+  `numPages` → **09c** mobile reader captures it via WebView bridge (device-bound). *Phase 2 — analytics:*
+  **09d** core stats engine (heatmap, time+pages, speed, time-of-day, per-book %, ETA — reuses 08a's
+  current/longest streak) → **09e** web Stats tab (UI) → **09f** mobile Stats tab (UI, device-bound).
+  09a design (mechanical defaults, no product invention): `pageCount?` optional on Document (backward-compat;
+  `makeDocument`/`importDocument` untouched); pure `withDocumentPageCount(doc, n)` validates int ≥1 (RangeError
+  else), no mutation; store `setDocumentPageCount(deps, docId, n)` is **set-once/idempotent** — missing doc →
+  null/no write, same count → no write/no outbox, change → put + exactly one HLC outbox entry (op 'put', #2).
+  pageCount is **intrinsic to the bytes** (docId = sha256) → collision-free cross-device, no LWW/`updatedAt`
+  added (noted for unit-12 reconciler).
 - **Unit 08c MERGED (2026-06-13) — PR #73 squashed to main (545ff44), Issue #72 closed, device-verified by
   user (Expo Go). Umbrella Unit 08 (Streaks + daily goal + freezes) COMPLETE** across all three slices:
   08a engine (#69) → 08b web (#71) → 08c mobile (#73). Mobile Today now renders 08a's `deriveHabitSummary`

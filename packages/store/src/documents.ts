@@ -8,6 +8,7 @@ import {
   computeDocumentId,
   makeDocument,
   makeOutboxEntry,
+  withDocumentPageCount,
 } from '@ember/core';
 
 import type { BlobStore } from './blob-store.js';
@@ -83,4 +84,38 @@ export async function importDocument(
  */
 export async function listDocuments(repo: Repository): Promise<Document[]> {
   return repo.query<Document>(DOCUMENTS_COLLECTION);
+}
+
+/**
+ * Set a document's total page count (write-once / idempotent).
+ *
+ * - Document not found            → return null, no write.
+ * - Same count already stored      → return existing record, no write, no outbox entry.
+ * - Otherwise                      → put updated record + exactly one HLC-stamped outbox entry.
+ *
+ * pageCount is intrinsic to the bytes (docId = sha256), so cross-device writes are value-identical;
+ * no LWW tiebreak needed. Called by the reader (09b/09c) when pdfjs reports numPages.
+ */
+export async function setDocumentPageCount(
+  deps: { repo: Repository; newOutboxId: () => string; hlc: Hlc },
+  docId: string,
+  pageCount: number,
+): Promise<Document | null> {
+  const existing = await deps.repo.get<Document>(DOCUMENTS_COLLECTION, docId);
+  if (!existing) return null;
+  if (existing.pageCount === pageCount) return existing; // idempotent no-op
+
+  const updated = withDocumentPageCount(existing, pageCount);
+  await deps.repo.put(DOCUMENTS_COLLECTION, updated);
+  await deps.repo.enqueue(
+    makeOutboxEntry({
+      id: deps.newOutboxId(),
+      hlc: deps.hlc,
+      collection: DOCUMENTS_COLLECTION,
+      recordId: docId,
+      op: 'put',
+      payload: updated,
+    }),
+  );
+  return updated;
 }
