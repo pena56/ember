@@ -115,6 +115,8 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     setDocumentPageCount: notUsed('setDocumentPageCount') as WebStore['setDocumentPageCount'],
     createAnnotation: notUsed('createAnnotation') as WebStore['createAnnotation'],
     listAnnotations: notUsed('listAnnotations') as WebStore['listAnnotations'],
+    updateAnnotation: notUsed('updateAnnotation') as WebStore['updateAnnotation'],
+    deleteAnnotation: notUsed('deleteAnnotation') as WebStore['deleteAnnotation'],
   };
 }
 

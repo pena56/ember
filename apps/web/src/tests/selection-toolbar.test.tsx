@@ -2,11 +2,12 @@
  * selection-toolbar.test.tsx — SelectionToolbar component tests.
  *
  * Tests that: clicking a swatch calls onCreate with the resolved anchor + color;
+ * the Note button calls onCreateNote with the resolved anchor (not onCreate);
  * renders null when selection is collapsed.
  *
  * Strategy: build a hand-crafted page DOM (data-page wrapper + .textLayer div
  * with spans), fake window.getSelection(), trigger the selectionchange event,
- * then click swatches.
+ * then click swatches / Note button.
  */
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -239,6 +240,7 @@ describe('SelectionToolbar', () => {
       <SelectionToolbar
         pageGeometries={new Map([[1, GEO]])}
         onCreate={onCreate}
+        onCreateNote={vi.fn()}
       />,
     );
 
@@ -254,5 +256,105 @@ describe('SelectionToolbar', () => {
 
     expect(onCreate).toHaveBeenCalledOnce();
     expect(onCreate.mock.calls[0]![0].color).toBe('blue');
+  });
+
+  // ── 10c: Note button ─────────────────────────────────────────────────────────
+
+  it('Note button calls onCreateNote with the resolved anchor (not onCreate)', async () => {
+    const { pageWrapper } = buildPageDOM();
+    const helloNode = pageWrapper.querySelector('.textLayer span')!.childNodes[0]!;
+    const worldNode = pageWrapper.querySelectorAll('.textLayer span')[1]!.childNodes[0]!;
+
+    const removeAllRanges = vi.fn();
+    const mockRange = {
+      collapsed: false,
+      startContainer: helloNode,
+      startOffset: 0,
+      endContainer: worldNode,
+      endOffset: 6,
+      getBoundingClientRect: () => ({ left: 100, top: 300, right: 250, bottom: 315, width: 150, height: 15 }),
+    };
+    vi.spyOn(window, 'getSelection').mockReturnValue({
+      rangeCount: 1,
+      isCollapsed: false,
+      getRangeAt: () => mockRange as unknown as Range,
+      removeAllRanges,
+    } as unknown as Selection);
+
+    const onCreate = vi.fn();
+    const onCreateNote = vi.fn();
+    render(
+      <SelectionToolbar
+        pageGeometries={new Map([[1, GEO]])}
+        onCreate={onCreate}
+        onCreateNote={onCreateNote}
+      />,
+    );
+
+    await act(async () => {
+      document.dispatchEvent(new Event('selectionchange'));
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    const noteBtn = screen.getByLabelText('Add note');
+    await act(async () => {
+      fireEvent.click(noteBtn);
+    });
+
+    // onCreateNote called with the anchor; onCreate NOT called.
+    expect(onCreateNote).toHaveBeenCalledOnce();
+    expect(onCreate).not.toHaveBeenCalled();
+
+    const call = onCreateNote.mock.calls[0]![0] as { anchor: { kind: string; page: number; quote: string } };
+    expect(call.anchor.kind).toBe('text');
+    expect(call.anchor.page).toBe(1);
+    expect(call.anchor.quote).toBe('Hello world');
+
+    // Selection cleared
+    expect(removeAllRanges).toHaveBeenCalled();
+  });
+
+  it('swatch behavior is unchanged when onCreateNote is provided', async () => {
+    const { pageWrapper } = buildPageDOM();
+    const helloNode = pageWrapper.querySelector('.textLayer span')!.childNodes[0]!;
+
+    const removeAllRanges = vi.fn();
+    const mockRange = {
+      collapsed: false,
+      startContainer: helloNode,
+      startOffset: 0,
+      endContainer: helloNode,
+      endOffset: 5,
+      getBoundingClientRect: () => ({ left: 100, top: 300, right: 200, bottom: 315, width: 100, height: 15 }),
+    };
+    vi.spyOn(window, 'getSelection').mockReturnValue({
+      rangeCount: 1,
+      isCollapsed: false,
+      getRangeAt: () => mockRange as unknown as Range,
+      removeAllRanges,
+    } as unknown as Selection);
+
+    const onCreate = vi.fn();
+    const onCreateNote = vi.fn();
+    render(
+      <SelectionToolbar
+        pageGeometries={new Map([[1, GEO]])}
+        onCreate={onCreate}
+        onCreateNote={onCreateNote}
+      />,
+    );
+
+    await act(async () => {
+      document.dispatchEvent(new Event('selectionchange'));
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    const yellowBtn = screen.getByLabelText('Highlight yellow');
+    await act(async () => {
+      fireEvent.click(yellowBtn);
+    });
+
+    expect(onCreate).toHaveBeenCalledOnce();
+    expect(onCreateNote).not.toHaveBeenCalled();
   });
 });

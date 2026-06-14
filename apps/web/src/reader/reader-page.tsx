@@ -13,9 +13,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Annotation, PageTextGeometry } from '@ember/core';
+import type { Annotation, HighlightColor, PageTextGeometry, TextAnchor } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
+import { AnnotationPopover } from './annotation-popover.js';
 import { PdfPage } from './pdf-page.js';
 import { computePageOffset, resumeScrollTop } from './reading-position.js';
 import { SelectionToolbar } from './selection-toolbar.js';
@@ -28,6 +29,25 @@ import { useSessionTracking } from './use-session-tracking.js';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ReadMode = 'scroll' | 'paged';
+
+interface AnnotationRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The currently-selected annotation (may be a transient unsaved draft for new notes).
+ * `isDraft` is true when the annotation has not yet been persisted — the first Save
+ * call in the popover will write it via createNote(); closing empty discards it.
+ */
+interface SelectedAnnotation {
+  annotation: Annotation;
+  rect: AnnotationRect;
+  /** True for a new note that hasn't been saved yet. */
+  isDraft?: boolean;
+}
 
 interface ReaderPageProps {
   docId: string;
@@ -140,6 +160,7 @@ function ScrollReader({
   annotationsByPage,
   pageGeometries,
   onTextGeometry,
+  onSelectAnnotation,
 }: {
   pdf: import('pdfjs-dist').PDFDocumentProxy;
   numPages: number;
@@ -150,6 +171,7 @@ function ScrollReader({
   annotationsByPage: Map<number, Annotation[]>;
   pageGeometries: Map<number, PageTextGeometry>;
   onTextGeometry: (pageNumber: number, geometry: PageTextGeometry) => void;
+  onSelectAnnotation: (annotation: Annotation, rect: AnnotationRect) => void;
 }) {
   const pageRefs = useRef<Map<number, Element>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -227,6 +249,7 @@ function ScrollReader({
               annotations={annotationsByPage.get(pageNum) ?? []}
               geometry={pageGeometries.get(pageNum)}
               onTextGeometry={(geo) => { onTextGeometry(pageNum, geo); }}
+              onSelectAnnotation={onSelectAnnotation}
             />
           </div>
         );
@@ -246,6 +269,7 @@ function PagedReader({
   annotationsByPage,
   pageGeometries,
   onTextGeometry,
+  onSelectAnnotation,
 }: {
   pdf: import('pdfjs-dist').PDFDocumentProxy;
   numPages: number;
@@ -255,6 +279,7 @@ function PagedReader({
   annotationsByPage: Map<number, Annotation[]>;
   pageGeometries: Map<number, PageTextGeometry>;
   onTextGeometry: (pageNumber: number, geometry: PageTextGeometry) => void;
+  onSelectAnnotation: (annotation: Annotation, rect: AnnotationRect) => void;
 }) {
   const goNext = () => { onPageChange(Math.min(currentPage + 1, numPages)); };
   const goPrev = () => { onPageChange(Math.max(currentPage - 1, 1)); };
@@ -285,6 +310,7 @@ function PagedReader({
         annotations={annotationsByPage.get(currentPage) ?? []}
         geometry={pageGeometries.get(currentPage)}
         onTextGeometry={(geo) => { onTextGeometry(currentPage, geo); }}
+        onSelectAnnotation={onSelectAnnotation}
       />
 
       {/* Prev / Next buttons */}
@@ -460,7 +486,79 @@ function ReaderToolbar({
 
 export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   const { status, pdf, numPages } = usePdfDocument(docId);
-  const { annotationsByPage, createHighlight } = useAnnotations(docId);
+  const { annotationsByPage, createHighlight, createNote, updateAnnotation, removeAnnotation } = useAnnotations(docId);
+
+  // Selected annotation state — holds the currently-open annotation (persisted or draft).
+  const [selected, setSelected] = useState<SelectedAnnotation | null>(null);
+
+  const handleSelectAnnotation = useCallback((annotation: Annotation, rect: AnnotationRect) => {
+    setSelected({ annotation, rect });
+  }, []);
+
+  const handleClosePopover = useCallback(() => {
+    setSelected(null);
+  }, []);
+
+  // Handle recolor: update color then close popover.
+  const handleRecolor = useCallback(async (color: HighlightColor) => {
+    if (!selected) return;
+    await updateAnnotation({ annotation: selected.annotation, patch: { color } });
+    setSelected(null);
+  }, [selected, updateAnnotation]);
+
+  // Handle note edit: update note text then close popover.
+  const handleEditNote = useCallback(async (text: string) => {
+    if (!selected) return;
+    const { annotation, rect, isDraft } = selected;
+
+    if (isDraft) {
+      // First save for a new note — create the record now.
+      if (text.trim() === '') {
+        // Empty note for a draft — discard (no record written).
+        setSelected(null);
+        return;
+      }
+      const created = await createNote({ anchor: annotation.anchor, note: text.trim() });
+      // Update selection to the now-persisted record.
+      setSelected({ annotation: created, rect });
+    } else {
+      await updateAnnotation({ annotation, patch: { note: text.trim() === '' ? null : text.trim() } });
+      setSelected(null);
+    }
+  }, [selected, createNote, updateAnnotation]);
+
+  // Handle delete: remove annotation then close popover.
+  const handleDelete = useCallback(async () => {
+    if (!selected) return;
+    const { annotation, isDraft } = selected;
+    if (!isDraft) {
+      await removeAnnotation(annotation.id);
+    }
+    setSelected(null);
+  }, [selected, removeAnnotation]);
+
+  // Handle Note toolbar button: open a draft note editor without persisting.
+  const handleCreateNote = useCallback((_input: { anchor: TextAnchor }) => {
+    // Build a transient draft annotation (not yet persisted).
+    // The popover's first Save will call createNote(); closing empty discards it.
+    const draft: Annotation = {
+      id: `draft-${Date.now().toString()}`,
+      docId,
+      kind: 'note',
+      anchor: _input.anchor,
+      note: '',
+      createdAt: Date.now(),
+      updatedAt: '',
+    };
+    // Position the draft popover near the selection (use viewport center as fallback).
+    const draftRect: AnnotationRect = {
+      left: window.innerWidth / 2 - 128,
+      top: window.innerHeight / 2 - 60,
+      width: 0,
+      height: 0,
+    };
+    setSelected({ annotation: draft, rect: draftRect, isDraft: true });
+  }, [docId]);
 
   // Page geometry map — filled via onTextGeometry from each PdfPage render.
   const [pageGeometries, setPageGeometries] = useState<Map<number, PageTextGeometry>>(new Map());
@@ -583,6 +681,17 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
       <SelectionToolbar
         pageGeometries={pageGeometries}
         onCreate={createHighlight}
+        onCreateNote={handleCreateNote}
+      />
+
+      {/* Annotation editor popover — rendered once at reader level */}
+      <AnnotationPopover
+        annotation={selected?.annotation ?? null}
+        rect={selected?.rect ?? null}
+        onRecolor={(color) => { void handleRecolor(color); }}
+        onEditNote={(text) => { void handleEditNote(text); }}
+        onDelete={() => { void handleDelete(); }}
+        onClose={handleClosePopover}
       />
 
       <ReaderToolbar
@@ -617,6 +726,7 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 annotationsByPage={annotationsByPage}
                 pageGeometries={pageGeometries}
                 onTextGeometry={handleTextGeometry}
+                onSelectAnnotation={handleSelectAnnotation}
               />
             ) : (
               <PagedReader
@@ -628,6 +738,7 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
                 annotationsByPage={annotationsByPage}
                 pageGeometries={pageGeometries}
                 onTextGeometry={handleTextGeometry}
+                onSelectAnnotation={handleSelectAnnotation}
               />
             )}
           </>

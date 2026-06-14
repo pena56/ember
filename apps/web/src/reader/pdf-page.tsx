@@ -16,6 +16,15 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { Annotation, PageTextGeometry } from '@ember/core';
 
+// ── Rect type (shared with HighlightLayer) ────────────────────────────────────
+
+interface AnnotationRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 import { HighlightLayer } from './highlight-layer.js';
 import { extractPageGeometry } from './page-geometry.js';
 import { placeholderHeight } from './page-visibility.js';
@@ -39,11 +48,13 @@ interface PdfPageProps {
   annotations?: Annotation[];
   /** Normalized geometry for this page (for highlight rect resolution). */
   geometry?: PageTextGeometry | undefined;
+  /** Called when the user clicks a highlight rect or note pin. */
+  onSelectAnnotation?: (annotation: Annotation, rect: AnnotationRect) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry, annotations = [], geometry }: PdfPageProps) {
+export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry, annotations = [], geometry, onSelectAnnotation }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
   // Natural page size for the placeholder box
@@ -202,6 +213,7 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
         geometry={geometry}
         pageWidth={displayWidth}
         pageHeight={pageHeightPx}
+        onSelectAnnotation={onSelectAnnotation ?? (() => {})}
       />
       {/* Text layer — transparent, selectable glyphs over the canvas.
           The `textLayer` class (styles.css) supplies pdf.js's structural

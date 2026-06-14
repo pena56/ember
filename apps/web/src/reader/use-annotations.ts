@@ -19,6 +19,21 @@ export interface UseAnnotationsResult {
   annotationsByPage: Map<number, Annotation[]>;
   /** Create a new highlight annotation. Optimistic: appends to state after await. */
   createHighlight(input: { anchor: TextAnchor; color: HighlightColor }): Promise<void>;
+  /**
+   * Create a new standalone note annotation. The note must be non-empty (enforced by the
+   * caller — 10a throws on empty note-kind text). Optimistic: appends to state after await.
+   * Returns the persisted Annotation so the caller can immediately open its editor.
+   */
+  createNote(input: { anchor: TextAnchor; note: string }): Promise<Annotation>;
+  /**
+   * Edit an existing annotation (recolor / add/update/clear note). Replaces the annotation
+   * in state by id after the store resolves (optimistic-after-await, no reload).
+   */
+  updateAnnotation(input: { annotation: Annotation; patch: { color?: HighlightColor; note?: string | null } }): Promise<void>;
+  /**
+   * Delete an annotation by id. Drops it from state without a full reload.
+   */
+  removeAnnotation(id: string): Promise<void>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -63,5 +78,36 @@ export function useAnnotations(docId: string): UseAnnotationsResult {
     [store, docId],
   );
 
-  return { annotationsByPage, createHighlight };
+  const createNote = useCallback(
+    async (input: { anchor: TextAnchor; note: string }): Promise<Annotation> => {
+      const created = await store.createAnnotation({
+        docId,
+        kind: 'note',
+        anchor: input.anchor,
+        note: input.note,
+      });
+      setAnnotations((prev) => [...prev, created]);
+      return created;
+    },
+    [store, docId],
+  );
+
+  const updateAnnotation = useCallback(
+    async (input: { annotation: Annotation; patch: { color?: HighlightColor; note?: string | null } }): Promise<void> => {
+      const updated = await store.updateAnnotation(input);
+      // Replace by id in state (optimistic-after-await, no reload).
+      setAnnotations((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    },
+    [store],
+  );
+
+  const removeAnnotation = useCallback(
+    async (id: string): Promise<void> => {
+      await store.deleteAnnotation(id);
+      setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    },
+    [store],
+  );
+
+  return { annotationsByPage, createHighlight, createNote, updateAnnotation, removeAnnotation };
 }

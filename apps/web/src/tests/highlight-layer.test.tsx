@@ -2,11 +2,12 @@
  * highlight-layer.test.tsx — HighlightLayer component tests.
  *
  * Verifies: renders positioned rects for a highlight spanning 2 items,
- * renders nothing when geometry is undefined, ignores 'note' kind records.
+ * renders nothing when geometry is undefined, note annotations render as
+ * pin + dotted underline (not fill), click fires onSelectAnnotation.
  */
 
-import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Annotation, PageTextGeometry } from '@ember/core';
 
@@ -50,6 +51,20 @@ const NOTE_ANN: Annotation = {
   updatedAt: 'hlc-2',
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function renderLayer(annotations: Annotation[], onSelectAnnotation = vi.fn()) {
+  return render(
+    <HighlightLayer
+      annotations={annotations}
+      geometry={GEO}
+      pageWidth={PAGE_W}
+      pageHeight={PAGE_H}
+      onSelectAnnotation={onSelectAnnotation}
+    />,
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 afterEach(() => { cleanup(); });
@@ -62,6 +77,7 @@ describe('HighlightLayer', () => {
         geometry={undefined}
         pageWidth={PAGE_W}
         pageHeight={PAGE_H}
+        onSelectAnnotation={vi.fn()}
       />,
     );
 
@@ -70,16 +86,9 @@ describe('HighlightLayer', () => {
   });
 
   it('renders 2 positioned rects for a highlight spanning 2 items', () => {
-    const { container } = render(
-      <HighlightLayer
-        annotations={[HIGHLIGHT_BOTH]}
-        geometry={GEO}
-        pageWidth={PAGE_W}
-        pageHeight={PAGE_H}
-      />,
-    );
+    const { container } = renderLayer([HIGHLIGHT_BOTH]);
 
-    // Should have the outer wrapper + 2 rect divs.
+    // Should have the outer wrapper + 2 rect buttons.
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).not.toBeNull();
     expect(wrapper.children).toHaveLength(2);
@@ -102,14 +111,7 @@ describe('HighlightLayer', () => {
   });
 
   it('applies a highlight color class to each rect', () => {
-    const { container } = render(
-      <HighlightLayer
-        annotations={[HIGHLIGHT_BOTH]}
-        geometry={GEO}
-        pageWidth={PAGE_W}
-        pageHeight={PAGE_H}
-      />,
-    );
+    const { container } = renderLayer([HIGHLIGHT_BOTH]);
 
     const wrapper = container.firstChild as HTMLElement;
     const rect1 = wrapper.children[0] as HTMLElement;
@@ -117,47 +119,81 @@ describe('HighlightLayer', () => {
     expect(rect1.className).toContain('highlight-yellow');
   });
 
-  it('ignores annotations with kind "note"', () => {
-    const { container } = render(
-      <HighlightLayer
-        annotations={[NOTE_ANN]}
-        geometry={GEO}
-        pageWidth={PAGE_W}
-        pageHeight={PAGE_H}
-      />,
-    );
+  it('clicking a highlight rect fires onSelectAnnotation with the annotation + rect', () => {
+    const onSelectAnnotation = vi.fn();
+    renderLayer([HIGHLIGHT_BOTH], onSelectAnnotation);
 
+    // The first rect button for HIGHLIGHT_BOTH (there are 2 with same label)
+    const btns = screen.getAllByLabelText(/^Highlight: "/);
+    expect(btns.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(btns[0]!);
+
+    expect(onSelectAnnotation).toHaveBeenCalledOnce();
+    const [annotation, rect] = onSelectAnnotation.mock.calls[0] as [Annotation, { left: number; top: number; width: number; height: number }];
+    expect(annotation.id).toBe('ann-1');
+    expect(typeof rect.left).toBe('number');
+    expect(typeof rect.top).toBe('number');
+  });
+
+  it('highlight rects are <button> elements with pointer-events-auto', () => {
+    const { container } = renderLayer([HIGHLIGHT_BOTH]);
     const wrapper = container.firstChild as HTMLElement;
-    // No rects should be rendered for a note.
-    expect(wrapper.children).toHaveLength(0);
+    const rect1 = wrapper.children[0] as HTMLElement;
+    expect(rect1.tagName).toBe('BUTTON');
+    expect(rect1.className).toContain('pointer-events-auto');
+  });
+
+  it('a kind:"note" annotation renders a pin button + dotted underline, NOT a fill', () => {
+    const { container } = renderLayer([NOTE_ANN]);
+    const wrapper = container.firstChild as HTMLElement;
+
+    // Pin button (unique label "Note: ...") should exist
+    const pinBtn = screen.getByLabelText(/^Note: "/);
+    expect(pinBtn).toBeDefined();
+
+    // Underline button(s) should exist (label "Note underline: ...")
+    const underlineBtns = screen.getAllByLabelText(/^Note underline: "/);
+    expect(underlineBtns.length).toBeGreaterThanOrEqual(1);
+
+    // No fill rect (highlight fill divs should not be present)
+    // All children are note-related; none should have highlight-* color classes
+    for (const child of Array.from(wrapper.children)) {
+      expect((child as HTMLElement).className).not.toContain('bg-highlight-');
+    }
+  });
+
+  it('a kind:"note" pin button fires onSelectAnnotation when clicked', () => {
+    const onSelectAnnotation = vi.fn();
+    renderLayer([NOTE_ANN], onSelectAnnotation);
+
+    // The pin has a unique aria-label "Note: ..." (underline has "Note underline: ...")
+    const pinBtn = screen.getByLabelText(/^Note: "/);
+    fireEvent.click(pinBtn);
+
+    expect(onSelectAnnotation).toHaveBeenCalledOnce();
+    const [annotation] = onSelectAnnotation.mock.calls[0] as [Annotation];
+    expect(annotation.id).toBe('note-1');
+  });
+
+  it('a highlight carrying a note shows a note-dot element', () => {
+    const highlightWithNote: Annotation = { ...HIGHLIGHT_BOTH, note: 'Has a note' };
+    const { container } = renderLayer([highlightWithNote]);
+    const wrapper = container.firstChild as HTMLElement;
+
+    // Should contain a note-dot indicator somewhere
+    const noteDot = wrapper.querySelector('[data-note-dot]');
+    expect(noteDot).not.toBeNull();
   });
 
   it('renders nothing when annotations array is empty', () => {
-    const { container } = render(
-      <HighlightLayer
-        annotations={[]}
-        geometry={GEO}
-        pageWidth={PAGE_W}
-        pageHeight={PAGE_H}
-      />,
-    );
-
+    const { container } = renderLayer([]);
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.children).toHaveLength(0);
   });
 
-  it('layer is aria-hidden and pointer-events-none', () => {
-    const { container } = render(
-      <HighlightLayer
-        annotations={[HIGHLIGHT_BOTH]}
-        geometry={GEO}
-        pageWidth={PAGE_W}
-        pageHeight={PAGE_H}
-      />,
-    );
-
+  it('outer layer is pointer-events-none', () => {
+    const { container } = renderLayer([HIGHLIGHT_BOTH]);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.getAttribute('aria-hidden')).toBe('true');
     expect(wrapper.className).toContain('pointer-events-none');
   });
 });

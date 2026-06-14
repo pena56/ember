@@ -154,4 +154,144 @@ describe('WebStore annotation surface', () => {
     expect(a1.updatedAt).toBeTruthy();
     expect(a2.updatedAt).toBeTruthy();
   });
+
+  // ── 10c: updateAnnotation + deleteAnnotation ──────────────────────────────────
+
+  it('updateAnnotation writes one record + one put outbox entry with bumped updatedAt', async () => {
+    const { store, repo } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'yellow',
+    });
+
+    const originalUpdatedAt = annotation.updatedAt;
+
+    const updated = await store.updateAnnotation({
+      annotation,
+      patch: { color: 'blue' },
+    });
+
+    expect(updated.id).toBe(annotation.id);
+    expect(updated.docId).toBe(annotation.docId);
+    expect(updated.createdAt).toBe(annotation.createdAt);
+    expect(updated.anchor).toEqual(annotation.anchor);
+    expect(updated.color).toBe('blue');
+    // updatedAt should have advanced (new HLC stamp)
+    expect(updated.updatedAt).not.toBe(originalUpdatedAt);
+
+    // Exactly one record total (upserted, not duplicated)
+    const records = await repo.query(ANNOTATIONS_COLLECTION);
+    expect(records).toHaveLength(1);
+
+    // Two outbox entries total (one from create, one from update)
+    const outbox = await repo.unacked();
+    expect(outbox).toHaveLength(2);
+    const putEntries = outbox.filter((e) => e.op === 'put');
+    expect(putEntries).toHaveLength(2);
+  });
+
+  it('updateAnnotation recolor changes color (preserves id/createdAt/anchor)', async () => {
+    const { store } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'green',
+    });
+
+    const updated = await store.updateAnnotation({
+      annotation,
+      patch: { color: 'pink' },
+    });
+
+    expect(updated.id).toBe(annotation.id);
+    expect(updated.createdAt).toBe(annotation.createdAt);
+    expect(updated.anchor).toEqual(ANCHOR);
+    expect(updated.color).toBe('pink');
+  });
+
+  it('updateAnnotation note edit sets the note field', async () => {
+    const { store } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'yellow',
+    });
+
+    const withNote = await store.updateAnnotation({
+      annotation,
+      patch: { note: 'My note text' },
+    });
+
+    expect(withNote.note).toBe('My note text');
+    expect(withNote.color).toBe('yellow');
+  });
+
+  it('updateAnnotation note clear removes the note field', async () => {
+    const { store } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'yellow',
+      note: 'Initial note',
+    });
+
+    const cleared = await store.updateAnnotation({
+      annotation,
+      patch: { note: null },
+    });
+
+    expect(cleared.note).toBeUndefined();
+  });
+
+  it('deleteAnnotation removes the record + enqueues one delete tombstone', async () => {
+    const { store, repo } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'yellow',
+    });
+
+    await store.deleteAnnotation(annotation.id);
+
+    // Record should be gone
+    const records = await repo.query(ANNOTATIONS_COLLECTION);
+    expect(records).toHaveLength(0);
+
+    // Two outbox entries: put (from create) + delete (from delete)
+    const outbox = await repo.unacked();
+    expect(outbox).toHaveLength(2);
+    const deleteEntry = outbox.find((e) => e.op === 'delete');
+    expect(deleteEntry).toBeDefined();
+    expect(deleteEntry!.collection).toBe(ANNOTATIONS_COLLECTION);
+    expect(deleteEntry!.recordId).toBe(annotation.id);
+  });
+
+  it('deleteAnnotation uses exactly one HLC stamp (invariant #2)', async () => {
+    const { store, repo } = makeWebStore();
+
+    const annotation = await store.createAnnotation({
+      docId: 'doc-1',
+      kind: 'highlight',
+      anchor: ANCHOR,
+      color: 'yellow',
+    });
+
+    await store.deleteAnnotation(annotation.id);
+
+    const outbox = await repo.unacked();
+    const deleteEntries = outbox.filter((e) => e.op === 'delete');
+    // Only one delete entry
+    expect(deleteEntries).toHaveLength(1);
+  });
 });
