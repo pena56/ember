@@ -356,8 +356,16 @@ Update after every meaningful change.
   `[...HIGHLIGHT_COLORS]` instead of a double-cast. Re-verified all green: `pnpm -w typecheck` 9 ✓ · `pnpm -w test` (mobile
   195) ✓ · `pnpm -w lint` ✓. Invariants confirmed: #1 (local repo only), #2 (one HLC stamp shared by record+outbox),
   #6 (RN tokens; in-HTML HIGHLIGHT_HEX is the parity-commented WebView exception, values == `--color-highlight-*`).
-  apps/mobile-only diff. **Next:** user device-verify (Expo Go) → squash-merge PR #93 + delete branch → spec 10e (mobile
-  edit/recolor/delete + standalone notes/pins — the final slice of umbrella Unit 10). Awaiting device-verify + merge.
+  apps/mobile-only diff.
+- **Unit 10d MERGED (2026-06-14) — PR #93 (squash ac5d83d), Issue #92 closed.** Device-verify passed (Expo Go): all 4
+  colors paint and persist after a full app reload. **Device-verify surfaced one extra fix:** Android/iOS show a *native*
+  text-selection action menu (Copy / Share / Select all) as a **system overlay above all app content**, which covered our
+  SelectionToolbar (positioned just above the same selection). Fixed by `menuItems={[]}` on `<WebView>` — suppresses the
+  native menu on both platforms while leaving selection (handles + `selectionchange`) intact. **Carry-forward for 10e**
+  (its edit/recolor toolbar overlays a *tapped highlight*, same overlay-vs-system-menu class of issue): any custom UI
+  drawn over a WebView text selection must suppress the native menu via `menuItems={[]}`. Mobile create+render done;
+  **Next:** spec 10e (mobile edit/recolor/delete + standalone notes/pins — the final slice of umbrella Unit 10).
+  Awaiting user "spec 10e".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
