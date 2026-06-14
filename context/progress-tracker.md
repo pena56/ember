@@ -294,6 +294,35 @@ Update after every meaningful change.
   mobile 156) · `lint` ✓. Invariants #1/#2/#6 + core purity verified. **Phase: umbrella Unit 10 second slice
   (web create+render) COMPLETE.** **Next:** spec 10c (web edit/recolor/delete + standalone notes + pins), then 10d
   (mobile, WebView selection bridge). Awaiting user "spec 10c".
+- **Unit 10c SPECCED (2026-06-13) — Issue #90 (umbrella #10 open), branch feat/90-web-annotation-edit-notes
+  (not yet cut), spec specs/10c-web-annotation-edit-notes.md. Route standard** (one boundary apps/web — the
+  shared brain is done: 10a `editAnnotation` + store `saveAnnotation`/`deleteAnnotation`, `note` kind exists;
+  no new dep — `radix-ui`+`lucide-react` already installed). **Product/UX forks resolved with user:**
+  (1) **edit = click highlight → popover** (4 recolor swatches + note textarea + delete); (2) **standalone
+  `note` kind = margin pin glyph + dotted underline** on the anchored text, click-to-edit; (3) **Note button**
+  added to the 10b selection toolbar (creates a `note`); (4) edit/recolor/delete + notes kept in **one** unit.
+  Scope: web-store facade `updateAnnotation`/`deleteAnnotation` (one HLC-stamped outbox entry each, #2) →
+  `use-annotations` gains `createNote`/`updateAnnotation`/`removeAnnotation` → vendored shadcn `popover.tsx` →
+  `highlight-layer` made interactive (rects = focusable click targets; note pins+underline) →
+  `annotation-popover.tsx` editor → toolbar Note button → reader-page wiring (`selected` annotation+rect state).
+  No core/store source change beyond the web facade. UI unit → frontend-design + impeccable before review.
+  First verifiable result: click a highlight → recolor/note/delete; select → Note → pinned margin note; all
+  survive reload.
+- **Unit 10c BUILT + REVIEWED (2026-06-14) — PR for Issue #90, branch feat/90-web-annotation-edit-notes.**
+  Dispatched standard route: Sonnet TDD executor (test-first) → frontend-design + impeccable (UI) →
+  fresh-context Opus reviewer. Shipped: web-store `updateAnnotation`/`deleteAnnotation` (one HLC-stamped
+  outbox entry each, #2; store delete import aliased) · `use-annotations` `createNote`/`updateAnnotation`/
+  `removeAnnotation` (optimistic) · interactive `highlight-layer` (rects = focusable `<button>`s; note kind =
+  dotted underline + ember margin pin, not a fill; note-dot on note-carrying highlights) · new
+  `annotation-popover.tsx` (swatches + note textarea + calm delete; hand-rolled fixed-position panel anchored
+  to clicked rect, Esc/click-outside close, autofocus) · toolbar **Note** button (`onCreateNote`) · reader-page
+  wiring threads `onSelectAnnotation` through both scroll+paged modes; transient unsaved-draft Note flow so
+  empty `note`-kind records are never written (10a). `pnpm -w typecheck` ✓ · `test` ✓ (web 257 / +1 Esc) ·
+  `lint` ✓. Invariants #1\#2\#6 + core purity verified; no core/store source change beyond the web facade.
+  **Reviewer verdict: APPROVE WITH NITS** — fixed pre-merge: deleted the unused vendored `popover.tsx`
+  (hand-rolled panel is the chosen approach — Radix's anchor model fits an arbitrary clicked rect poorly +
+  jsdom flake), added the missing Esc-closes test, added textarea autofocus. **Next:** merge PR #90, then
+  10d (mobile reader highlight+notes UI, WebView selection bridge).
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived

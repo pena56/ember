@@ -1,7 +1,7 @@
 import type { Annotation, AnnotationKind, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { makeAnnotation } from '@ember/core';
+import { editAnnotation, makeAnnotation } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
+import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -40,6 +40,19 @@ export interface WebStore {
   }): Promise<Annotation>;
   /** Return all saved annotations for a document (sorted by createdAt ascending). */
   listAnnotations(docId: string): Promise<Annotation[]>;
+  /**
+   * Edit an existing annotation (recolor / add/update/clear note). One HLC stamp
+   * shared by the updated record + its single outbox put entry (invariant #2).
+   */
+  updateAnnotation(input: {
+    annotation: Annotation;
+    patch: { color?: HighlightColor; note?: string | null };
+  }): Promise<Annotation>;
+  /**
+   * Delete an annotation by id. Removes the record + enqueues one HLC-stamped
+   * delete tombstone outbox entry (invariant #2).
+   */
+  deleteAnnotation(id: string): Promise<void>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -155,6 +168,22 @@ export function createWebStore(deps: {
     async listAnnotations(docId: string): Promise<Annotation[]> {
       const list = await listAnnotations(repo, docId);
       return [...list].sort((a, b) => a.createdAt - b.createdAt);
+    },
+
+    async updateAnnotation(input: {
+      annotation: Annotation;
+      patch: { color?: HighlightColor; note?: string | null };
+    }): Promise<Annotation> {
+      const hlc = clock.nextStamp();
+      const next = editAnnotation(input.annotation, input.patch, { hlc });
+      return saveAnnotation({ repo, newOutboxId: () => clock.newOutboxId(), hlc }, next);
+    },
+
+    async deleteAnnotation(id: string): Promise<void> {
+      return deleteAnnotationRecord(
+        { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        id,
+      );
     },
   };
 }

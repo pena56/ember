@@ -48,6 +48,8 @@ function makeStubStore(overrides?: Partial<WebStore>): WebStore {
     setDocumentPageCount: vi.fn().mockResolvedValue(null),
     createAnnotation: vi.fn().mockResolvedValue(makeAnnotation()),
     listAnnotations: vi.fn().mockResolvedValue([]),
+    updateAnnotation: vi.fn().mockResolvedValue(makeAnnotation()),
+    deleteAnnotation: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as WebStore;
 }
@@ -173,5 +175,128 @@ describe('useAnnotations', () => {
     rerender();
     await act(async () => { await Promise.resolve(); });
     expect(store.listAnnotations).toHaveBeenCalledWith('doc-b');
+  });
+
+  // ── 10c: createNote, updateAnnotation, removeAnnotation ──────────────────────
+
+  it('createNote persists a kind:"note" record and appends to annotationsByPage', async () => {
+    const noteAnnotation = makeAnnotation({
+      id: 'note-ann',
+      kind: 'note',
+      anchor: ANCHOR,
+      note: 'My note',
+    });
+    const store = makeStubStore({
+      listAnnotations: vi.fn().mockResolvedValue([]),
+      createAnnotation: vi.fn().mockResolvedValue(noteAnnotation),
+    });
+
+    const { result } = renderHook(() => useAnnotations('doc-x'), {
+      wrapper: makeWrapper(store),
+    });
+
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.annotationsByPage.size).toBe(0);
+
+    let created: Annotation | undefined;
+    await act(async () => {
+      created = await result.current.createNote({ anchor: ANCHOR, note: 'My note' });
+    });
+
+    // createAnnotation called with kind:'note'
+    expect(store.createAnnotation).toHaveBeenCalledWith({
+      docId: 'doc-x',
+      kind: 'note',
+      anchor: ANCHOR,
+      note: 'My note',
+    });
+
+    // Returns the new annotation
+    expect(created?.id).toBe('note-ann');
+    expect(created?.kind).toBe('note');
+
+    // Optimistically appended
+    expect(result.current.annotationsByPage.get(2)).toHaveLength(1);
+    expect(result.current.annotationsByPage.get(2)![0]!.kind).toBe('note');
+  });
+
+  it('updateAnnotation replaces in place (recolor) without reload', async () => {
+    const existing = makeAnnotation({ id: 'ann-1', color: 'yellow', anchor: ANCHOR });
+    const updated = makeAnnotation({ id: 'ann-1', color: 'blue', anchor: ANCHOR, updatedAt: 'hlc-2' });
+
+    const store = makeStubStore({
+      listAnnotations: vi.fn().mockResolvedValue([existing]),
+      updateAnnotation: vi.fn().mockResolvedValue(updated),
+    });
+
+    const { result } = renderHook(() => useAnnotations('doc-x'), {
+      wrapper: makeWrapper(store),
+    });
+
+    await act(async () => { await Promise.resolve(); });
+
+    // Initially yellow
+    expect(result.current.annotationsByPage.get(2)![0]!.color).toBe('yellow');
+
+    await act(async () => {
+      await result.current.updateAnnotation({ annotation: existing, patch: { color: 'blue' } });
+    });
+
+    expect(store.updateAnnotation).toHaveBeenCalledOnce();
+    // No extra listAnnotations call
+    expect(store.listAnnotations).toHaveBeenCalledOnce();
+
+    // Now shows blue
+    expect(result.current.annotationsByPage.get(2)![0]!.color).toBe('blue');
+    expect(result.current.annotationsByPage.get(2)![0]!.updatedAt).toBe('hlc-2');
+  });
+
+  it('updateAnnotation replaces in place (note edit) without reload', async () => {
+    const existing = makeAnnotation({ id: 'ann-1', anchor: ANCHOR });
+    const withNote = { ...existing, note: 'Added note', updatedAt: 'hlc-3' };
+
+    const store = makeStubStore({
+      listAnnotations: vi.fn().mockResolvedValue([existing]),
+      updateAnnotation: vi.fn().mockResolvedValue(withNote),
+    });
+
+    const { result } = renderHook(() => useAnnotations('doc-x'), {
+      wrapper: makeWrapper(store),
+    });
+
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => {
+      await result.current.updateAnnotation({ annotation: existing, patch: { note: 'Added note' } });
+    });
+
+    const page2 = result.current.annotationsByPage.get(2)!;
+    expect(page2[0]!.note).toBe('Added note');
+  });
+
+  it('removeAnnotation drops the annotation from state without reload', async () => {
+    const existing = makeAnnotation({ id: 'ann-1', anchor: ANCHOR });
+    const store = makeStubStore({
+      listAnnotations: vi.fn().mockResolvedValue([existing]),
+      deleteAnnotation: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { result } = renderHook(() => useAnnotations('doc-x'), {
+      wrapper: makeWrapper(store),
+    });
+
+    await act(async () => { await Promise.resolve(); });
+
+    expect(result.current.annotationsByPage.get(2)).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.removeAnnotation('ann-1');
+    });
+
+    expect(store.deleteAnnotation).toHaveBeenCalledWith('ann-1');
+    expect(store.listAnnotations).toHaveBeenCalledOnce(); // No reload
+
+    // Annotation gone
+    expect(result.current.annotationsByPage.get(2) ?? []).toHaveLength(0);
   });
 });
