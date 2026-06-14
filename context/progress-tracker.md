@@ -346,8 +346,18 @@ Update after every meaningful change.
   review. Pure helpers vitest-tested; hook/bridge/toolbar/paint device-verified (no headless RN renderer — 05a/07c/
   08c/09c precedent). First verifiable result: select text → tap color → highlight paints → reopen doc → still there.
   Dispatch route: Sonnet TDD executor → frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR
-  "Closes #92" → Device-verify (Expo Go) before merge. **Next:** dispatch 10d, then 10e (mobile edit/notes/pins —
-  the final slice of umbrella Unit 10). Awaiting user "dispatch".
+  "Closes #92" → Device-verify (Expo Go) before merge.
+- **Unit 10d DISPATCHED → PR #93 OPEN, awaiting device-verify (2026-06-14).** Branch feat/92-mobile-highlight-create-render
+  (8ed20ac). Sonnet TDD executor built all 13 files; 39 new vitest tests (native-store-annotation 7, annotation-anchor 10,
+  highlight-paint 7, build-reader-html 15). Fresh-context Opus review → **REQUEST CHANGES**, all fixed: (1) BLOCKING —
+  paged mode never stamped `data-page` on its page container → selection capture + setAnnotations repaint both broke in
+  paged mode; now stamped to match scroll mode; (2) should-fix — selection toolbar `left` had no upper clamp → could
+  overflow the right edge; now measures overlay width via `onLayout` and clamps both sides (TOOLBAR_WIDTH=196); (3) nit —
+  `[...HIGHLIGHT_COLORS]` instead of a double-cast. Re-verified all green: `pnpm -w typecheck` 9 ✓ · `pnpm -w test` (mobile
+  195) ✓ · `pnpm -w lint` ✓. Invariants confirmed: #1 (local repo only), #2 (one HLC stamp shared by record+outbox),
+  #6 (RN tokens; in-HTML HIGHLIGHT_HEX is the parity-commented WebView exception, values == `--color-highlight-*`).
+  apps/mobile-only diff. **Next:** user device-verify (Expo Go) → squash-merge PR #93 + delete branch → spec 10e (mobile
+  edit/recolor/delete + standalone notes/pins — the final slice of umbrella Unit 10). Awaiting device-verify + merge.
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
