@@ -25,7 +25,12 @@
  *   WebView → RN: { type:'ready', numPages } | { type:'page', current } |
  *                 { type:'position', page, offset }  (capture signal; debounced on scroll-settle)
  *                 { type:'error', message? } |
- *                 { type:'geometry', pageNumber, viewport:{width,height}, items }
+ *                 { type:'geometry', pageNumber, viewport:{width,height}, items } |
+ *                 { type:'selection', page, startChar, endChar, rect:{x,y,width,height} } |
+ *                 { type:'selectionCleared' }
+ *   RN → WebView (10d additions):
+ *                 { type:'setAnnotations', items:[{id,page,kind,color,boxes}] } |
+ *                 { type:'clearSelection' }
  */
 
 // ── Reader palette (must match ui-context.md exactly — no token pipeline here) ──
@@ -35,6 +40,19 @@ const READER_PALETTE = {
   sepia: { bg: '#F2E5CC', text: '#4A3F2F', pageBorder: '#D4C5A6' },
   night: { bg: '#14110E', text: '#C9BEAD', pageBorder: '#2A2420' },
 } as const;
+
+// ── Highlight palette (must match packages/tokens/src/theme.uniwind.css exactly) ──
+// --color-highlight-yellow: #f4d06f  --color-highlight-green: #9fc08a
+// --color-highlight-blue:   #93b7d4  --color-highlight-pink:  #e3a7be
+// No token pipeline available in the WebView HTML — same constraint as READER_PALETTE.
+// Injected into the template via JSON.stringify so the value is the single source of
+// truth checked by the build-reader-html.test.ts parity assertions.
+const HIGHLIGHT_HEX: Record<string, string> = {
+  yellow: '#f4d06f',
+  green:  '#9fc08a',
+  blue:   '#93b7d4',
+  pink:   '#e3a7be',
+};
 
 export function buildReaderHtml(pdfJsSrc: string, pdfWorkerSrc: string): string {
   // Build worker blob script — injected inline so pdf.js can set workerSrc to
@@ -200,6 +218,23 @@ html, body {
 }
 .textLayer .markedContent { display: contents; }
 .textLayer span[role="img"] { -webkit-user-select: none; user-select: none; cursor: default; }
+
+/* ── Highlight paint layer (10d) ─────────────────────────────────────────────
+ * .ember-hl overlays are absolutely-positioned inside .page-wrap, above the
+ * canvas but non-interactive (tap-to-edit is 10e). The per-theme blend mode
+ * (multiply on paper/sepia, screen on night) keeps the tint legible on all
+ * backgrounds — same approach as 10b's --highlight-blend token.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.ember-hl {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  /* Default blend: multiply (paper / sepia) */
+  mix-blend-mode: multiply;
+}
+html[data-reader-theme="night"] .ember-hl {
+  mix-blend-mode: screen;
+}
 </style>
 </head>
 <body>
@@ -250,6 +285,19 @@ let pageHeights = new Map(); // pageNum → natural CSS height
 let scrollObserver = null;
 let pendingPageInScroll = 1;
 let scrollSettleTimer = null; // debounce handle for position capture
+
+// ── 10d: Highlight paint state ──
+// Keyed by page number; each value is the items array for that page from the last
+// setAnnotations message. Cleared and rebuilt on every setAnnotations post.
+let annotationsByPage = new Map(); // pageNum → [{id, kind, color, boxes}]
+
+// ── 10d: Highlight palette (must match packages/tokens/src/theme.uniwind.css exactly) ──
+// Injected via JSON.stringify from the TS constant above so the parity test can assert
+// on the same value without duplicating the hex strings inside the template literal.
+var HIGHLIGHT_HEX = ${JSON.stringify(HIGHLIGHT_HEX)};
+
+// ── 10d: Selection debounce timer ──
+let selectionTimer = null;
 
 // Display width = viewport width minus padding
 function getDisplayWidth() {
@@ -329,6 +377,12 @@ async function renderPage(pageNum, container) {
       // Text layer is non-fatal (scanned/image PDF)
     }
 
+    // 10d: Paint any known highlights onto the freshly-rendered page.
+    // Called at the END of renderPage so lazily virtualized pages paint when
+    // they render. Also re-painted immediately for already-rendered pages when
+    // a setAnnotations message arrives.
+    paintAnnotations(pageNum, container);
+
     page.cleanup();
   } catch (err) {
     renderingPages.delete(pageNum);
@@ -336,6 +390,121 @@ async function renderPage(pageNum, container) {
     console.error('[ember-reader] renderPage error', pageNum, err);
   }
 }
+
+// ── 10d: Highlight paint layer ────────────────────────────────────────────────
+
+// Paint annotation overlays for pageNum into wrapEl.
+// Clears prior .ember-hl nodes first so re-paints on setAnnotations are clean.
+// Each box is expressed as fractions of page dimensions (resolved by RN via core).
+function paintAnnotations(pageNum, wrapEl) {
+  // Remove any existing highlight overlays for this page.
+  const prior = wrapEl.querySelectorAll('.ember-hl');
+  for (var i = 0; i < prior.length; i++) prior[i].parentNode.removeChild(prior[i]);
+
+  var items = annotationsByPage.get(pageNum);
+  if (!items || items.length === 0) return;
+
+  var W = wrapEl.offsetWidth;
+  var H = wrapEl.offsetHeight;
+
+  for (var j = 0; j < items.length; j++) {
+    var item = items[j];
+    var boxes = item.boxes;
+    var hexColor = HIGHLIGHT_HEX[item.color] || HIGHLIGHT_HEX.yellow;
+    for (var k = 0; k < boxes.length; k++) {
+      var box = boxes[k];
+      var el = document.createElement('div');
+      el.className = 'ember-hl';
+      el.style.left   = (box.x * W) + 'px';
+      el.style.top    = (box.y * H) + 'px';
+      el.style.width  = (box.width * W) + 'px';
+      el.style.height = (box.height * H) + 'px';
+      // ~50% alpha tint; blend mode is controlled by CSS (.ember-hl per-theme rule)
+      el.style.backgroundColor = hexColor + '80'; // 80 hex ≈ 50% opacity
+      wrapEl.appendChild(el);
+    }
+  }
+}
+
+// ── 10d: Selection capture bridge ────────────────────────────────────────────
+
+// Compute the char offset of (node, offsetInNode) within root's text nodes,
+// using a TreeWalker sum — same algorithm as web's charOffsetOf in selection-anchor.ts.
+// Returns -1 when the node is not found under root.
+function charOffsetOf(root, node, offsetInNode) {
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  var accumulated = 0;
+  var current = walker.nextNode();
+  while (current !== null) {
+    if (current === node) return accumulated + offsetInNode;
+    accumulated += current.length;
+    current = walker.nextNode();
+  }
+  return -1;
+}
+
+// Debounced selection handler: fires ~250 ms after the last selectionchange or
+// touchend, posts { type:'selection', page, startChar, endChar, rect } to RN,
+// or { type:'selectionCleared' } when the selection collapses.
+function handleSelectionChange() {
+  if (selectionTimer !== null) clearTimeout(selectionTimer);
+  selectionTimer = setTimeout(function () {
+    selectionTimer = null;
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+      postToRN({ type: 'selectionCleared' });
+      return;
+    }
+
+    var range = sel.getRangeAt(0);
+
+    // Find the .textLayer ancestor of the selection's anchor node.
+    var startNode = range.startContainer;
+    var textLayer = null;
+    var n = startNode.nodeType === Node.TEXT_NODE ? startNode.parentNode : startNode;
+    while (n) {
+      if (n.classList && n.classList.contains('textLayer')) { textLayer = n; break; }
+      n = n.parentNode;
+    }
+    if (!textLayer) { postToRN({ type: 'selectionCleared' }); return; }
+
+    // Find the .page-wrap containing this text layer (walk up from textLayer).
+    var pageWrap = textLayer.parentNode;
+    while (pageWrap && !(pageWrap.classList && pageWrap.classList.contains('page-wrap'))) {
+      pageWrap = pageWrap.parentNode;
+    }
+    if (!pageWrap || !pageWrap.dataset.page) { postToRN({ type: 'selectionCleared' }); return; }
+
+    var page = parseInt(pageWrap.dataset.page, 10);
+
+    var startChar = charOffsetOf(textLayer, range.startContainer, range.startOffset);
+    if (startChar < 0) { postToRN({ type: 'selectionCleared' }); return; }
+
+    var endChar = charOffsetOf(textLayer, range.endContainer, range.endOffset);
+    if (endChar < 0) {
+      // End node is outside this page's text layer (cross-page drag): clip to page text length.
+      var walker2 = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+      var total = 0;
+      var cur = walker2.nextNode();
+      while (cur !== null) { total += cur.length; cur = walker2.nextNode(); }
+      endChar = total;
+    }
+
+    if (startChar === endChar) { postToRN({ type: 'selectionCleared' }); return; }
+
+    var rect = range.getBoundingClientRect();
+    postToRN({
+      type: 'selection',
+      page: page,
+      startChar: startChar,
+      endChar: endChar,
+      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+    });
+  }, 250);
+}
+
+document.addEventListener('selectionchange', handleSelectionChange);
+document.addEventListener('touchend', handleSelectionChange);
 
 // ── Scroll mode rendering with IntersectionObserver virtualization ──
 const ACTIVE_BUFFER = 2; // pages above/below viewport to actively render
@@ -421,6 +590,9 @@ function buildPagedPage() {
   const wrap = document.getElementById('paged-page-wrap');
   wrap.innerHTML = '';
   const container = document.createElement('div');
+  // Match scroll mode: stamp the page number so selection capture and the
+  // setAnnotations repaint (both keyed on .page-wrap[data-page]) work in paged mode.
+  container.dataset.page = String(currentPage);
   wrap.appendChild(container);
   renderPage(currentPage, container);
 
@@ -521,6 +693,31 @@ function handleMessage(event) {
           window.scrollTo({ top: targetY, behavior: 'smooth' });
         }
       }
+      break;
+    }
+    case 'setAnnotations': {
+      // Rebuild the per-page annotation map, then repaint all already-rendered pages.
+      // Lazily virtualized pages pick up the annotations in paintAnnotations at the
+      // END of renderPage, so no explicit queuing needed.
+      annotationsByPage = new Map();
+      var items = msg.items || [];
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var bucket = annotationsByPage.get(it.page) || [];
+        bucket.push(it);
+        annotationsByPage.set(it.page, bucket);
+      }
+      // Repaint already-rendered page-wraps immediately.
+      var rendered = document.querySelectorAll('.page-wrap[data-page]');
+      for (var r = 0; r < rendered.length; r++) {
+        var pageNum = parseInt(rendered[r].dataset.page, 10);
+        paintAnnotations(pageNum, rendered[r]);
+      }
+      break;
+    }
+    case 'clearSelection': {
+      // RN asks the WebView to drop the active DOM selection (after highlight created).
+      if (window.getSelection) window.getSelection().removeAllRanges();
       break;
     }
   }
