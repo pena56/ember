@@ -366,6 +366,24 @@ Update after every meaningful change.
   drawn over a WebView text selection must suppress the native menu via `menuItems={[]}`. Mobile create+render done;
   **Next:** spec 10e (mobile edit/recolor/delete + standalone notes/pins — the final slice of umbrella Unit 10).
   Awaiting user "spec 10e".
+- **Unit 10e SPECCED (2026-06-14) — Issue #94 (umbrella #10 open), branch feat/94-mobile-annotation-edit-notes
+  (not yet cut), spec specs/10e-mobile-annotation-edit-notes.md. Route standard, UI unit, DEVICE-BOUND.** Final
+  slice of umbrella Unit 10; mirrors web 10c onto the WebView bridge, building on 10d. **Platform shift:** adds
+  ONE new bridge message — WebView→RN `{type:'annotationTap', id, rect}` (tappable `.ember-hl` overlays + note
+  pins stamp `dataset.annId`/`pointer-events:auto` and post on tap); RN owns the native editor, store mutations,
+  and repaint via the **existing** `setAnnotations` post (no new RN→WebView message for edit/delete). **Product
+  forks (carried from 10c):** edit = tap highlight → native editor card (4 recolor swatches + note textarea +
+  calm delete); standalone `note` kind = margin ember pin + dotted underline, tap-to-edit; Note button on the
+  10d selection toolbar (transient unsaved-draft flow — empty notes never written, 10a). Scope (apps/mobile
+  ONLY): native-store `updateAnnotation`/`deleteAnnotation` (one HLC outbox entry each, #2; store delete aliased)
+  · `use-annotations` `createNote`/`updateAnnotation`/`removeAnnotation` (optimistic) · `build-reader-html.ts`
+  tap reporter + note-kind paint branch (dotted underline + pin; accent hex = parity-commented WebView exception)
+  · `reader-webview.tsx` `annotationTap` wiring · new native `annotation-editor.tsx` · `selection-toolbar.tsx`
+  Note button · `reader-screen.tsx` editing-state + draft-note wiring. No core/store/tokens package change.
+  Tests: native-store-annotation + build-reader-html extended (vitest); editor/hook/bridge/note-paint
+  device-verified (no headless RN renderer — 10d precedent). Dispatch route: Sonnet TDD executor →
+  frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR "Closes #94" → Device-verify
+  (Expo Go) before merge. **Awaiting user "dispatch".**
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
