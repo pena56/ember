@@ -40,7 +40,8 @@ export type WebViewInMessage =
   | { type: 'error'; message?: string }
   | { type: 'geometry'; pageNumber: number; viewport: { width: number; height: number }; items: unknown[] }
   | { type: 'selection'; page: number; startChar: number; endChar: number; rect: { x: number; y: number; width: number; height: number } }
-  | { type: 'selectionCleared' };
+  | { type: 'selectionCleared' }
+  | { type: 'annotationTap'; id: string; rect: { x: number; y: number; width: number; height: number } };
 
 export interface ReaderWebViewProps {
   /**
@@ -76,6 +77,12 @@ export interface ReaderWebViewProps {
   onSelection?: (s: { page: number; startChar: number; endChar: number; rect: { x: number; y: number; width: number; height: number } }) => void;
   /** Called when the WebView selection collapses or is cleared. */
   onSelectionCleared?: () => void;
+  /**
+   * Called when the WebView reports a tap on a painted highlight overlay or a note
+   * pin/underline. `id` is the annotation id; `rect` is the tapped element's bounding
+   * box in WebView-viewport CSS px (same space as `onSelection`'s rect) for editor placement.
+   */
+  onAnnotationTap?: (t: { id: string; rect: { x: number; y: number; width: number; height: number } }) => void;
   /**
    * RN-resolved paint message; posted to the WebView whenever it changes (gated on
    * bootReady, same pattern as `resumeTo`). Undefined = nothing posted.
@@ -113,6 +120,7 @@ export function ReaderWebView({
   resumeTo,
   onSelection,
   onSelectionCleared,
+  onAnnotationTap,
   paintMessage,
   clearSelectionSignal,
 }: ReaderWebViewProps) {
@@ -224,6 +232,9 @@ export function ReaderWebView({
         break;
       case 'selectionCleared':
         onSelectionCleared?.();
+        break;
+      case 'annotationTap':
+        onAnnotationTap?.({ id: msg.id, rect: msg.rect });
         break;
     }
   }

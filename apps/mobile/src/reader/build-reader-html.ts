@@ -54,6 +54,11 @@ const HIGHLIGHT_HEX: Record<string, string> = {
   pink:   '#e3a7be',
 };
 
+// ── Note accent (10e) — the standalone-note pin + dotted underline color ──────────
+// Warm Amber-Ember accent. No token pipeline in the WebView HTML — documented exception,
+// same as HIGHLIGHT_HEX/READER_PALETTE. Parity-checked by build-reader-html.test.ts.
+const NOTE_ACCENT_HEX = '#e0701b'; // must match --color-accent
+
 export function buildReaderHtml(pdfJsSrc: string, pdfWorkerSrc: string): string {
   // Build worker blob script — injected inline so pdf.js can set workerSrc to
   // a blob URL. This avoids needing a separate worker file accessible via file://.
@@ -235,6 +240,41 @@ html, body {
 html[data-reader-theme="night"] .ember-hl {
   mix-blend-mode: screen;
 }
+
+/* ── Note paint layer (10e) ───────────────────────────────────────────────────
+ * Standalone notes are NOT a filled tint — they read as marginalia:
+ *  .ember-note-underline — a subtle accent dotted underline under the anchored text.
+ *  .ember-note-pin       — a small ember glyph in the page margin at the anchor's
+ *                          top line, the primary tap target to open the editor.
+ * Both are tappable (pointer-events:auto set inline) and carry dataset.annId.
+ * Accent hex is injected from NOTE_ACCENT_HEX (token-parity exception, like .ember-hl).
+ * ─────────────────────────────────────────────────────────────────────────── */
+.ember-note-underline {
+  position: absolute;
+  pointer-events: auto;
+  border-bottom: 1.5px dotted ${NOTE_ACCENT_HEX};
+  opacity: 0.55;
+  -webkit-tap-highlight-color: transparent;
+}
+.ember-note-pin {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50% 50% 50% 2px;
+  background: ${NOTE_ACCENT_HEX};
+  box-shadow: 0 1px 3px rgba(0,0,0,0.28);
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+}
+.ember-note-pin:active { transform: scale(0.88); }
+html[data-reader-theme="night"] .ember-note-underline,
+html[data-reader-theme="night"] .ember-note-pin {
+  /* Lighter accent reads better on the dark page (matches --color-accent dark variant) */
+  border-bottom-color: #f2913e;
+}
+html[data-reader-theme="night"] .ember-note-pin { background: #f2913e; }
 </style>
 </head>
 <body>
@@ -295,6 +335,10 @@ let annotationsByPage = new Map(); // pageNum → [{id, kind, color, boxes}]
 // Injected via JSON.stringify from the TS constant above so the parity test can assert
 // on the same value without duplicating the hex strings inside the template literal.
 var HIGHLIGHT_HEX = ${JSON.stringify(HIGHLIGHT_HEX)};
+
+// ── 10e: Note accent (must match --color-accent — see NOTE_ACCENT_HEX above) ──
+// Injected via JSON.stringify so the parity test asserts on the same value.
+var NOTE_ACCENT_HEX = ${JSON.stringify(NOTE_ACCENT_HEX)};
 
 // ── 10d: Selection debounce timer ──
 let selectionTimer = null;
@@ -393,12 +437,36 @@ async function renderPage(pageNum, container) {
 
 // ── 10d: Highlight paint layer ────────────────────────────────────────────────
 
+// 10e: report a tap on a painted overlay/pin up to RN. The element carries
+// dataset.annId; rect is its bounding box in WebView-viewport CSS px (same space
+// as selection.rect) so RN can place the native editor. Stop the event so it does
+// not also start a text selection.
+function reportAnnotationTap(ev, el) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  var r = el.getBoundingClientRect();
+  postToRN({
+    type: 'annotationTap',
+    id: el.dataset.annId,
+    rect: { x: r.left, y: r.top, width: r.width, height: r.height },
+  });
+}
+
+// Attach tap reporting to a painted overlay element (highlight box, note underline, or pin).
+function makeTappable(el, annId) {
+  el.dataset.annId = annId;
+  el.style.pointerEvents = 'auto';
+  el.addEventListener('click', function (ev) { reportAnnotationTap(ev, el); });
+}
+
 // Paint annotation overlays for pageNum into wrapEl.
-// Clears prior .ember-hl nodes first so re-paints on setAnnotations are clean.
-// Each box is expressed as fractions of page dimensions (resolved by RN via core).
+// Clears prior .ember-hl / .ember-note-* nodes first so re-paints on setAnnotations
+// are clean. Each box is expressed as fractions of page dimensions (resolved by RN via core).
 function paintAnnotations(pageNum, wrapEl) {
-  // Remove any existing highlight overlays for this page.
-  const prior = wrapEl.querySelectorAll('.ember-hl');
+  // Remove any existing annotation overlays for this page (highlight fills + note glyphs).
+  var prior = wrapEl.querySelectorAll('.ember-hl, .ember-note-underline, .ember-note-pin');
   for (var i = 0; i < prior.length; i++) prior[i].parentNode.removeChild(prior[i]);
 
   var items = annotationsByPage.get(pageNum);
@@ -410,6 +478,37 @@ function paintAnnotations(pageNum, wrapEl) {
   for (var j = 0; j < items.length; j++) {
     var item = items[j];
     var boxes = item.boxes;
+
+    if (item.kind === 'note') {
+      // ── Note paint: dotted underline per box + one margin pin at the first box's top.
+      for (var n = 0; n < boxes.length; n++) {
+        var nbox = boxes[n];
+        var underline = document.createElement('div');
+        underline.className = 'ember-note-underline';
+        underline.style.left   = (nbox.x * W) + 'px';
+        // Sit the dotted rule at the text baseline (bottom of the box).
+        underline.style.top    = ((nbox.y + nbox.height) * H - 2) + 'px';
+        underline.style.width  = (nbox.width * W) + 'px';
+        underline.style.height = '2px';
+        makeTappable(underline, item.id);
+        wrapEl.appendChild(underline);
+      }
+      // Margin pin at the first box's top line, just left of the text column.
+      if (boxes.length > 0) {
+        var first = boxes[0];
+        var pin = document.createElement('div');
+        pin.className = 'ember-note-pin';
+        var pinX = first.x * W - 20; // 14px glyph + ~6px gap, left of the text
+        if (pinX < 2) pinX = 2;      // clamp inside on narrow widths
+        pin.style.left = pinX + 'px';
+        pin.style.top  = (first.y * H) + 'px';
+        makeTappable(pin, item.id);
+        wrapEl.appendChild(pin);
+      }
+      continue;
+    }
+
+    // ── Highlight paint: filled, tinted, tappable boxes.
     var hexColor = HIGHLIGHT_HEX[item.color] || HIGHLIGHT_HEX.yellow;
     for (var k = 0; k < boxes.length; k++) {
       var box = boxes[k];
@@ -421,6 +520,9 @@ function paintAnnotations(pageNum, wrapEl) {
       el.style.height = (box.height * H) + 'px';
       // ~50% alpha tint; blend mode is controlled by CSS (.ember-hl per-theme rule)
       el.style.backgroundColor = hexColor + '80'; // 80 hex ≈ 50% opacity
+      // 10e: tap-to-edit — stamp id, make tappable (overrides the .ember-hl
+      // pointer-events:none default for these fill overlays).
+      makeTappable(el, item.id);
       wrapEl.appendChild(el);
     }
   }

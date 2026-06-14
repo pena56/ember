@@ -1,7 +1,7 @@
 import type { Annotation, AnnotationKind, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { makeAnnotation } from '@ember/core';
+import { editAnnotation, makeAnnotation } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
+import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -79,6 +79,20 @@ export interface NativeStore {
   }): Promise<Annotation>;
   /** Return all saved annotations for a document (sorted by createdAt ascending). */
   listAnnotations(docId: string): Promise<Annotation[]>;
+  /**
+   * Edit an existing annotation (recolor / add/update/clear note). One HLC stamp
+   * shared by the updated record + its single outbox put entry (invariant #2).
+   * Preserves id/createdAt/anchor; bumps `updatedAt`. Mirrors web-store 10c.
+   */
+  updateAnnotation(input: {
+    annotation: Annotation;
+    patch: { color?: HighlightColor; note?: string | null };
+  }): Promise<Annotation>;
+  /**
+   * Delete an annotation by id. Removes the record + enqueues one HLC-stamped
+   * delete tombstone outbox entry (invariant #2).
+   */
+  deleteAnnotation(id: string): Promise<void>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -189,6 +203,25 @@ export function createNativeStore(deps: {
     async listAnnotations(docId: string): Promise<Annotation[]> {
       const list = await listAnnotations(repo, docId);
       return [...list].sort((a, b) => a.createdAt - b.createdAt);
+    },
+
+    async updateAnnotation(input: {
+      annotation: Annotation;
+      patch: { color?: HighlightColor; note?: string | null };
+    }): Promise<Annotation> {
+      // ONE nextStamp() shared by editAnnotation (updatedAt) and the outbox entry (hlc).
+      // Invariant #2: every edit = exactly one HLC-stamped outbox put entry.
+      const hlc = clock.nextStamp();
+      const next = editAnnotation(input.annotation, input.patch, { hlc });
+      return saveAnnotation({ repo, newOutboxId: () => clock.newOutboxId(), hlc }, next);
+    },
+
+    async deleteAnnotation(id: string): Promise<void> {
+      // Invariant #2: one delete = exactly one HLC-stamped delete tombstone.
+      return deleteAnnotationRecord(
+        { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
+        id,
+      );
     },
   };
 }

@@ -14,17 +14,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColorValue } from 'react-native';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
-import type { PageTextGeometry, ReadingPosition, TextAnchor } from '@ember/core';
+import type { Annotation, HighlightColor, PageTextGeometry, ReadingPosition, TextAnchor } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { EmberFlame } from '../library/ember-flame.js';
 import { useNativeStore } from '../store/store-context.js';
 
 import { anchorFromSelection } from './annotation-anchor.js';
+import { AnnotationEditor } from './annotation-editor.js';
 import { buildSetAnnotationsMessage } from './highlight-paint.js';
 import type { ReadMode } from './reader-webview.js';
 import { ReaderWebView } from './reader-webview.js';
@@ -58,9 +59,9 @@ const READ_MODES: { value: ReadMode; label: string }[] = [
   { value: 'paged', label: 'Paged' },
 ];
 
-// Approx. rendered width of the 4-swatch SelectionToolbar (px): 4×36 swatches +
-// 3×8 gaps + 2×12 padding + border. Used to center + clamp it within the overlay.
-const TOOLBAR_WIDTH = 196;
+// Approx. rendered width of the SelectionToolbar (px): 4×36 swatches + 1 divider +
+// 1×36 Note button + 5×8 gaps + 2×12 padding + border. Used to center + clamp it.
+const TOOLBAR_WIDTH = 248;
 const TOOLBAR_MARGIN = 8;
 
 // ── Document Notice (error / missing) ─────────────────────────────────────────
@@ -275,8 +276,8 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   // One-shot resume target: set from onResume, passed to <ReaderWebView resumeTo=…/>
   const [resumeTo, setResumeTo] = useState<{ page: number; offset: number } | undefined>(undefined);
 
-  // ── 10d: Annotations + highlight state ────────────────────────────────────
-  const { annotations, createHighlight } = useAnnotations(docId);
+  // ── 10d/10e: Annotations + highlight/note state ───────────────────────────
+  const { annotations, createHighlight, createNote, updateAnnotation, removeAnnotation } = useAnnotations(docId);
   // Per-page geometry collected from the WebView as pages render.
   const [geometryByPage, setGeometryByPage] = useState<Map<number, PageTextGeometry>>(new Map());
   // Active text selection: derived TextAnchor + raw viewport rect for toolbar placement.
@@ -286,9 +287,20 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   } | null>(null);
   // Counter incremented each time we want the WebView to clear its DOM selection.
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0);
+  // 10e: the annotation currently open in the editor card. `isDraft` marks a
+  // freshly-created, not-yet-persisted note (first Save persists; empty discards).
+  const [editing, setEditing] = useState<{
+    annotation: Annotation;
+    rect: { x: number; y: number; width: number; height: number };
+    isDraft?: boolean;
+  } | null>(null);
   // Width of the WebView overlay area (px), measured on layout. Used to clamp the
   // selection toolbar so it never overflows the right edge near a right-margin selection.
   const [overlayWidth, setOverlayWidth] = useState(0);
+  // 10e: live keyboard height. The annotation editor is an absolutely-positioned bottom
+  // sheet, so the system never resizes it — we push it up by the keyboard height ourselves.
+  // (KeyboardAvoidingView is a no-op for absolute overlays on Android.)
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Cancel guard — track the active load so stale async ops don't update state
   const loadIdRef = useRef(0);
@@ -298,6 +310,22 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   const latestPosRef = useRef<{ page: number; offset: number }>({ page: 1, offset: 0 });
   // Current page ref — kept in sync with setCurrentPage so getPage() reads the live page.
   const currentPageRef = useRef(1);
+
+  // Track keyboard height so the annotation editor sheet can sit just above it.
+  // `keyboardDidShow`/`Hide` fire on both platforms; endCoordinates.height is the
+  // covered area in px. Reset to 0 on hide so the sheet drops back to the bottom edge.
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // onResume: called by the controller when a saved position is found. Sets the
   // toolbar page indicator and triggers the one-shot declarative resumeTo prop.
@@ -450,6 +478,70 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
     void createHighlight({ anchor, color });
   }
 
+  // ── 10e: edit/note handlers ───────────────────────────────────────────────
+
+  // Tap on a painted highlight or note pin/underline — open the editor on the
+  // matching record at the tapped rect. Unknown ids are ignored (stale paint).
+  function handleAnnotationTap({ id, rect }: { id: string; rect: { x: number; y: number; width: number; height: number } }) {
+    const found = annotations.find((a) => a.id === id);
+    if (!found) return;
+    setEditing({ annotation: found, rect });
+  }
+
+  // Note toolbar button — open an unsaved draft note editor (mirror web 10c).
+  // Nothing is written until the first Save; closing empty discards (10a forbids
+  // empty note-kind text). The draft is a local Annotation-shaped object.
+  function handleAddNote() {
+    if (!selection) return;
+    const { anchor, rect } = selection;
+    const draft: Annotation = {
+      id: `draft-${Date.now().toString()}`,
+      docId,
+      kind: 'note',
+      anchor,
+      note: '',
+      createdAt: Date.now(),
+      updatedAt: '',
+    };
+    setSelection(null);
+    setClearSelectionSignal((n) => n + 1);
+    setEditing({ annotation: draft, rect, isDraft: true });
+  }
+
+  function handleRecolor(color: HighlightColor) {
+    if (!editing) return;
+    const { annotation } = editing;
+    void updateAnnotation({ annotation, patch: { color } });
+    setEditing(null);
+  }
+
+  function handleEditNote(textValue: string) {
+    if (!editing) return;
+    const { annotation, rect, isDraft } = editing;
+    const trimmed = textValue.trim();
+    if (isDraft) {
+      // First Save for a draft note — persist now (empty already guarded by the editor).
+      if (trimmed === '') { setEditing(null); return; }
+      void createNote({ anchor: annotation.anchor, note: trimmed }).then((created) => {
+        // Swap the editor to the persisted record so a follow-up edit/delete works.
+        if (created) setEditing({ annotation: created, rect });
+        else setEditing(null);
+      });
+    } else {
+      // Empty string clears a highlight's note (10a); note-kind can't go empty here.
+      void updateAnnotation({ annotation, patch: { note: trimmed === '' ? null : trimmed } });
+      setEditing(null);
+    }
+  }
+
+  function handleDeleteAnnotation() {
+    if (!editing) return;
+    const { annotation, isDraft } = editing;
+    // A draft was never written — just discard.
+    if (!isDraft) void removeAnnotation(annotation.id);
+    setEditing(null);
+  }
+
   return (
     <View className="flex-1 bg-surface">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -516,6 +608,7 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                 onTextGeometry={handleTextGeometry}
                 onSelection={handleSelection}
                 onSelectionCleared={handleSelectionCleared}
+                onAnnotationTap={handleAnnotationTap}
                 paintMessage={paintMessage}
                 clearSelectionSignal={clearSelectionSignal}
               />
@@ -523,9 +616,10 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
               {/* Native selection toolbar — absolutely positioned over the WebView
                   at the selection's bounding rect. Placed above the rect when there
                   is room; falls back to below near the top edge. */}
-              {selection !== null && (
+              {selection !== null && editing === null && (
                 <SelectionToolbar
                   onPick={handleSwatchPick}
+                  onAddNote={handleAddNote}
                   style={{
                     position: 'absolute',
                     // Place the toolbar above the selection rect; fall back to below
@@ -541,6 +635,35 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                     ),
                   }}
                 />
+              )}
+
+              {/* Native annotation editor — a bottom sheet over a dim scrim. The editor
+                  opens a keyboard (note field), so a rect-anchored card would jam against
+                  the screen edge, cover the text being annotated, and fight the keyboard.
+                  A sheet that rises above the keyboard (KeyboardAvoidingView) keeps Save /
+                  Remove always reachable and reads as a proper modal. Tap the scrim to close. */}
+              {editing !== null && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  {/* Dim, tap-to-dismiss scrim. */}
+                  <Pressable
+                    onPress={() => { setEditing(null); }}
+                    accessibilityLabel="Dismiss editor"
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+                  />
+                  {/* Sheet pinned to the bottom, lifted by the live keyboard height so
+                      the note field + Save/Remove stay visible while typing. */}
+                  <View style={{ position: 'absolute', left: 0, right: 0, bottom: keyboardHeight }}>
+                    <AnnotationEditor
+                      annotation={editing.annotation}
+                      isDraft={editing.isDraft}
+                      onRecolor={handleRecolor}
+                      onEditNote={handleEditNote}
+                      onDelete={handleDeleteAnnotation}
+                      onClose={() => { setEditing(null); }}
+                      sheet
+                    />
+                  </View>
+                </View>
               )}
             </View>
           )}

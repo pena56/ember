@@ -383,7 +383,18 @@ Update after every meaningful change.
   Tests: native-store-annotation + build-reader-html extended (vitest); editor/hook/bridge/note-paint
   device-verified (no headless RN renderer — 10d precedent). Dispatch route: Sonnet TDD executor →
   frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR "Closes #94" → Device-verify
-  (Expo Go) before merge. **Awaiting user "dispatch".**
+  (Expo Go) before merge.
+- **Unit 10e BUILT — PR #95 OPEN, awaiting device-verify (2026-06-14).** Branch feat/94-mobile-annotation-edit-notes
+  cut + pushed; commit 6e5a0e9 (9 files, +802/−21). Built exactly to spec: native-store `updateAnnotation`/
+  `deleteAnnotation` (one shared HLC stamp = one outbox entry each, #2 — asserted in tests:
+  `outbox[1].hlc === updated.updatedAt`, single delete tombstone) · `use-annotations` createNote/updateAnnotation/
+  removeAnnotation · build-reader-html tap reporter + note-kind paint (pin + dotted underline, `NOTE_ACCENT_HEX`
+  parity-commented) · new `annotation-editor.tsx` (uniwind card) · selection-toolbar Note button · reader-screen
+  editing-state + transient draft flow. Verify: typecheck + lint clean, tests green (mobile 209 / web 257), incl.
+  extended native-store-annotation (13) + build-reader-html (23). Fresh-context review: **APPROVE-WITH-NITS**, no
+  blocking; the one behavioral nit (onBlur saving an unchanged note → redundant outbox entry) was fixed
+  (`handleBlur` guards on changed text). apps/mobile-only diff confirmed. **DEVICE-VERIFY (user, Expo Go) then
+  squash-merge #95 + delete branch → umbrella Unit 10 COMPLETE.**
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
