@@ -38,7 +38,9 @@ export type WebViewInMessage =
   | { type: 'position'; page: number; offset: number }
   | { type: 'stage'; stage: string }
   | { type: 'error'; message?: string }
-  | { type: 'geometry'; pageNumber: number; viewport: { width: number; height: number }; items: unknown[] };
+  | { type: 'geometry'; pageNumber: number; viewport: { width: number; height: number }; items: unknown[] }
+  | { type: 'selection'; page: number; startChar: number; endChar: number; rect: { x: number; y: number; width: number; height: number } }
+  | { type: 'selectionCleared' };
 
 export interface ReaderWebViewProps {
   /**
@@ -66,6 +68,25 @@ export interface ReaderWebViewProps {
    * to the WebView (gated on bootReady, like the other post effects).
    */
   resumeTo?: { page: number; offset: number } | undefined;
+  /**
+   * Called when the WebView posts a non-collapsed selection within one page's text
+   * layer. Includes raw char offsets (DOM TreeWalker sum) + bounding rect in
+   * WebView-viewport CSS px for positioning the native toolbar overlay.
+   */
+  onSelection?: (s: { page: number; startChar: number; endChar: number; rect: { x: number; y: number; width: number; height: number } }) => void;
+  /** Called when the WebView selection collapses or is cleared. */
+  onSelectionCleared?: () => void;
+  /**
+   * RN-resolved paint message; posted to the WebView whenever it changes (gated on
+   * bootReady, same pattern as `resumeTo`). Undefined = nothing posted.
+   */
+  paintMessage?: { type: 'setAnnotations'; items: unknown[] } | undefined;
+  /**
+   * Increment to ask the WebView to drop its active DOM selection.
+   * Mirrors the `resumeTo` declarative-counter pattern: a new value triggers one
+   * `clearSelection` post (gated on bootReady).
+   */
+  clearSelectionSignal?: number;
 }
 
 // ── HTML singleton (built once; pdf.js content is ~3MB) ──────────────────────
@@ -90,6 +111,10 @@ export function ReaderWebView({
   onTextGeometry,
   onPosition,
   resumeTo,
+  onSelection,
+  onSelectionCleared,
+  paintMessage,
+  clearSelectionSignal,
 }: ReaderWebViewProps) {
   const webViewRef = useRef<WebView | null>(null);
   // The in-page pdf.js (~3MB) only attaches its `message` listener after it
@@ -138,6 +163,20 @@ export function ReaderWebView({
     );
   }, [resumeTo]);
 
+  // Post setAnnotations whenever the resolved paint message changes.
+  // Gated on bootReady — mirrors the resumeTo effect exactly.
+  useEffect(() => {
+    if (paintMessage === undefined || !bootReadyRef.current) return;
+    webViewRef.current?.postMessage(JSON.stringify(paintMessage));
+  }, [paintMessage]);
+
+  // Post clearSelection when the signal counter increments.
+  // Gated on bootReady — mirrors the resumeTo/paintMessage pattern.
+  useEffect(() => {
+    if (clearSelectionSignal === undefined || clearSelectionSignal === 0 || !bootReadyRef.current) return;
+    webViewRef.current?.postMessage(JSON.stringify({ type: 'clearSelection' }));
+  }, [clearSelectionSignal]);
+
   function handleMessage(event: WebViewMessageEvent) {
     let msg: WebViewInMessage;
     try {
@@ -154,6 +193,8 @@ export function ReaderWebView({
         post({ type: 'setMode', mode });
         post({ type: 'setTheme', theme: readerTheme });
         if (bytes !== undefined) postLoad(bytes);
+        // Flush pending paint message (annotations already loaded before boot).
+        if (paintMessage !== undefined) post(paintMessage as Record<string, unknown>);
         break;
       case 'ready':
         onReady(msg.numPages);
@@ -178,6 +219,12 @@ export function ReaderWebView({
           // Non-fatal: geometry extraction failure must never break rendering.
         }
         break;
+      case 'selection':
+        onSelection?.(msg);
+        break;
+      case 'selectionCleared':
+        onSelectionCleared?.();
+        break;
     }
   }
 
@@ -199,6 +246,12 @@ export function ReaderWebView({
       allowFileAccess
       // Required for postMessage to work on both platforms
       originWhitelist={['*']}
+      // Suppress the native text-selection action menu (Copy / Share / Select all).
+      // It renders as a system overlay above all app content, covering our own
+      // SelectionToolbar. An empty array suppresses it on both iOS and Android while
+      // leaving the selection itself (handles + selectionchange) intact — our swatch
+      // toolbar becomes the only affordance over a selection.
+      menuItems={[]}
       onMessage={handleMessage}
       // Suppress console errors from leaking as yellow boxes in dev
       onError={() => { onError(); }}

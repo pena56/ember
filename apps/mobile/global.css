@@ -11,3 +11,7 @@
    The `text-streak-*` pair is emitted defensively for the Stats streak numeral (09f),
    which is the first literal-className use of those tokens. */
 @source inline("bg-streak-lit bg-streak-risk bg-text-muted text-streak-lit text-streak-risk");
+/* 10d: Highlight swatch colors — literal class names used in selection-toolbar.tsx, but
+   included here defensively so that if the mapping ever becomes dynamic they still emit.
+   Token-driven only (invariant #6). */
+@source inline("bg-highlight-yellow bg-highlight-green bg-highlight-blue bg-highlight-pink");

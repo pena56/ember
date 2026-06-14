@@ -12,20 +12,24 @@
  * useReadingPosition (unit 06d).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColorValue } from 'react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
-import type { ReadingPosition } from '@ember/core';
+import type { PageTextGeometry, ReadingPosition, TextAnchor } from '@ember/core';
 import type { ReaderThemeName } from '@ember/tokens';
 
 import { EmberFlame } from '../library/ember-flame.js';
 import { useNativeStore } from '../store/store-context.js';
 
+import { anchorFromSelection } from './annotation-anchor.js';
+import { buildSetAnnotationsMessage } from './highlight-paint.js';
 import type { ReadMode } from './reader-webview.js';
 import { ReaderWebView } from './reader-webview.js';
+import { SelectionToolbar } from './selection-toolbar.js';
+import { useAnnotations } from './use-annotations.js';
 import { useCapturePageCount } from './use-capture-page-count.js';
 import { useReadingPosition } from './use-reading-position.js';
 import { useSessionTracking } from './use-session-tracking.js';
@@ -53,6 +57,11 @@ const READ_MODES: { value: ReadMode; label: string }[] = [
   { value: 'scroll', label: 'Scroll' },
   { value: 'paged', label: 'Paged' },
 ];
+
+// Approx. rendered width of the 4-swatch SelectionToolbar (px): 4×36 swatches +
+// 3×8 gaps + 2×12 padding + border. Used to center + clamp it within the overlay.
+const TOOLBAR_WIDTH = 196;
+const TOOLBAR_MARGIN = 8;
 
 // ── Document Notice (error / missing) ─────────────────────────────────────────
 
@@ -266,6 +275,21 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   // One-shot resume target: set from onResume, passed to <ReaderWebView resumeTo=…/>
   const [resumeTo, setResumeTo] = useState<{ page: number; offset: number } | undefined>(undefined);
 
+  // ── 10d: Annotations + highlight state ────────────────────────────────────
+  const { annotations, createHighlight } = useAnnotations(docId);
+  // Per-page geometry collected from the WebView as pages render.
+  const [geometryByPage, setGeometryByPage] = useState<Map<number, PageTextGeometry>>(new Map());
+  // Active text selection: derived TextAnchor + raw viewport rect for toolbar placement.
+  const [selection, setSelection] = useState<{
+    anchor: TextAnchor;
+    rect: { x: number; y: number; width: number; height: number };
+  } | null>(null);
+  // Counter incremented each time we want the WebView to clear its DOM selection.
+  const [clearSelectionSignal, setClearSelectionSignal] = useState(0);
+  // Width of the WebView overlay area (px), measured on layout. Used to clamp the
+  // selection toolbar so it never overflows the right edge near a right-margin selection.
+  const [overlayWidth, setOverlayWidth] = useState(0);
+
   // Cancel guard — track the active load so stale async ops don't update state
   const loadIdRef = useRef(0);
   // Last progress stage the WebView reported, for the hang watchdog's message.
@@ -300,6 +324,13 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   });
 
   useCapturePageCount({ docId, ready: status === 'ready', numPages });
+
+  // Memoized paint message: recomputed when annotations or geometry changes.
+  // Passed to <ReaderWebView> which posts it into the WebView on change (gated on bootReady).
+  const paintMessage = useMemo(
+    () => buildSetAnnotationsMessage(annotations, geometryByPage),
+    [annotations, geometryByPage],
+  );
 
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
@@ -382,6 +413,43 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
     if (message !== undefined) setErrorDetail(message);
   }
 
+  // ── 10d: Geometry + selection handlers ────────────────────────────────────
+
+  function handleTextGeometry(geometry: PageTextGeometry) {
+    setGeometryByPage((prev) => {
+      const next = new Map(prev);
+      next.set(geometry.pageNumber, geometry);
+      return next;
+    });
+  }
+
+  function handleSelection(s: { page: number; startChar: number; endChar: number; rect: { x: number; y: number; width: number; height: number } }) {
+    const geometry = geometryByPage.get(s.page);
+    if (!geometry) return; // geometry not yet received for this page — ignore
+    const anchor = anchorFromSelection({
+      page: s.page,
+      startChar: s.startChar,
+      endChar: s.endChar,
+      geometry,
+    });
+    if (anchor !== null) {
+      setSelection({ anchor, rect: s.rect });
+    }
+  }
+
+  function handleSelectionCleared() {
+    setSelection(null);
+  }
+
+  function handleSwatchPick(color: Parameters<typeof createHighlight>[0]['color']) {
+    if (!selection) return;
+    const { anchor } = selection;
+    setSelection(null);
+    // Ask the WebView to drop its DOM selection before the highlight is painted.
+    setClearSelectionSignal((n) => n + 1);
+    void createHighlight({ anchor, color });
+  }
+
   return (
     <View className="flex-1 bg-surface">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -424,6 +492,7 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
               receive the load message; hidden behind loading until ready */}
           {bytes !== undefined && (
             <View
+              onLayout={(e) => { setOverlayWidth(e.nativeEvent.layout.width); }}
               style={{
                 flex: 1,
                 // Keep the WebView mounted but invisible while status === 'loading'
@@ -444,7 +513,35 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                 onStage={handleWebViewStage}
                 onPosition={handlePosition}
                 resumeTo={resumeTo}
+                onTextGeometry={handleTextGeometry}
+                onSelection={handleSelection}
+                onSelectionCleared={handleSelectionCleared}
+                paintMessage={paintMessage}
+                clearSelectionSignal={clearSelectionSignal}
               />
+
+              {/* Native selection toolbar — absolutely positioned over the WebView
+                  at the selection's bounding rect. Placed above the rect when there
+                  is room; falls back to below near the top edge. */}
+              {selection !== null && (
+                <SelectionToolbar
+                  onPick={handleSwatchPick}
+                  style={{
+                    position: 'absolute',
+                    // Place the toolbar above the selection rect; fall back to below
+                    // if the rect is near the top edge (< 60 px room).
+                    top: selection.rect.y > 60
+                      ? selection.rect.y - 56
+                      : selection.rect.y + selection.rect.height + 8,
+                    // Horizontally centered on the rect, clamped within the overlay
+                    // width so it never overflows the left or right edge.
+                    left: Math.min(
+                      Math.max(TOOLBAR_MARGIN, selection.rect.x + selection.rect.width / 2 - TOOLBAR_WIDTH / 2),
+                      Math.max(TOOLBAR_MARGIN, overlayWidth - TOOLBAR_WIDTH - TOOLBAR_MARGIN),
+                    ),
+                  }}
+                />
+              )}
             </View>
           )}
         </View>
