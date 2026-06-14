@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColorValue } from 'react-native';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
@@ -63,9 +63,6 @@ const READ_MODES: { value: ReadMode; label: string }[] = [
 // 1×36 Note button + 5×8 gaps + 2×12 padding + border. Used to center + clamp it.
 const TOOLBAR_WIDTH = 248;
 const TOOLBAR_MARGIN = 8;
-// Approx. rendered width of the AnnotationEditor card (px) — wider than the toolbar
-// to fit the note field comfortably; clamped within the overlay the same way.
-const EDITOR_WIDTH = 280;
 
 // ── Document Notice (error / missing) ─────────────────────────────────────────
 
@@ -620,29 +617,34 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                 />
               )}
 
-              {/* Native annotation editor — absolutely positioned over the WebView at
-                  the tapped annotation rect. Same placement/clamp math as the toolbar. */}
+              {/* Native annotation editor — a bottom sheet over a dim scrim. The editor
+                  opens a keyboard (note field), so a rect-anchored card would jam against
+                  the screen edge, cover the text being annotated, and fight the keyboard.
+                  A sheet that rises above the keyboard (KeyboardAvoidingView) keeps Save /
+                  Remove always reachable and reads as a proper modal. Tap the scrim to close. */}
               {editing !== null && (
-                <AnnotationEditor
-                  annotation={editing.annotation}
-                  isDraft={editing.isDraft}
-                  onRecolor={handleRecolor}
-                  onEditNote={handleEditNote}
-                  onDelete={handleDeleteAnnotation}
-                  onClose={() => { setEditing(null); }}
-                  style={{
-                    position: 'absolute',
-                    // Below the rect when there's room above; otherwise above it.
-                    top: editing.rect.y > 200
-                      ? editing.rect.y - 8
-                      : editing.rect.y + editing.rect.height + 8,
-                    left: Math.min(
-                      Math.max(TOOLBAR_MARGIN, editing.rect.x + editing.rect.width / 2 - EDITOR_WIDTH / 2),
-                      Math.max(TOOLBAR_MARGIN, overlayWidth - EDITOR_WIDTH - TOOLBAR_MARGIN),
-                    ),
-                    width: EDITOR_WIDTH,
-                  }}
-                />
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  {/* Dim, tap-to-dismiss scrim. */}
+                  <Pressable
+                    onPress={() => { setEditing(null); }}
+                    accessibilityLabel="Dismiss editor"
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+                  />
+                  <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+                  >
+                    <AnnotationEditor
+                      annotation={editing.annotation}
+                      isDraft={editing.isDraft}
+                      onRecolor={handleRecolor}
+                      onEditNote={handleEditNote}
+                      onDelete={handleDeleteAnnotation}
+                      onClose={() => { setEditing(null); }}
+                      sheet
+                    />
+                  </KeyboardAvoidingView>
+                </View>
               )}
             </View>
           )}

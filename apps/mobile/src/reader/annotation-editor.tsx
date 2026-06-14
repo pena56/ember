@@ -43,6 +43,12 @@ export interface AnnotationEditorProps {
   onDelete: () => void;
   /** Dismiss the editor. */
   onClose: () => void;
+  /**
+   * Render as a bottom sheet (full-width, rounded top, grabber) rather than a
+   * free-floating card. The screen uses this so the editor rises cleanly above
+   * the keyboard instead of jamming against a screen edge.
+   */
+  sheet?: boolean;
   /** Absolute position style passed in by the screen (WebView-viewport → overlay coords). */
   style?: StyleProp<ViewStyle>;
 }
@@ -97,6 +103,7 @@ export function AnnotationEditor({
   onEditNote,
   onDelete,
   onClose,
+  sheet = false,
   style,
 }: AnnotationEditorProps) {
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
@@ -135,14 +142,24 @@ export function AnnotationEditor({
 
   return (
     <View
-      // Decorative lift above the WebView; not exposed to accessibility.
+      // Decorative lift above the WebView; not exposed to accessibility. As a sheet the
+      // shadow casts upward (negative y); as a floating card it casts downward.
       style={[
         style as ViewStyle,
-        { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 8 },
+        { shadowColor: '#000', shadowOffset: { width: 0, height: sheet ? -3 : 3 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 8 },
       ]}
-      className="rounded-2xl bg-surface-raised border border-line px-3.5 pt-3 pb-3"
+      className={
+        sheet
+          ? 'rounded-t-3xl bg-surface-raised border-t border-x border-line px-5 pt-2.5 pb-7'
+          : 'rounded-2xl bg-surface-raised border border-line px-3.5 pt-3 pb-3'
+      }
       accessibilityViewIsModal
     >
+      {/* Grabber — sheet only; signals a draggable/dismissable sheet. */}
+      {sheet && (
+        <View className="self-center w-9 h-1 rounded-full bg-line mb-2.5" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+      )}
+
       {/* Header: kind label + close */}
       <View className="flex-row items-center justify-between mb-2.5">
         <Text className="font-sans text-[10px] font-semibold tracking-[2px] uppercase text-accent">
@@ -197,9 +214,11 @@ export function AnnotationEditor({
         placeholderTextColor={muted as string}
         multiline
         textAlignVertical="top"
+        // A fresh draft opens straight into typing (keyboard + sheet rise together).
+        autoFocus={isDraft}
         accessibilityLabel="Note text"
-        className="rounded-lg bg-surface border border-line px-3 py-2 font-sans text-sm text-text"
-        style={{ minHeight: isNote ? 84 : 64, color: text as string }}
+        className="rounded-lg bg-surface border border-line px-3 py-2.5 font-sans text-sm text-text"
+        style={{ minHeight: isNote ? 88 : 64, color: text as string }}
       />
 
       {/* Action row: delete (calm) + save */}
