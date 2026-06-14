@@ -98,3 +98,43 @@ describe('buildReaderHtml — 10d additions', () => {
     expect(paintIdx).toBeGreaterThan(renderPageIdx);
   });
 });
+
+describe('buildReaderHtml — 10e additions (tap reporter + note paint)', () => {
+  // ── Tap reporter ───────────────────────────────────────────────────────────
+
+  it('posts an annotationTap message', () => {
+    expect(HTML).toContain("type: 'annotationTap'");
+  });
+
+  it('stamps dataset.annId on tappable overlays', () => {
+    expect(HTML).toContain('dataset.annId');
+  });
+
+  it('overrides pointer-events to auto on tappable overlays', () => {
+    expect(HTML).toContain("pointerEvents = 'auto'");
+  });
+
+  // ── Note-kind paint branch ───────────────────────────────────────────────────
+
+  it('branches on the note kind in paintAnnotations', () => {
+    expect(HTML).toContain("item.kind === 'note'");
+  });
+
+  it('contains the ember-note-underline class', () => {
+    expect(HTML).toContain('ember-note-underline');
+  });
+
+  it('contains the ember-note-pin class', () => {
+    expect(HTML).toContain('ember-note-pin');
+  });
+
+  it('clears prior note overlays in paintAnnotations', () => {
+    // The cleanup query must also remove note underline/pin nodes between repaints.
+    expect(HTML).toContain('.ember-note-underline');
+    expect(HTML).toContain('.ember-note-pin');
+  });
+
+  it('contains an accent-parity comment for the in-HTML note hex', () => {
+    expect(HTML).toContain('must match --color-accent');
+  });
+});
