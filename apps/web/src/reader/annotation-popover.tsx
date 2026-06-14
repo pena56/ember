@@ -218,8 +218,9 @@ export function AnnotationPopover({
               aria-label={isNote ? 'Delete note' : 'Delete highlight'}
               onClick={onDelete}
               className={[
-                'flex items-center gap-1 text-[11px] text-reader-text opacity-40',
-                'hover:opacity-70 hover:text-accent transition-all duration-150',
+                // Calm but legible at rest (was opacity-40 — too faint to discover);
+                'flex items-center gap-1 text-[11px] text-reader-text opacity-70',
+                'hover:opacity-100 hover:text-accent transition-all duration-150',
                 'rounded-md px-1.5 py-1',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               ].join(' ')}
