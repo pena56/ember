@@ -308,7 +308,7 @@ Update after every meaningful change.
   No core/store source change beyond the web facade. UI unit → frontend-design + impeccable before review.
   First verifiable result: click a highlight → recolor/note/delete; select → Note → pinned margin note; all
   survive reload.
-- **Unit 10c BUILT + REVIEWED (2026-06-14) — PR for Issue #90, branch feat/90-web-annotation-edit-notes.**
+- **Unit 10c MERGED (2026-06-14) — PR #91 (squash, Closes #90), branch deleted.**
   Dispatched standard route: Sonnet TDD executor (test-first) → frontend-design + impeccable (UI) →
   fresh-context Opus reviewer. Shipped: web-store `updateAnnotation`/`deleteAnnotation` (one HLC-stamped
   outbox entry each, #2; store delete import aliased) · `use-annotations` `createNote`/`updateAnnotation`/
@@ -321,8 +321,9 @@ Update after every meaningful change.
   `lint` ✓. Invariants #1\#2\#6 + core purity verified; no core/store source change beyond the web facade.
   **Reviewer verdict: APPROVE WITH NITS** — fixed pre-merge: deleted the unused vendored `popover.tsx`
   (hand-rolled panel is the chosen approach — Radix's anchor model fits an arbitrary clicked rect poorly +
-  jsdom flake), added the missing Esc-closes test, added textarea autofocus. **Next:** merge PR #90, then
-  10d (mobile reader highlight+notes UI, WebView selection bridge).
+  jsdom flake), added the missing Esc-closes test, added textarea autofocus. Highlights + notes now fully
+  editable on web (create/render 10b + edit/recolor/delete/notes 10c). **Next:** spec 10d (mobile reader
+  highlight+notes UI, WebView selection bridge) — the last slice of umbrella Unit 10. Awaiting user "spec 10d".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
