@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColorValue } from 'react-native';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
@@ -297,6 +297,10 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   // Width of the WebView overlay area (px), measured on layout. Used to clamp the
   // selection toolbar so it never overflows the right edge near a right-margin selection.
   const [overlayWidth, setOverlayWidth] = useState(0);
+  // 10e: live keyboard height. The annotation editor is an absolutely-positioned bottom
+  // sheet, so the system never resizes it — we push it up by the keyboard height ourselves.
+  // (KeyboardAvoidingView is a no-op for absolute overlays on Android.)
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Cancel guard — track the active load so stale async ops don't update state
   const loadIdRef = useRef(0);
@@ -306,6 +310,22 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
   const latestPosRef = useRef<{ page: number; offset: number }>({ page: 1, offset: 0 });
   // Current page ref — kept in sync with setCurrentPage so getPage() reads the live page.
   const currentPageRef = useRef(1);
+
+  // Track keyboard height so the annotation editor sheet can sit just above it.
+  // `keyboardDidShow`/`Hide` fire on both platforms; endCoordinates.height is the
+  // covered area in px. Reset to 0 on hide so the sheet drops back to the bottom edge.
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // onResume: called by the controller when a saved position is found. Sets the
   // toolbar page indicator and triggers the one-shot declarative resumeTo prop.
@@ -630,10 +650,9 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                     accessibilityLabel="Dismiss editor"
                     style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
                   />
-                  <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
-                  >
+                  {/* Sheet pinned to the bottom, lifted by the live keyboard height so
+                      the note field + Save/Remove stay visible while typing. */}
+                  <View style={{ position: 'absolute', left: 0, right: 0, bottom: keyboardHeight }}>
                     <AnnotationEditor
                       annotation={editing.annotation}
                       isDraft={editing.isDraft}
@@ -643,7 +662,7 @@ export function ReaderScreen({ docId, title, onBack }: ReaderScreenProps) {
                       onClose={() => { setEditing(null); }}
                       sheet
                     />
-                  </KeyboardAvoidingView>
+                  </View>
                 </View>
               )}
             </View>
