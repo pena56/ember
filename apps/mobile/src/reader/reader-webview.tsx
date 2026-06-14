@@ -246,6 +246,12 @@ export function ReaderWebView({
       allowFileAccess
       // Required for postMessage to work on both platforms
       originWhitelist={['*']}
+      // Suppress the native text-selection action menu (Copy / Share / Select all).
+      // It renders as a system overlay above all app content, covering our own
+      // SelectionToolbar. An empty array suppresses it on both iOS and Android while
+      // leaving the selection itself (handles + selectionchange) intact — our swatch
+      // toolbar becomes the only affordance over a selection.
+      menuItems={[]}
       onMessage={handleMessage}
       // Suppress console errors from leaking as yellow boxes in dev
       onError={() => { onError(); }}
