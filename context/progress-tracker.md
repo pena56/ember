@@ -322,8 +322,32 @@ Update after every meaningful change.
   **Reviewer verdict: APPROVE WITH NITS** — fixed pre-merge: deleted the unused vendored `popover.tsx`
   (hand-rolled panel is the chosen approach — Radix's anchor model fits an arbitrary clicked rect poorly +
   jsdom flake), added the missing Esc-closes test, added textarea autofocus. Highlights + notes now fully
-  editable on web (create/render 10b + edit/recolor/delete/notes 10c). **Next:** spec 10d (mobile reader
-  highlight+notes UI, WebView selection bridge) — the last slice of umbrella Unit 10. Awaiting user "spec 10d".
+  editable on web (create/render 10b + edit/recolor/delete/notes 10c).
+- **Mobile slice (10d-as-one-unit) SCORED COMPLEX → split (2026-06-14), mirroring the web split.** "10d" in the
+  plan was the *entire* mobile annotation experience — which bundles what web needed TWO units for (10b
+  create+render, 10c edit+notes) PLUS net-new WebView-bridge infra web never needed (selection capture across the
+  bridge, paint-sync into the pdf.js HTML, tap-to-select). One signal = 2 (novel logic) → complex → split, same
+  shape as the web side: **10d** mobile create+render (mirror 10b) → **10e** mobile edit/recolor/delete + notes/pins
+  (mirror 10c). Both apps/mobile-only, device-bound.
+- **Unit 10d SPECCED (2026-06-14) — Issue #92 (umbrella #10 open), branch feat/92-mobile-highlight-create-render
+  (not yet cut), spec specs/10d-mobile-highlight-create-render.md. Route standard, UI unit, DEVICE-BOUND.** First
+  mobile slice. **Platform shift:** the mobile reader is pdf.js in a WebView, so 10d splits along the bridge — the
+  *WebView (HTML string)* does selection capture + char-offset DOM-walk + dumb paint (no tokens, no `@ember/core`,
+  like the existing `READER_PALETTE` exception); *RN* does everything needing core/tokens (derive `quote`+TextAnchor
+  from posted offsets, `resolveAnchorRects`→normalized boxes posted back for paint, native uniwind swatch toolbar,
+  store mutation). Bridge adds WebView→RN `selection`/`selectionCleared`, RN→WebView `setAnnotations`/`clearSelection`.
+  Scope (apps/mobile ONLY): native-store `createAnnotation`/`listAnnotations` (verbatim web-store shape, one HLC
+  outbox entry per create, #2) · pure `annotation-anchor.ts` (`anchorFromSelection`/`boxesForAnnotation`) ·
+  `use-annotations.ts` (load+create, `{store}` gate) · pure `highlight-paint.ts` (`buildSetAnnotationsMessage`) ·
+  `build-reader-html.ts` selection bridge + in-HTML paint layer (palette hardcoded to `--color-highlight-*`, parity
+  comment; per-theme multiply/screen blend) · `reader-webview.tsx` bridge wiring · `reader-screen.tsx` geometry
+  collection + selection state + toolbar overlay · new native `selection-toolbar.tsx` (uniwind swatches). No
+  core/store/tokens package change (10a brain + 10b tokens reused). UI unit → frontend-design + impeccable before
+  review. Pure helpers vitest-tested; hook/bridge/toolbar/paint device-verified (no headless RN renderer — 05a/07c/
+  08c/09c precedent). First verifiable result: select text → tap color → highlight paints → reopen doc → still there.
+  Dispatch route: Sonnet TDD executor → frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR
+  "Closes #92" → Device-verify (Expo Go) before merge. **Next:** dispatch 10d, then 10e (mobile edit/notes/pins —
+  the final slice of umbrella Unit 10). Awaiting user "dispatch".
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
