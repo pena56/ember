@@ -236,6 +236,10 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **✅ Umbrella Unit 10 (Highlights + notes) COMPLETE (2026-06-14)** — all five slices merged, Issue #10 closed.
+  See the dated entry below. **Next umbrella:** sync — Unit 11 (Auth: anonymous-local → account claim, #11) and/or
+  Unit 12 (Convex schema + sync server + reconciler, #12) — the outbox/HLC LWW groundwork from 03/10 now has a
+  consumer. Awaiting user direction on which unit to spec next.
 - **Unit 10 (Highlights + notes) SCORED COMPLEX → split by boundary (2026-06-13), like 03/04/05/06/07/08/09.**
   Crosses 4 boundaries: core (annotation model + anchor→rect resolver over 05c's `PageTextGeometry`), store
   (new syncable type, outbox/HLC LWW), apps/web reader UI, apps/mobile reader UI. **Product forks resolved
@@ -384,17 +388,23 @@ Update after every meaningful change.
   device-verified (no headless RN renderer — 10d precedent). Dispatch route: Sonnet TDD executor →
   frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR "Closes #94" → Device-verify
   (Expo Go) before merge.
-- **Unit 10e BUILT — PR #95 OPEN, awaiting device-verify (2026-06-14).** Branch feat/94-mobile-annotation-edit-notes
-  cut + pushed; commit 6e5a0e9 (9 files, +802/−21). Built exactly to spec: native-store `updateAnnotation`/
-  `deleteAnnotation` (one shared HLC stamp = one outbox entry each, #2 — asserted in tests:
-  `outbox[1].hlc === updated.updatedAt`, single delete tombstone) · `use-annotations` createNote/updateAnnotation/
-  removeAnnotation · build-reader-html tap reporter + note-kind paint (pin + dotted underline, `NOTE_ACCENT_HEX`
-  parity-commented) · new `annotation-editor.tsx` (uniwind card) · selection-toolbar Note button · reader-screen
-  editing-state + transient draft flow. Verify: typecheck + lint clean, tests green (mobile 209 / web 257), incl.
-  extended native-store-annotation (13) + build-reader-html (23). Fresh-context review: **APPROVE-WITH-NITS**, no
-  blocking; the one behavioral nit (onBlur saving an unchanged note → redundant outbox entry) was fixed
-  (`handleBlur` guards on changed text). apps/mobile-only diff confirmed. **DEVICE-VERIFY (user, Expo Go) then
-  squash-merge #95 + delete branch → umbrella Unit 10 COMPLETE.**
+- **Unit 10e MERGED (2026-06-14) — PR #95 (squash 50dcd73), Issue #94 closed.** Built exactly to spec:
+  native-store `updateAnnotation`/`deleteAnnotation` (one shared HLC stamp = one outbox entry each, #2 — asserted
+  in tests: `outbox[1].hlc === updated.updatedAt`, single delete tombstone) · `use-annotations` createNote/
+  updateAnnotation/removeAnnotation · build-reader-html tap reporter + note-kind paint (pin + dotted underline,
+  `NOTE_ACCENT_HEX` parity-commented) · new `annotation-editor.tsx` (uniwind card) · selection-toolbar Note button
+  · reader-screen editing-state + transient draft flow. Fresh-context review APPROVE-WITH-NITS (onBlur redundant-
+  save nit fixed). **Device-verify shipped two UI fixes:** the editor is now a keyboard-aware **bottom sheet over a
+  dim scrim** (rect-anchored card jammed the screen edge / covered the annotated text); and since
+  KeyboardAvoidingView is a no-op for an absolute overlay on Android, the sheet is lifted by the **live keyboard
+  height** (`Keyboard` show/hide listeners → `bottom: keyboardHeight`) so the note field + Save/Remove stay above
+  the keyboard. User-verified on device (Expo Go). apps/mobile-only.
+- **🎉 Umbrella Unit 10 (Highlights + notes, both platforms) COMPLETE (2026-06-14)** — all five slices MERGED;
+  umbrella Issue #10 closed: 10a shared brain (#86) → 10b web create+render (#88) → 10c web edit/notes (#90) →
+  10d mobile create+render (#92) → 10e mobile edit/recolor/delete + standalone notes/pins (#94, PR #95). Annotations are now first-class on both web and
+  mobile: create / recolor / note / delete + standalone margin notes, all offline-first, each mutation one
+  HLC-stamped outbox entry (#2), anchor/rect math single-sourced in core, WebView stays a dumb painter (#6
+  in-HTML hex exception parity-commented). Sync reconciliation across devices is unit-12.
 - **🎉 Umbrella Unit 09 (Stats tab, both platforms) COMPLETE (2026-06-13)** — all six slices MERGED:
   Phase 1 page-count capture 09a (#74) / 09b (#77) / 09c (#79); Phase 2 analytics 09d engine (#81) →
   09e web Stats UI (#83) → 09f mobile Stats UI (#85). Stats now ship on web and mobile, fully derived
