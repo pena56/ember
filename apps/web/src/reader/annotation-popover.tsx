@@ -143,8 +143,9 @@ export function AnnotationPopover({
             onClick={onClose}
             className={[
               'w-5 h-5 flex items-center justify-center rounded-md',
-              'text-reader-text opacity-40 hover:opacity-70',
-              'transition-opacity',
+              // App-theme muted token (legible on surface-raised in both themes).
+              'text-text-muted hover:text-text',
+              'transition-colors',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             ].join(' ')}
           >
@@ -218,8 +219,11 @@ export function AnnotationPopover({
               aria-label={isNote ? 'Delete note' : 'Delete highlight'}
               onClick={onDelete}
               className={[
-                'flex items-center gap-1 text-[11px] text-reader-text opacity-40',
-                'hover:opacity-70 hover:text-accent transition-all duration-150',
+                // Use the app-theme muted-text token (legible on surface-raised in BOTH
+                // light + dark). The card is bg-surface-raised (app theme), so reader-text
+                // — locked to paper-dark — went invisible on the dark card. Calm, not faint.
+                'flex items-center gap-1 text-[11px] text-text-muted',
+                'hover:text-accent transition-colors duration-150',
                 'rounded-md px-1.5 py-1',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               ].join(' ')}

@@ -196,4 +196,13 @@ describe('HighlightLayer', () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.className).toContain('pointer-events-none');
   });
+
+  it('outer layer sits above the text layer (z-10) so its buttons are clickable', () => {
+    // Regression guard: .textLayer is z-index:0 with no pointer-events:none, so without
+    // an explicit higher z-index the text layer intercepts every click on the annotation
+    // buttons (notes + highlights) below it. z-10 lifts the interactive layer on top.
+    const { container } = renderLayer([HIGHLIGHT_BOTH]);
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.className).toContain('z-10');
+  });
 });

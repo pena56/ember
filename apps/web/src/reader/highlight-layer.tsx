@@ -202,8 +202,14 @@ export function HighlightLayer({
   }
 
   return (
+    // z-10 lifts the interactive annotation buttons ABOVE pdf.js's text layer
+    // (.textLayer is position:absolute; inset:0; z-index:0 with no pointer-events:none,
+    // so its container otherwise intercepts every click — including the left margin where
+    // the note pin sits — and nothing in here is clickable). The outer div stays
+    // pointer-events-none so empty areas fall through to the text layer and text stays
+    // selectable; only the individual rects/pins (pointer-events-auto) capture clicks.
     <div
-      className="absolute inset-0 pointer-events-none"
+      className="absolute inset-0 pointer-events-none z-10"
     >
       {elements}
     </div>
