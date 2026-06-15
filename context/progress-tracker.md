@@ -249,6 +249,23 @@ Update after every meaningful change.
   app fully usable, outbox accumulates; client signs in anon when online; claim upgrades the *same* user to
   Password. Split: **11a** Convex Auth backend (this — specced) → **11b** web auth UI + provider →
   **11c** mobile auth UI + provider (device-bound).
+- **Unit 11b BUILT — PR #100 OPEN (2026-06-15), commit bb9c2e5 on branch feat/99-web-auth-ui; awaiting USER
+  browser-verify gate before merge.** Dispatched standard route: Sonnet TDD executor → frontend-design +
+  impeccable (account menu/dialog visual+a11y polish; token-driven) → fresh-context Opus review = **APPROVE WITH
+  NITS**. Reviewer's one behavioral nit — `useAnonymousAuth` did not re-anon after sign-out within a session
+  (`hasFiredRef` latched) — was **fixed in-branch** (guard clears once `isAuthenticated` flips true) and locked
+  with regression test (8). Built (all in `apps/web/` + one `convex/package.json` export line + lockfile):
+  `ConvexAuthProvider` over `ConvexReactClient(VITE_CONVEX_URL)` outside Theme/Store providers; `useAnonymousAuth`;
+  `use-account`; `account-menu.tsx` + `auth-dialog.tsx`; vendored shadcn dialog/input/label; `.env.example`. Web
+  imports the generated `api` via the `@ember/convex/_generated/api` export shim + a matching tsconfig path alias
+  (workspace export resolved — no relative fallback needed). Verify green: `pnpm -w typecheck` 9/9, `pnpm -w test`
+  (web 277, +1 re-anon test), `pnpm -w lint` 6/6. Single `convex@1.40.0` in lockfile (no 1.41). Invariants #1/#2
+  intact (no core/store/outbox/clock change, no `owner` field, no mutation signature change; auth never gates
+  content). Token gap surfaced (pre-existing, NOT introduced here): `text-destructive` resolves to hardcoded hex
+  via the shadcn alias layer — no `--color-error` semantic token in `packages/tokens` yet. **USER gate before
+  merge:** create `apps/web/.env.local` with `VITE_CONVEX_URL` = root `.env.local` `CONVEX_URL` (necessary-warbler-246)
+  → `pnpm --filter @ember/web dev` → anonymous load → create account → reload-persists → sign out → re-anon (no
+  reload) → sign in → offline-still-usable. Next: 11c (mobile auth UI + provider, device-bound).
 - **Unit 11b SPECCED (2026-06-15) — Issue #99 (umbrella #11 open), branch feat/99-web-auth-ui (not yet cut),
   spec specs/11b-web-auth-ui.md. Route standard, UI unit.** Second slice; wires the web client to the 11a
   backend. **Product forks resolved with user (2026-06-15):** (1) auth UI = **header account menu + shadcn
