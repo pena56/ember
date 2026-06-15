@@ -14,7 +14,17 @@ import { AuthDialog } from '../auth/auth-dialog.js';
 // ── Hoist mocks so vi.mock() factories can reference them ─────────────────────
 // vi.hoisted() is evaluated before module resolution.
 
-const { mockSignIn } = vi.hoisted(() => ({ mockSignIn: vi.fn() }));
+const { mockSignIn, mockFinishAuthWithReload } = vi.hoisted(() => ({
+  mockSignIn: vi.fn(),
+  mockFinishAuthWithReload: vi.fn(),
+}));
+
+// Stub the reload helper — jsdom can't navigate, and we assert it's called
+// instead of an in-place close (the claim token-swap needs a reload).
+vi.mock('../auth/claim-reload.js', () => ({
+  finishAuthWithReload: mockFinishAuthWithReload,
+  consumePendingAuthToast: vi.fn(() => null),
+}));
 
 // ── Mock @convex-dev/auth/react ───────────────────────────────────────────────
 
@@ -84,8 +94,8 @@ describe('AuthDialog', () => {
       });
     });
 
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(toast.success).toHaveBeenCalledWith('Your library is saved.');
+    // Success path reloads (carrying the toast) rather than closing in place.
+    expect(mockFinishAuthWithReload).toHaveBeenCalledWith('Your library is saved.');
   });
 
   it('(3) toggling to sign in mode calls signIn with flow: "signIn"', async () => {
@@ -116,7 +126,7 @@ describe('AuthDialog', () => {
       });
     });
 
-    expect(toast.success).toHaveBeenCalledWith('Welcome back.');
+    expect(mockFinishAuthWithReload).toHaveBeenCalledWith('Welcome back.');
   });
 
   it('(4) rejected signIn shows a sanitized inline error + toast.error, dialog stays open', async () => {

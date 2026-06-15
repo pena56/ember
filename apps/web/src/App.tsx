@@ -13,10 +13,12 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router';
+import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/sonner.js';
 
 import { AppShell } from './app-shell.js';
+import { consumePendingAuthToast } from './auth/claim-reload.js';
 import { useAnonymousAuth } from './auth/use-anonymous-auth.js';
 import { LibraryPage } from './library/library-page.js';
 import { ReaderPage } from './reader/reader-page.js';
@@ -76,6 +78,12 @@ function ReaderRoute() {
 export default function App() {
   // Auto sign-in anonymously when online + unauthenticated. No UI — side-effect only.
   useAnonymousAuth();
+
+  // After a claim/sign-in reload (see claim-reload.ts), show the carried toast.
+  useEffect(() => {
+    const msg = consumePendingAuthToast();
+    if (msg) toast.success(msg);
+  }, []);
 
   return (
     <>

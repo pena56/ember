@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 
 import { friendlyAuthError } from './auth-errors.js';
+import { finishAuthWithReload } from './claim-reload.js';
 
 type Mode = 'signUp' | 'signIn';
 
@@ -104,18 +105,14 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     setPending(true);
     try {
       await signIn('password', { email: email.trim(), password, flow: mode });
-      onOpenChange(false);
-      reset();
-      if (mode === 'signUp') {
-        toast.success('Your library is saved.');
-      } else {
-        toast.success('Welcome back.');
-      }
+      // Claim/sign-in keeps isAuthenticated true (token swap, not a status
+      // flip), so convex/react won't re-fetch the new identity without a
+      // reload. finishAuthWithReload carries the toast across. See claim-reload.ts.
+      finishAuthWithReload(mode === 'signUp' ? 'Your library is saved.' : 'Welcome back.');
     } catch (err) {
       const msg = friendlyAuthError(err, mode);
       setError(msg);
       toast.error(msg);
-    } finally {
       setPending(false);
     }
   }
