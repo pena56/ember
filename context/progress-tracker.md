@@ -249,8 +249,27 @@ Update after every meaningful change.
   app fully usable, outbox accumulates; client signs in anon when online; claim upgrades the *same* user to
   Password. Split: **11a** Convex Auth backend (this — specced) → **11b** web auth UI + provider →
   **11c** mobile auth UI + provider (device-bound).
-- **Unit 11a BUILT — PR #98 OPEN, awaiting USER setup gate before merge (2026-06-15).** Issue #97
-  (umbrella #11 open), branch feat/97-convex-auth-backend, spec specs/11a-convex-auth-backend.md.
+- **Unit 11b SPECCED (2026-06-15) — Issue #99 (umbrella #11 open), branch feat/99-web-auth-ui (not yet cut),
+  spec specs/11b-web-auth-ui.md. Route standard, UI unit.** Second slice; wires the web client to the 11a
+  backend. **Product forks resolved with user (2026-06-15):** (1) auth UI = **header account menu + shadcn
+  Dialog** (beside ThemeControl; anonymous → "Save your library", claimed → email + Sign out) — NOT a dedicated
+  route; (2) flows = **claim (signUp upgrade) + returning sign-in (signIn) + sign out** (cross-device data pull =
+  #12, claim-as-merge UI = #14, both out of scope). Scope (`apps/web/` + one `convex/package.json` export line):
+  add `convex@1.40.0` + `@convex-dev/auth@0.0.94` to apps/web (single convex copy — same pin as `convex/`);
+  `ConvexAuthProvider` over a `ConvexReactClient(import.meta.env.VITE_CONVEX_URL)` in main.tsx (auth never gates
+  content — invariant #1); `useAnonymousAuth` (auto anon sign-in when online+unauthed, retries on `online`);
+  `use-account` (derives loading/anonymous/claimed from `useConvexAuth` + `useQuery(api.users.currentUser)`);
+  `account-menu.tsx` + `auth-dialog.tsx` (vendor shadcn dialog/input/label); `apps/web/.env.example`. Web imports
+  the generated `api` via a `@ember/convex/_generated/api` export shim (`_generated` is git-ignored → codegen gate,
+  like 11a's deploy gate). **No core/store/outbox/clock change, no `owner` field, no mutation signature change**
+  (invariants #1/#2 intact). Tests mock `@convex-dev/auth/react` + `convex/react` (no real client in jsdom). UI
+  unit → frontend-design + impeccable before review. **USER browser-verify gate (deployment-bound) before merge:**
+  create `apps/web/.env.local` with the dev URL (root `.env.local` `CONVEX_URL`, deployment necessary-warbler-246)
+  → `pnpm --filter @ember/web dev` → anonymous load → create account → reload-persists → sign out → sign in →
+  offline-still-usable. Dispatch: Sonnet TDD executor → frontend-design + impeccable → fresh-context Opus reviewer
+  → branch/commit/PR "Closes #99" → user runs the env + browser-verify gate before merge. Next: 11c (mobile, device-bound).
+- **Unit 11a MERGED (2026-06-15) — PR #98 (squash fbb7891), Issue #97 closed; schema deployed to dev
+  necessary-warbler-246.** Issue #97 (umbrella #11 open), branch feat/97-convex-auth-backend, spec specs/11a-convex-auth-backend.md.
   Dispatched standard route: Sonnet executor → fresh-context Opus review = **APPROVE** (no blockers).
   Built (all in `convex/`): `auth.ts` (Anonymous + Password — note: `Anonymous` is a *named* import in
   @convex-dev/auth@0.0.94, not default as the spec drafted), `http.ts`, `schema.ts` (`...authTables`),
@@ -258,9 +277,9 @@ Update after every meaningful change.
   hand-authored `auth.config.ts` (byte-identical to CLI template, no secret material), `@convex-dev/auth@0.0.94`
   + `@auth/core@0.41.2` installed, convex still pinned 1.40.0, `tsconfig.json` gained `"types":["node"]` for
   `process.env`. `pnpm -w typecheck/lint/test` all green (258 tests). Nothing outside `convex/` changed except
-  pnpm-lock + context docs (invariants #1/#2 intact). **BLOCKED ON USER GATE before merge:** run `npx
-  @convex-dev/auth` (mints JWT_PRIVATE_KEY/JWKS/SITE_URL) + `npx convex dev` (push auth schema; confirm
-  `users`/`currentUser` in dashboard). Then merge #98. **Next: 11b (web auth UI + provider).**
+  pnpm-lock + context docs (invariants #1/#2 intact). USER setup gate completed: `npx @convex-dev/auth` minted
+  JWT_PRIVATE_KEY/JWKS/SITE_URL + `npx convex dev --once` pushed the auth schema cleanly (`users`/`currentUser`
+  live). PR #98 squash-merged (fbb7891). **Next: 11b (web auth UI + provider) — specced, see above.**
 - ~~**Unit 11a SPECCED (2026-06-15) — Issue #97 (umbrella #11 open), branch feat/97-convex-auth-backend
   (not yet cut), spec specs/11a-convex-auth-backend.md. Route standard** (single boundary `convex/`, new dep,
   well-trodden config + one query, ambiguity resolved). First real Convex code in the repo. Scope (`convex/`
