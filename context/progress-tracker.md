@@ -249,7 +249,19 @@ Update after every meaningful change.
   app fully usable, outbox accumulates; client signs in anon when online; claim upgrades the *same* user to
   Password. Split: **11a** Convex Auth backend (this — specced) → **11b** web auth UI + provider →
   **11c** mobile auth UI + provider (device-bound).
-- **Unit 11a SPECCED (2026-06-15) — Issue #97 (umbrella #11 open), branch feat/97-convex-auth-backend
+- **Unit 11a BUILT — PR #98 OPEN, awaiting USER setup gate before merge (2026-06-15).** Issue #97
+  (umbrella #11 open), branch feat/97-convex-auth-backend, spec specs/11a-convex-auth-backend.md.
+  Dispatched standard route: Sonnet executor → fresh-context Opus review = **APPROVE** (no blockers).
+  Built (all in `convex/`): `auth.ts` (Anonymous + Password — note: `Anonymous` is a *named* import in
+  @convex-dev/auth@0.0.94, not default as the spec drafted), `http.ts`, `schema.ts` (`...authTables`),
+  `users.ts` (`currentUser`; `isAnonymous` prefers the lib's own flag, falls back to no-email heuristic),
+  hand-authored `auth.config.ts` (byte-identical to CLI template, no secret material), `@convex-dev/auth@0.0.94`
+  + `@auth/core@0.41.2` installed, convex still pinned 1.40.0, `tsconfig.json` gained `"types":["node"]` for
+  `process.env`. `pnpm -w typecheck/lint/test` all green (258 tests). Nothing outside `convex/` changed except
+  pnpm-lock + context docs (invariants #1/#2 intact). **BLOCKED ON USER GATE before merge:** run `npx
+  @convex-dev/auth` (mints JWT_PRIVATE_KEY/JWKS/SITE_URL) + `npx convex dev` (push auth schema; confirm
+  `users`/`currentUser` in dashboard). Then merge #98. **Next: 11b (web auth UI + provider).**
+- ~~**Unit 11a SPECCED (2026-06-15) — Issue #97 (umbrella #11 open), branch feat/97-convex-auth-backend
   (not yet cut), spec specs/11a-convex-auth-backend.md. Route standard** (single boundary `convex/`, new dep,
   well-trodden config + one query, ambiguity resolved). First real Convex code in the repo. Scope (`convex/`
   only): install `@convex-dev/auth@0.0.94` + `@auth/core@0.41.2` (convex stays repo-pinned 1.40.0); `auth.ts`
@@ -261,7 +273,7 @@ Update after every meaningful change.
   deploy the auth schema — no headless substitute for minting deployment JWT keys. Dispatch: Sonnet executor →
   fresh-context Opus reviewer (verify #1/#2 non-violation: no owner field, store untouched; Convex-eslint clean;
   Anonymous+Password+authTables+http wiring matches the lib contract) → branch/commit/PR "Closes #97" → user runs
-  the setup/deploy gate before merge. Next: 11b (web auth UI + provider).
+  the setup/deploy gate before merge. Next: 11b (web auth UI + provider).~~ *(superseded — see BUILT entry above)*
 - **✅ Umbrella Unit 10 (Highlights + notes) COMPLETE (2026-06-14)** — all five slices merged, Issue #10 closed.
   See the dated entry below.
 - **Unit 10 (Highlights + notes) SCORED COMPLEX → split by boundary (2026-06-13), like 03/04/05/06/07/08/09.**
