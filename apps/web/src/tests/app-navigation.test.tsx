@@ -27,6 +27,22 @@ vi.mock('sonner', () => ({
   Toaster: () => null,
 }));
 
+// ── Mock Convex auth (no real provider needed in jsdom) ───────────────────────
+
+vi.mock('@convex-dev/auth/react', () => ({
+  useAuthActions: () => ({ signIn: vi.fn(), signOut: vi.fn() }),
+  useConvexAuth: () => ({ isLoading: true, isAuthenticated: false }),
+  ConvexAuthProvider: ({ children }: { children: unknown }) => children,
+}));
+
+vi.mock('convex/react', () => ({
+  useConvexAuth: () => ({ isLoading: true, isAuthenticated: false }),
+  useQuery: () => undefined,
+}));
+
+vi.mock('../auth/use-anonymous-auth.js', () => ({ useAnonymousAuth: vi.fn() }));
+vi.mock('../auth/use-account.js', () => ({ useAccount: () => ({ status: 'loading', email: undefined }) }));
+
 // ── Mock pdf.js loader ────────────────────────────────────────────────────────
 
 vi.mock('../reader/pdf.js', () => ({

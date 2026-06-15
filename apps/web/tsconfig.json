@@ -12,6 +12,7 @@
       "@ember/core": ["../../packages/core/src/index.ts"],
       "@ember/store": ["../../packages/store/src/index.ts"],
       "@ember/tokens": ["../../packages/tokens/src/index.ts"],
+      "@ember/convex/_generated/api": ["../../convex/_generated/api.d.ts"],
       "@/*": ["./src/*"]
     }
   },

@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@convex-dev/auth": "0.0.94",
+    "@ember/convex": "workspace:*",
     "@ember/core": "workspace:*",
     "@ember/store": "workspace:*",
     "@ember/tokens": "workspace:*",
@@ -18,6 +20,7 @@
     "@fontsource/inter": "5.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "1.40.0",
     "lucide-react": "^1.17.0",
     "pdfjs-dist": "6.0.227",
     "radix-ui": "^1.5.0",
