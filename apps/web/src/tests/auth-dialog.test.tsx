@@ -119,11 +119,19 @@ describe('AuthDialog', () => {
     expect(toast.success).toHaveBeenCalledWith('Welcome back.');
   });
 
-  it('(4) rejected signIn shows inline error + toast.error, dialog stays open', async () => {
-    mockSignIn.mockRejectedValue(new Error('Invalid credentials'));
+  it('(4) rejected signIn shows a sanitized inline error + toast.error, dialog stays open', async () => {
+    // The raw Convex server error — must never reach the user verbatim.
+    mockSignIn.mockRejectedValue(
+      new Error(
+        '[CONVEX A(auth:signIn)] [Request ID: b0ea0d137d20d93b] Server Error\n' +
+          'Uncaught Error: InvalidSecret\n    Called by client',
+      ),
+    );
     const onOpenChange = vi.fn();
     renderDialog(true, onOpenChange);
 
+    // Toggle to sign-in mode so InvalidSecret maps to the credentials message.
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'bad@test.com' } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrong' } });
 
@@ -133,10 +141,13 @@ describe('AuthDialog', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeDefined();
-      expect(screen.getByRole('alert').textContent).toContain('Invalid credentials');
     });
+    const alertText = screen.getByRole('alert').textContent ?? '';
+    // Friendly, and free of raw server/stack noise.
+    expect(alertText).toBe('Incorrect email or password.');
+    expect(alertText).not.toMatch(/CONVEX|Request ID|Uncaught|InvalidSecret|Called by client/i);
 
-    expect(toast.error).toHaveBeenCalledWith('Invalid credentials');
+    expect(toast.error).toHaveBeenCalledWith('Incorrect email or password.');
     // Dialog stays open
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });

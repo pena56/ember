@@ -27,6 +27,8 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 
+import { friendlyAuthError } from './auth-errors.js';
+
 type Mode = 'signUp' | 'signIn';
 
 interface AuthDialogProps {
@@ -110,7 +112,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         toast.success('Welcome back.');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      const msg = friendlyAuthError(err, mode);
       setError(msg);
       toast.error(msg);
     } finally {

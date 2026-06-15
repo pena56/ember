@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { AuthDialog } from './auth-dialog.js';
+import { friendlyAuthError } from './auth-errors.js';
 import { useAccount } from './use-account.js';
 
 export function AccountMenu() {
@@ -51,7 +52,7 @@ export function AccountMenu() {
             void signOut().then(() => {
               toast.success('Signed out.');
             }).catch((err: unknown) => {
-              toast.error(err instanceof Error ? err.message : 'Sign out failed.');
+              toast.error(friendlyAuthError(err, 'signOut'));
             });
           }}
           className="font-sans text-sm text-text-muted hover:text-text transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-sm leading-none flex-shrink-0"
