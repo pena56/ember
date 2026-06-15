@@ -6,9 +6,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@auth/core": "0.41.2",
+    "@convex-dev/auth": "0.0.94",
     "convex": "1.40.0"
   },
   "devDependencies": {
+    "@types/node": "25.9.2",
     "typescript": "6.0.3"
   }
 }
