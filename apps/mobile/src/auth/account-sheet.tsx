@@ -270,36 +270,39 @@ export function AccountSheet() {
   const { status, email } = useAccount();
   const accentColor = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
-  return (
-    <View className="flex-1">
-      {/* Grabber — signals a dismissable sheet (Android has no swipe affordance). */}
-      <View className="items-center pt-3 pb-1">
-        <View className="h-1 w-10 rounded-full bg-line" />
+  if (status === 'loading') {
+    return (
+      <View
+        className="flex-1 items-center justify-center"
+        accessibilityRole="none"
+        accessibilityState={{ busy: true }}
+        accessibilityLabel="Loading account"
+      >
+        <ActivityIndicator size="large" color={accentColor} accessibilityElementsHidden />
       </View>
+    );
+  }
 
-      {/* Header row: title + always-present close control. */}
-      <View className="flex-row items-center justify-between px-6 pt-1 pb-2">
-        <Text className="font-serif text-2xl text-text" accessibilityRole="header">
+  return (
+    <View className="px-6 pt-3">
+      {/* Header row: title + always-present close control. The title takes the
+          remaining width (flex-1) and clips to one line so a long string can
+          never squeeze the close button or break the row layout. */}
+      <View className="flex-row items-start justify-between mb-3">
+        <Text
+          className="font-serif text-2xl text-text flex-1 pr-3"
+          numberOfLines={1}
+          accessibilityRole="header"
+        >
           {status === 'claimed' ? 'Account' : 'Save your library'}
         </Text>
         <CloseButton />
       </View>
 
-      {status === 'loading' ? (
-        <View
-          className="flex-1 items-center justify-center"
-          accessibilityRole="none"
-          accessibilityState={{ busy: true }}
-          accessibilityLabel="Loading account"
-        >
-          <ActivityIndicator size="large" color={accentColor} accessibilityElementsHidden />
-        </View>
-      ) : status === 'claimed' ? (
-        <View className="px-6 pt-4">
-          <ClaimedView email={email} />
-        </View>
+      {status === 'claimed' ? (
+        <ClaimedView email={email} />
       ) : (
-        <View className="px-6 pt-2">
+        <View>
           <Text className="font-sans text-sm text-text-muted mb-5 leading-relaxed">
             Create an account to sync your library and progress across devices. This is
             optional — you can keep reading on this device without one.
