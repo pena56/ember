@@ -31,6 +31,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Path, Svg } from 'react-native-svg';
 import { toast } from 'sonner-native';
 import { useResolveClassNames } from 'uniwind';
 
@@ -39,6 +40,28 @@ import { useAuthReset } from './auth-provider-gate.js';
 import { useAccount } from './use-account.js';
 
 type Mode = 'signUp' | 'signIn';
+
+// ── Close button ───────────────────────────────────────────────────────────────
+// The modal is a native-stack modal with no header; Android gives it no swipe-to-
+// dismiss affordance, so this explicit control is the only reliable way out (the
+// account is optional — the app is fully usable locally without it).
+
+function CloseButton() {
+  const mutedColor = useResolveClassNames('bg-text-muted').backgroundColor as ColorValue;
+  return (
+    <Pressable
+      onPress={() => { router.back(); }}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      className="h-9 w-9 items-center justify-center rounded-full border border-line bg-surface-raised"
+    >
+      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Path d="M6 6l12 12M18 6 6 18" stroke={mutedColor} strokeWidth={2} strokeLinecap="round" />
+      </Svg>
+    </Pressable>
+  );
+}
 
 // ── Claimed view ──────────────────────────────────────────────────────────────
 
@@ -136,11 +159,6 @@ function AuthForm() {
 
   return (
     <View className="gap-6">
-      {/* Title */}
-      <Text className="font-serif text-xl text-text" accessibilityRole="header">
-        {mode === 'signUp' ? 'Create account' : 'Sign in'}
-      </Text>
-
       <View className="gap-4">
         {/* Email */}
         <View className="gap-1.5">
@@ -252,37 +270,43 @@ export function AccountSheet() {
   const { status, email } = useAccount();
   const accentColor = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
-  if (status === 'loading') {
-    return (
-      <View
-        className="flex-1 items-center justify-center"
-        accessibilityRole="none"
-        accessibilityState={{ busy: true }}
-        accessibilityLabel="Loading account"
-      >
-        <ActivityIndicator size="large" color={accentColor} accessibilityElementsHidden />
-      </View>
-    );
-  }
-
-  if (status === 'claimed') {
-    return (
-      <View className="px-6 pt-6">
-        <Text className="font-serif text-xl text-text mb-6" accessibilityRole="header">
-          Account
-        </Text>
-        <ClaimedView email={email} />
-      </View>
-    );
-  }
-
-  // anonymous
   return (
-    <View className="px-6 pt-6">
-      <Text className="font-sans text-sm text-text-muted mb-4 leading-relaxed">
-        Save your reading library and keep your progress across devices.
-      </Text>
-      <AuthForm />
+    <View className="flex-1">
+      {/* Grabber — signals a dismissable sheet (Android has no swipe affordance). */}
+      <View className="items-center pt-3 pb-1">
+        <View className="h-1 w-10 rounded-full bg-line" />
+      </View>
+
+      {/* Header row: title + always-present close control. */}
+      <View className="flex-row items-center justify-between px-6 pt-1 pb-2">
+        <Text className="font-serif text-2xl text-text" accessibilityRole="header">
+          {status === 'claimed' ? 'Account' : 'Save your library'}
+        </Text>
+        <CloseButton />
+      </View>
+
+      {status === 'loading' ? (
+        <View
+          className="flex-1 items-center justify-center"
+          accessibilityRole="none"
+          accessibilityState={{ busy: true }}
+          accessibilityLabel="Loading account"
+        >
+          <ActivityIndicator size="large" color={accentColor} accessibilityElementsHidden />
+        </View>
+      ) : status === 'claimed' ? (
+        <View className="px-6 pt-4">
+          <ClaimedView email={email} />
+        </View>
+      ) : (
+        <View className="px-6 pt-2">
+          <Text className="font-sans text-sm text-text-muted mb-5 leading-relaxed">
+            Create an account to sync your library and progress across devices. This is
+            optional — you can keep reading on this device without one.
+          </Text>
+          <AuthForm />
+        </View>
+      )}
     </View>
   );
 }
