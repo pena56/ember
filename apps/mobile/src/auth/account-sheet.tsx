@@ -46,11 +46,21 @@ type Mode = 'signUp' | 'signIn';
 // dismiss affordance, so this explicit control is the only reliable way out (the
 // account is optional — the app is fully usable locally without it).
 
+function dismissSheet() {
+  // Prefer back (returns to wherever the sheet was opened from). Fall back to the
+  // library if there's no back stack, so Close can never throw GO_BACK errors.
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace('/library');
+  }
+}
+
 function CloseButton() {
   const mutedColor = useResolveClassNames('bg-text-muted').backgroundColor as ColorValue;
   return (
     <Pressable
-      onPress={() => { router.back(); }}
+      onPress={dismissSheet}
       accessibilityRole="button"
       accessibilityLabel="Close"
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -74,7 +84,7 @@ function ClaimedView({ email }: { email: string | undefined }) {
     try {
       await signOut();
       toast.success('Signed out.');
-      router.back();
+      dismissSheet();
     } catch (err: unknown) {
       toast.error(friendlyAuthError(err, 'signOut'));
     } finally {
@@ -148,7 +158,7 @@ function AuthForm() {
       resetAuthClient();
       const successMsg = mode === 'signUp' ? 'Your library is saved.' : 'Welcome back.';
       toast.success(successMsg);
-      router.back();
+      dismissSheet();
     } catch (err: unknown) {
       const msg = friendlyAuthError(err, mode);
       setError(msg);

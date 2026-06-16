@@ -9,6 +9,7 @@
  */
 
 import { Redirect } from 'expo-router';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccountSheet } from '../src/auth/account-sheet.js';
@@ -22,9 +23,15 @@ export default function AccountScreen() {
     return <Redirect href="/library" />;
   }
 
+  // bg-surface must live on a plain View (uniwind className paints it); the
+  // native-stack modal's own container defaults to a light background, so
+  // putting the token on the View covers it in every theme. SafeAreaView only
+  // handles insets (style, not className) — matches the library-screen pattern.
   return (
-    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-surface">
-      <AccountSheet />
-    </SafeAreaView>
+    <View className="flex-1 bg-surface">
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+        <AccountSheet />
+      </SafeAreaView>
+    </View>
   );
 }

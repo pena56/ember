@@ -15,6 +15,14 @@ import { StoreProvider } from '../src/store/store-context.js';
 import { ThemeProvider } from '../src/theme/theme-provider.js';
 import { useTheme } from '../src/theme/use-theme.js';
 
+// Anchor the root Stack on the tab group so the app launches into the tabs
+// (Today/Library/Stats), NOT the account modal. Without this, the explicitly
+// declared `account` screen becomes the initial route and opens on load —
+// trapping the user in the (optional) account sheet with nothing to go back to.
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
 // ── Anonymous auth trigger — mounted inside ConvexAuthProvider scope ──────────
 
 /**
