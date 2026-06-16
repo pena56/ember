@@ -236,6 +236,40 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 11c BUILT — in PR (2026-06-16) — Issue #101 (umbrella #11 open), branch feat/101-mobile-auth-ui,
+  spec specs/11c-mobile-auth-ui.md. Route standard, UI unit. Final slice of #11 → closes umbrella on merge.**
+  Dispatched: Sonnet TDD executor (25 pure-helper tests across should-sign-in-anonymously/derive-account-view/
+  auth-errors/gate-reducer; all impl + provider wiring) → fresh-context Opus reviewer = CHANGES-REQUIRED (one
+  blocker) → fixed. **Blocker:** AccountButton mounted unconditionally → its `useConvexAuth`/`useQuery` hooks
+  throw when `convex===null` (no provider above), crashing the Library screen in the missing-env/offline-local
+  path the unit exists to protect (invariant #1). Web never hit this (web throws on missing URL). **Fix:** gate
+  `{convex !== null && <AccountButton/>}` in the header + `<Redirect href="/library"/>` defensive guard in the
+  `/account` route. Re-verified green (workspace typecheck/lint/test exit 0). Also: `app.json` adds the
+  `expo-secure-store` config plugin. Awaiting USER device gate before merge.
+  Wires the Expo client to the 11a backend, mirroring 11b re-expressed for RN. **Product fork resolved with user
+  (2026-06-16):** account-UI placement = **dedicated account sheet** — a person icon in the Library header (beside
+  ThemeControl) opens an expo-router modal holding claim / sign-in / sign-out (NOT inline Today, NOT a nav tab).
+  Scope (`apps/mobile/` only — the `convex/package.json` `_generated/api` export shim already exists from 11b):
+  add `convex@1.40.0` + `@convex-dev/auth@0.0.94` + `expo-secure-store` + `expo-network` + `@ember/convex`
+  (workspace; single convex copy — same pin as `convex/`/`apps/web`); `ConvexAuthProvider` with a **SecureStore**
+  token-storage adapter + key-safe `storageNamespace`, above ThemeProvider, inside an `AuthProviderGate`;
+  `useAnonymousAuth` (auto anon sign-in gated on `expo-network`, retries on network-restored, re-anons after
+  sign-out); `use-account` (loading/anonymous/claimed from `useConvexAuth` + `useQuery(api.users.currentUser)`);
+  account icon + modal sheet; ported `auth-errors` (`friendlyAuthError`, intentional web↔mobile dup); `.env.example`.
+  **Claim reactivity (carry-forward from 11b):** anon→password claim swaps one non-null token for another so
+  `isAuthenticated` never flips and `client.setAuth` is never re-called — RN has no `window.location.reload()`, so
+  the fix is **remount the provider subtree via a `key` bump** (`AuthProviderGate.resetAuthClient()`), which
+  re-reads the SecureStore token; module state survives a React remount so the success toast shows directly (no
+  sessionStorage shuttle). Fallback: recreate the `ConvexReactClient`. **No core/store/outbox/clock change, no
+  `owner` field, no mutation signature change** (invariants #1/#2); missing `EXPO_PUBLIC_CONVEX_URL` is non-fatal
+  → app runs offline-local (improves on 11b's hard throw; invariant #1). Mobile has no component-render test infra
+  → test **pure helpers** (`deriveAccountView`, `shouldSignInAnonymously`, `auth-errors`, the gate reducer); UI
+  verified in the device gate (mobile convention). UI unit → frontend-design + impeccable before review.
+  **USER device-verify gate (deployment-bound) before merge:** `apps/mobile/.env.local` with the dev URL
+  (necessary-warbler-246) → `pnpm --filter @ember/mobile start` on device/sim → anonymous load → claim →
+  query re-bind w/o reload → kill+reopen persists (SecureStore) → sign out → sign in → airplane-mode still usable.
+  Dispatch: Sonnet TDD executor → frontend-design + impeccable → fresh-context Opus reviewer → branch/commit/PR
+  "Closes #101" → user runs the env + device gate before merge. **On merge: close umbrella #11.**
 - **Unit 11 (Auth: anonymous-local → account claim) SCORED COMPLEX → split by boundary (2026-06-15)**, like
   03/04/.../10. First sync-umbrella unit; lands deliberately BEFORE #12 ("security before the features it gates").
   **Product/architecture forks resolved with user (2026-06-15):** (1) provider = **Convex Auth**
@@ -1128,7 +1162,10 @@ Update after every meaningful change.
   Engine is **pdf.js inside a react-native-webview** (render AND text layer, same pdfjs-dist@6.0.227 as web).
   One engine → exact 05a parity; selectable text layer ships in 05b; geometry extraction to RN core is 05c.
   architecture.md updated: mobile PDF row changed from react-native-pdf to pdfjs-dist-in-WebView.
-- **Convex auth provider** (unit 11): which sign-in method(s) — email link, OAuth (Google/Apple)?
+- ~~**Convex auth provider** (unit 11): which sign-in method(s) — email link, OAuth (Google/Apple)?~~
+  **RESOLVED 2026-06-15 (user):** provider = Convex Auth (`@convex-dev/auth`); claim credential = **Password**
+  (email+password). OAuth (Google/Apple) and email-link/OTP **deferred** (need provider config / an email
+  provider) — not in 11a/11b/11c. Shipped web (11b) + mobile (11c) on Password.
 - **Quota numbers** (unit 13): confirm defaults (e.g. 2GB/user, 100MB/file) and monetization path.
 - **Web reader leaf decisions**: font/scroll polish — safe to decide during build.
 
