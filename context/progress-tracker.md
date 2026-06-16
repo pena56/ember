@@ -249,8 +249,18 @@ Update after every meaningful change.
   app fully usable, outbox accumulates; client signs in anon when online; claim upgrades the *same* user to
   Password. Split: **11a** Convex Auth backend (this — specced) → **11b** web auth UI + provider →
   **11c** mobile auth UI + provider (device-bound).
-- **Unit 11b BUILT — PR #100 OPEN (2026-06-15), commit bb9c2e5 on branch feat/99-web-auth-ui; awaiting USER
-  browser-verify gate before merge.** Dispatched standard route: Sonnet TDD executor → frontend-design +
+- **Unit 11b MERGED (2026-06-16) — PR #100 (squash d4fdbcc), Issue #99 closed; USER browser-verify gate passed
+  (anonymous load → claim → sign out → sign in all green against dev necessary-warbler-246).** Two post-review
+  fixes landed on-branch during the gate: (a) **error sanitization** — `friendlyAuthError(err, mode)` maps Convex
+  Auth's stable result tokens (`InvalidSecret`/`InvalidAccountId` = wrong-password/no-account → "Incorrect email or
+  password."; account-exists; rate-limit; weak-password; network) to one calm sentence per flow and never leaks the
+  raw `[CONVEX A(auth:signIn)] … Uncaught Error` string (the user hit this); (b) **claim reactivity** — anon→password
+  claim swaps one non-null token for another, so `@convex-dev/auth` never flips `isAuthenticated` and convex/react's
+  `ConvexProviderWithAuth` never re-calls `client.setAuth`, leaving every live query on the stale anonymous identity
+  until reload. Re-invoking `setAuth` ourselves would clobber the provider's backend auth-state callback, so a
+  successful claim/sign-in finishes with a deliberate `window.location.reload()` (`claim-reload.ts`) that re-reads the
+  stored password token; the success toast is carried across via sessionStorage. Sign-out flips token→null (real
+  status change) so it stays reactive — no reload. Dispatched standard route: Sonnet TDD executor → frontend-design +
   impeccable (account menu/dialog visual+a11y polish; token-driven) → fresh-context Opus review = **APPROVE WITH
   NITS**. Reviewer's one behavioral nit — `useAnonymousAuth` did not re-anon after sign-out within a session
   (`hasFiredRef` latched) — was **fixed in-branch** (guard clears once `isAuthenticated` flips true) and locked
@@ -258,8 +268,9 @@ Update after every meaningful change.
   `ConvexAuthProvider` over `ConvexReactClient(VITE_CONVEX_URL)` outside Theme/Store providers; `useAnonymousAuth`;
   `use-account`; `account-menu.tsx` + `auth-dialog.tsx`; vendored shadcn dialog/input/label; `.env.example`. Web
   imports the generated `api` via the `@ember/convex/_generated/api` export shim + a matching tsconfig path alias
-  (workspace export resolved — no relative fallback needed). Verify green: `pnpm -w typecheck` 9/9, `pnpm -w test`
-  (web 277, +1 re-anon test), `pnpm -w lint` 6/6. Single `convex@1.40.0` in lockfile (no 1.41). Invariants #1/#2
+  (workspace export resolved — no relative fallback needed). Verify green at merge: `pnpm -w typecheck` 9/9,
+  `pnpm -w test` (web 288 — incl. re-anon, error-sanitizer, and claim-reload tests), `pnpm -w lint` 6/6. Single
+  `convex@1.40.0` in lockfile (no 1.41). Invariants #1/#2
   intact (no core/store/outbox/clock change, no `owner` field, no mutation signature change; auth never gates
   content). Token gap surfaced (pre-existing, NOT introduced here): `text-destructive` resolves to hardcoded hex
   via the shadcn alias layer — no `--color-error` semantic token in `packages/tokens` yet. **USER gate before
