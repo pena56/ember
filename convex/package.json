@@ -1,6 +1,12 @@
 {
   "name": "@ember/convex",
   "version": "0.0.1",
+  "exports": {
+    "./_generated/api": {
+      "types": "./_generated/api.d.ts",
+      "default": "./_generated/api.js"
+    }
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint ."

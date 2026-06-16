@@ -10,6 +10,7 @@
 
 import { NavLink, Outlet } from 'react-router';
 
+import { AccountMenu } from './auth/account-menu.js';
 import { ThemeControl } from './theme/theme-control.js';
 
 // ── NavLink active class helper ───────────────────────────────────────────────
@@ -111,6 +112,9 @@ export function AppShell() {
             <Tab to="/library">Library</Tab>
             <Tab to="/stats">Stats</Tab>
           </nav>
+
+          {/* Account menu */}
+          <AccountMenu />
 
           {/* Theme control */}
           <ThemeControl />
