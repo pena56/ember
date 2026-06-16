@@ -2,7 +2,6 @@ node_modules/
 dist/
 .turbo/
 .expo/
-convex/_generated/
 *.local
 .env
 .env.*
