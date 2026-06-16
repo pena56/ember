@@ -236,8 +236,20 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 11c BUILT — in PR (2026-06-16) — Issue #101 (umbrella #11 open), branch feat/101-mobile-auth-ui,
-  spec specs/11c-mobile-auth-ui.md. Route standard, UI unit. Final slice of #11 → closes umbrella on merge.**
+- **Unit 11c MERGED (2026-06-16) — PR #102, Issue #101 closed. UMBRELLA #11 COMPLETE (closed). Auth epic done:
+  11a (#97) → 11b (#99/#100) → 11c (#101/#102), all merged + device-verified.**
+  **Device-gate fixes (3 rounds, real Android):** (1) account modal auto-opened on launch + Close threw `GO_BACK
+  was not handled` — the root Stack only declared the `account` screen, making it the initial route; fixed with
+  `unstable_settings = { initialRouteName: '(tabs)' }` so the app anchors on the tabs and /account opens only via
+  the header icon. (2) white bg in dark mode + washed-out text — `bg-surface` on a `SafeAreaView` via className
+  doesn't paint, so the native modal's light default showed through under dark-theme (light) text; fixed by moving
+  `bg-surface` onto a plain `<View>` wrapper, SafeAreaView for insets only (library-screen pattern). (3) Close
+  hardened with a `router.canGoBack()` fallback. `app.json` gained the `expo-secure-store` config plugin.
+  **CI fix (pre-existing since 11a):** CI was red because `convex/_generated/` was git-ignored with no CI codegen
+  (`convex codegen` needs deployment access for the @convex-dev/auth component API and pushes on run). Per Convex's
+  own guidance (`codegen --help`: "should be committed to the repo") → un-ignored + committed `convex/_generated/`;
+  CI now green (typecheck/lint/test) with no secret/deploy step.
+  --- (build history below) ---
   Dispatched: Sonnet TDD executor (25 pure-helper tests across should-sign-in-anonymously/derive-account-view/
   auth-errors/gate-reducer; all impl + provider wiring) → fresh-context Opus reviewer = CHANGES-REQUIRED (one
   blocker) → fixed. **Blocker:** AccountButton mounted unconditionally → its `useConvexAuth`/`useQuery` hooks
