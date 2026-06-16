@@ -5,6 +5,8 @@ import { useResolveClassNames } from 'uniwind';
 
 import type { Document } from '@ember/core';
 
+import { AccountButton } from '../auth/account-button.js';
+import { convex } from '../convex/convex-client.js';
 import type { ThemePreference } from '../theme/resolve-app-theme.js';
 import { useTheme } from '../theme/use-theme.js';
 
@@ -122,7 +124,13 @@ export function LibraryScreen() {
         <Text className="font-serif text-2xl text-text" accessibilityRole="header">
           Ember
         </Text>
-        <ThemeControl />
+        <View className="flex-row items-center gap-3">
+          <ThemeControl />
+          {/* Account affordance only when Convex is configured. Offline-local
+              (no EXPO_PUBLIC_CONVEX_URL) has no provider above it, so mounting
+              AccountButton — which reads convex hooks — would crash (invariant #1). */}
+          {convex !== null && <AccountButton />}
+        </View>
       </View>
 
       {/* Content */}
