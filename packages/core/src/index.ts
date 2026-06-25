@@ -12,3 +12,6 @@ export * from './streak.js';
 export * from './analytics.js';
 export * from './annotation.js';
 export * from './anchor-resolver.js';
+export * from './sync-transport.js';
+export * from './apply-pull.js';
+export * from './reconcile.js';
