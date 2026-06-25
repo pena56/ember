@@ -248,19 +248,19 @@ Update after every meaningful change.
   shape (03a), not domain-typed tables; specialize later when #13/#16 need it. Per-type rules (furthest-page,
   union+LWW, additive sessions) are already pinned in architecture.md and land in 12b — esp. the **furthest-page
   lossiness** under naive server LWW, flagged in 12a's spec as a 12b concern.
-- **Unit 12a BUILT + REVIEWED, awaiting USER deploy gate (2026-06-25) — Issue #103 (umbrella #12 open), branch
-  feat/103-convex-sync-server (cut, committed: no). Built test-first (Sonnet) → reviewed fresh-context (Opus):
-  APPROVE WITH NITS, no blocking issues; reviewer independently probed same-batch-dup + concurrency traps and
-  verified ownership isolation + auth-mock fidelity vs real @convex-dev/auth.** Delivered: schema.ts `records`+
-  `syncState` tables (keep `...authTables`); `convex/sync.ts` `push`/`pull`; `convex-test@0.0.53` +
-  `@edge-runtime/vm@5.0.0` + `vitest@4.1.8` harness (`convex/vitest.config.ts` edge-runtime env). **13 tests
-  green** (insert/LWW/tombstone, acked-incl-superseded, cursor pull, ownership isolation, unauth throws, +nits:
-  same-batch dup-key, empty batch, limit boundary). All 3 verify cmds green. Two hand-bridged files (codegen is
-  user-gated): minimal `_generated/api.d.ts` `sync` registration (self-correcting on next codegen) + `import-
-  meta.d.ts` glob stub — both judged sound by review. **REMAINING before merge: USER runs `npx convex dev --once`
-  (deploy gate, schema → dev necessary-warbler-246, same class as 11a), confirm 2 tables in dashboard + that
-  codegen reproduces the api.d.ts line; THEN commit + PR "Closes #103".** Next: 12b (core reconciler + conflict-
-  merge fold) — incl. furthest-page lossiness fix.
+- **Unit 12a MERGED (2026-06-25) — PR #104 (squash), Issue #103 closed; umbrella #12 still open.** Convex sync
+  server live. Built test-first (Sonnet) → reviewed fresh-context (Opus): APPROVE WITH NITS, no blocking issues;
+  reviewer independently probed same-batch-dup + concurrency traps and verified ownership isolation + auth-mock
+  fidelity vs real @convex-dev/auth. Delivered: schema.ts `records` + `syncState` tables (keep `...authTables`,
+  indexes by_owner_key/by_owner_seq/by_owner); `convex/sync.ts` `push` (HLC-LWW upsert, per-owner monotonic
+  serverSeq, acked incl. superseded) + `pull` (serverSeq cursor, asc, take(limit ?? 200)); ownership via
+  getAuthUserId (throws if null). `convex-test@0.0.53` + `@edge-runtime/vm@5.0.0` + `vitest@4.1.8` harness
+  (edge-runtime env). **13 tests** (insert/LWW/tombstone, acked-incl-superseded, cursor pull, limit boundary,
+  same-batch dup-key, empty batch, ownership isolation, unauth throws). 3 verify cmds + CI green. **Deploy gate
+  PASSED** (`npx convex dev --once` → dev necessary-warbler-246: 3 indexes added; codegen reproduced the
+  `_generated/api.d.ts` sync registration with zero drift). Two hand-bridged files judged sound by review: minimal
+  api.d.ts sync registration + `import-meta.d.ts` glob stub. **Next: 12b** (core reconciler + conflict-merge fold,
+  `packages/core`) — where the single merge engine (#5) lands and **furthest-page lossiness** gets fixed.
   <!-- prior spec note retained below for trail -->
 - **Unit 12a SPECCED (2026-06-25) — Issue #103 (umbrella #12 open), branch feat/103-convex-sync-server (not yet
   cut), spec specs/12a-convex-sync-server.md. Route standard** (one boundary `convex/`, dev-only `convex-test`
