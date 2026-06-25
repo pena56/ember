@@ -236,6 +236,44 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 12 (Convex schema + sync server + reconciler) SCORED COMPLEX → split by boundary (2026-06-25)**,
+  like 03/04/.../11. The build plan's "hard core" — first cross-device data flow. Split:
+  **12a** Convex sync server (`convex/`) → **12b** core reconciler + conflict-merge fold (`packages/core`,
+  invariant #5's single engine) → **12c** web reconciler wiring → **12d** mobile reconciler wiring (device-bound).
+  Order: server contract → core engine → client wiring (backend/sync before frontend).
+  **Architecture forks resolved with user (2026-06-25):** (1) **merge runs client-side** — Convex is a dumb
+  HLC-ordered canonical record store (per-key HLC-LWW + per-owner `serverSeq` cursor); the single merge engine
+  lives in core (`applyPull`, 12b) and runs on the client during pull, keeping Convex off the read path (#1) and
+  the engine in one place (#5). (2) **Generic mirror schema** — one `records` table mirroring the `OutboxEntry`
+  shape (03a), not domain-typed tables; specialize later when #13/#16 need it. Per-type rules (furthest-page,
+  union+LWW, additive sessions) are already pinned in architecture.md and land in 12b — esp. the **furthest-page
+  lossiness** under naive server LWW, flagged in 12a's spec as a 12b concern.
+- **Unit 12a BUILT + REVIEWED, awaiting USER deploy gate (2026-06-25) — Issue #103 (umbrella #12 open), branch
+  feat/103-convex-sync-server (cut, committed: no). Built test-first (Sonnet) → reviewed fresh-context (Opus):
+  APPROVE WITH NITS, no blocking issues; reviewer independently probed same-batch-dup + concurrency traps and
+  verified ownership isolation + auth-mock fidelity vs real @convex-dev/auth.** Delivered: schema.ts `records`+
+  `syncState` tables (keep `...authTables`); `convex/sync.ts` `push`/`pull`; `convex-test@0.0.53` +
+  `@edge-runtime/vm@5.0.0` + `vitest@4.1.8` harness (`convex/vitest.config.ts` edge-runtime env). **13 tests
+  green** (insert/LWW/tombstone, acked-incl-superseded, cursor pull, ownership isolation, unauth throws, +nits:
+  same-batch dup-key, empty batch, limit boundary). All 3 verify cmds green. Two hand-bridged files (codegen is
+  user-gated): minimal `_generated/api.d.ts` `sync` registration (self-correcting on next codegen) + `import-
+  meta.d.ts` glob stub — both judged sound by review. **REMAINING before merge: USER runs `npx convex dev --once`
+  (deploy gate, schema → dev necessary-warbler-246, same class as 11a), confirm 2 tables in dashboard + that
+  codegen reproduces the api.d.ts line; THEN commit + PR "Closes #103".** Next: 12b (core reconciler + conflict-
+  merge fold) — incl. furthest-page lossiness fix.
+  <!-- prior spec note retained below for trail -->
+- **Unit 12a SPECCED (2026-06-25) — Issue #103 (umbrella #12 open), branch feat/103-convex-sync-server (not yet
+  cut), spec specs/12a-convex-sync-server.md. Route standard** (one boundary `convex/`, dev-only `convex-test`
+  harness, well-trodden Convex fn logic, forks resolved). Scope (`convex/` only): add `records` + `syncState`
+  tables to schema.ts (keep `...authTables`); `convex/sync.ts` `push` mutation (HLC-LWW upsert keyed by
+  (owner,collection,recordId), per-owner monotonic `serverSeq`, returns acked entry ids incl. superseded) +
+  `pull` query (cursor by `serverSeq`, ascending, batched); ownership via `getAuthUserId(ctx)` (throw if null) —
+  anon users sync their own data, cross-user claim merge is #14. No core/store/client change; invariants #1/#2/#5
+  intact (no semantic merge here — that's 12b). Tests via `convex-test@0.0.53` (edge-runtime vitest env): insert/
+  LWW/tombstone, cursor pull, ownership isolation, unauth throws. **USER deploy gate (deployment-bound) before
+  merge:** `npx convex dev --once` pushes the schema to dev necessary-warbler-246 (same gate class as 11a).
+  Dispatch: Sonnet TDD executor → fresh-context Opus reviewer → branch/commit/PR "Closes #103" → user runs the
+  deploy gate before merge. Next: 12b (core reconciler + conflict-merge fold).
 - **Unit 11c MERGED (2026-06-16) — PR #102, Issue #101 closed. UMBRELLA #11 COMPLETE (closed). Auth epic done:
   11a (#97) → 11b (#99/#100) → 11c (#101/#102), all merged + device-verified.**
   **Device-gate fixes (3 rounds, real Android):** (1) account modal auto-opened on launch + Close threw `GO_BACK
