@@ -26,6 +26,7 @@ import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
 import { useBlobSync } from './sync/use-blob-sync.js';
 import { useReconciler } from './sync/use-reconciler.js';
+import { useStorageUsage } from './sync/use-storage-usage.js';
 import { TodayPage } from './today/today-page.js';
 
 // ── Library route wrapper ────────────────────────────────────────────────────
@@ -90,7 +91,9 @@ export default function App() {
   // ones. Decoupled from record-sync (separate concerns). The library page
   // reads blob-sync status records directly; retryDeferred is threaded down
   // as a prop so LibraryPage doesn't need a nested useConvexAuth.
-  const { retryDeferred } = useBlobSync();
+  // Pass the server file cap so over-cap files skip the encrypt+upload entirely.
+  const usage = useStorageUsage();
+  const { retryDeferred } = useBlobSync(usage ? { fileCap: usage.fileCap } : undefined);
 
   // After a claim/sign-in reload (see claim-reload.ts), show the carried toast.
   useEffect(() => {

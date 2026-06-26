@@ -14,6 +14,7 @@
  *  (7) signal.notify() schedules a debounced run
  *  (8) e2e: uploads a pending blob and downloads a missing one via fakes
  *  (9) retryDeferred() one-shot passes retryDeferred:true
+ *  (10) over-cap blob is pre-skipped (never uploaded) and marked over-file-cap
  */
 
 import { act, cleanup, render } from '@testing-library/react';
@@ -147,17 +148,20 @@ function Harness({
   transport,
   crypto,
   intervalMs,
+  fileCap,
   onRetry,
 }: {
   transport: BlobTransport;
   crypto?: CryptoBox;
   intervalMs?: number;
+  fileCap?: number;
   onRetry?: (fn: () => Promise<void>) => void;
 }) {
   const { retryDeferred } = useBlobSync({
     transport,
     crypto: crypto ?? identityCrypto,
     ...(intervalMs !== undefined ? { intervalMs } : {}),
+    ...(fileCap !== undefined ? { fileCap } : {}),
   });
   if (onRetry) onRetry(retryDeferred);
   return null;
@@ -186,6 +190,7 @@ function renderHook(
   opts?: {
     intervalMs?: number;
     crypto?: CryptoBox;
+    fileCap?: number;
     onRetry?: (fn: () => Promise<void>) => void;
   },
 ) {
@@ -194,6 +199,7 @@ function renderHook(
       transport,
       crypto: opts?.crypto ?? identityCrypto,
       ...(opts?.intervalMs !== undefined ? { intervalMs: opts.intervalMs } : {}),
+      ...(opts?.fileCap !== undefined ? { fileCap: opts.fileCap } : {}),
       ...(opts?.onRetry ? { onRetry: opts.onRetry } : {}),
     }),
     { wrapper: makeWrapper(bundle, webStore) },
@@ -436,5 +442,35 @@ describe('useBlobSync', () => {
     // Manual retry should include the deferred blob
     await act(async () => { await capturedRetry?.(); });
     expect(transport.uploadCalls).toContain('doc-a');
+  });
+
+  it('(10) over-cap blob is pre-skipped: never uploaded, marked over-file-cap', async () => {
+    hoisted.authState.isAuthenticated = true;
+
+    const fileCap = 50_000_000; // 50 MB
+    const blobs = makeMemoryBlobs(new Map([
+      ['doc-big', new Uint8Array([1, 2, 3])],   // over cap by byteSize
+      ['doc-small', new Uint8Array([4, 5, 6])], // under cap
+    ]));
+    const blobStatusRepo = new MemoryRepository();
+    const repo = new MemoryRepository();
+
+    await repo.put('documents', { id: 'doc-big', title: 'Big', filename: 'big.pdf', contentId: 'doc-big', byteSize: 60_000_000, importedAt: 1 });
+    await repo.put('documents', { id: 'doc-small', title: 'Small', filename: 'small.pdf', contentId: 'doc-small', byteSize: 1000, importedAt: 2 });
+
+    const transport = makeMemoryTransport();
+    const { bundle, webStore } = makeTestRig({ repo, blobs, blobStatus: blobStatusRepo });
+
+    renderHook(bundle, webStore, transport, { fileCap });
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    // The over-cap file is never encrypted/uploaded …
+    expect(transport.uploadCalls).not.toContain('doc-big');
+    // … but is marked deferred/over-file-cap so the UI can show the badge.
+    const bigStatus = await blobStatusRepo.get<BlobStatus>(BLOB_SYNC_COLLECTION, 'doc-big');
+    expect(bigStatus).toEqual({ id: 'doc-big', status: 'deferred', code: 'over-file-cap' });
+
+    // The under-cap file still uploads normally.
+    expect(transport.uploadCalls).toContain('doc-small');
   });
 });

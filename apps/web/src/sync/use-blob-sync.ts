@@ -17,8 +17,8 @@
 import { useConvexAuth } from 'convex/react';
 import { useEffect, useRef } from 'react';
 
-import { reconcileBlobs } from '@ember/core';
-import type { BlobTransport, CryptoBox, BlobSyncReport } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, reconcileBlobs } from '@ember/core';
+import type { BlobStatus, BlobTransport, CryptoBox, BlobSyncReport } from '@ember/core';
 
 import { useSyncBundle, useWebStore } from '../store/store-context.js';
 
@@ -31,6 +31,13 @@ export interface UseBlobSyncOpts {
   /** Inject a fake CryptoBox (tests only — skips loadBlobKey). */
   crypto?: CryptoBox;
   intervalMs?: number;
+  /**
+   * Server per-file cap (bytes), from getStorageUsage. When known, a blob whose
+   * local byteSize already exceeds it is pre-marked deferred/over-file-cap and
+   * excluded from the upload set — we never waste an encrypt+upload on a file the
+   * server will certainly reject. The server stays authoritative for the boundary.
+   */
+  fileCap?: number;
 }
 
 export interface UseBlobSyncResult {
@@ -54,6 +61,7 @@ export function useBlobSync(opts?: UseBlobSyncOpts): UseBlobSyncResult {
   const injectedTransport = opts?.transport;
   const injectedCrypto = opts?.crypto;
   const intervalMs = opts?.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const fileCap = opts?.fileCap;
 
   // Stable ref for retryDeferred so render never captures stale closure
   const retryDeferredRef = useRef<() => Promise<void>>(async () => {});
@@ -104,7 +112,27 @@ export function useBlobSync(opts?: UseBlobSyncOpts): UseBlobSyncResult {
         do {
           queuedRef.current = false;
           const docs = await webStore.listDocuments();
-          const candidateIds = docs.map((d) => d.id);
+
+          // Pre-skip blobs we already know exceed the per-file cap: mark them
+          // deferred/over-file-cap (so the row shows the badge) and keep them out
+          // of candidateIds entirely, so the engine never encrypts + uploads a
+          // file the server will certainly reject — even on a retryDeferred pass
+          // (an over-cap file can never shrink, so retrying is pointless). The
+          // server remains authoritative for files near the boundary.
+          let candidates = docs;
+          if (fileCap !== undefined) {
+            const overCap = docs.filter((d) => d.byteSize > fileCap);
+            for (const d of overCap) {
+              await activeBundle.blobStatus.put<BlobStatus>(BLOB_SYNC_COLLECTION, {
+                id: d.id,
+                status: 'deferred',
+                code: 'over-file-cap',
+              });
+            }
+            candidates = docs.filter((d) => d.byteSize <= fileCap);
+          }
+          const candidateIds = candidates.map((d) => d.id);
+
           report = await reconcileBlobs({
             candidateIds,
             blobs: activeBundle.blobs,
@@ -153,7 +181,7 @@ export function useBlobSync(opts?: UseBlobSyncOpts): UseBlobSyncResult {
       unsubscribe();
       if (debounceTimer !== undefined) clearTimeout(debounceTimer);
     };
-  }, [isAuthenticated, bundle, webStore, injectedTransport, injectedCrypto, intervalMs]);
+  }, [isAuthenticated, bundle, webStore, injectedTransport, injectedCrypto, intervalMs, fileCap]);
 
   return {
     retryDeferred(): Promise<void> {
