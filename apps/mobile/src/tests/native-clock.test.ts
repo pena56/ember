@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { compare } from '@ember/core';
+import type { Hlc } from '@ember/core';
+
 import { createNativeClock } from '../store/native-clock.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -102,6 +105,45 @@ describe('createNativeClock', () => {
     expect(typeof a).toBe('string');
     expect(typeof b).toBe('string');
     expect(a).not.toBe(b);
+  });
+
+  it('receive() returns a stamp >= both the prior local stamp and the remote', () => {
+    const storage = makeStorage();
+    idCounter = 0;
+    const clock = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    const local = clock.nextStamp();
+
+    // Remote is ahead in wall time.
+    const remote: Hlc = { wall: 5000, counter: 3, node: 'remote-node' };
+    const merged = clock.receive(remote);
+
+    // merged >= local and merged >= remote
+    expect(compare(merged, local)).toBe(1);
+    expect(compare(merged, remote)).toBe(1);
+  });
+
+  it('receive() persists the merged clock and survives a reload (monotonic)', () => {
+    const storage = makeStorage();
+    idCounter = 0;
+    const clock = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    clock.nextStamp();
+    const remote: Hlc = { wall: 9000, counter: 1, node: 'remote-node' };
+    const merged = clock.receive(remote);
+
+    // Reload over the same storage: next stamp must be strictly after the merged one.
+    const clock2 = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    const next = clock2.nextStamp();
+    expect(compare(next, merged)).toBe(1);
+  });
+
+  it('receive() advances the local clock so the following nextStamp is strictly after the remote', () => {
+    const storage = makeStorage();
+    idCounter = 0;
+    const clock = createNativeClock({ storage, now: () => 1000, newId: fakeNewId });
+    const remote: Hlc = { wall: 4000, counter: 7, node: 'remote-node' };
+    clock.receive(remote);
+    const next = clock.nextStamp();
+    expect(compare(next, remote)).toBe(1);
   });
 
   it('newId() does not perturb the HLC clock (nextStamp unaffected by newId calls)', () => {
