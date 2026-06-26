@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 
 import type { BlobStatus, Document } from '@ember/core';
 
-import { useWebStore } from '../store/store-context.js';
+import { useSyncBundle, useWebStore } from '../store/store-context.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,7 @@ function deriveSyncState(status: BlobStatus | undefined): SyncState {
 
 export function useLibrary(): LibraryState {
   const store = useWebStore();
+  const bundle = useSyncBundle();
   const [documents, setDocuments] = useState<DocumentWithSync[]>([]);
   const [loading, setLoading] = useState(false);
   // Incrementing this triggers the load effect without calling setState inside it.
@@ -51,6 +52,15 @@ export function useLibrary(): LibraryState {
   const refresh = useCallback(() => {
     setLoadTick((n) => n + 1);
   }, []);
+
+  // Re-read when the blob-sync scheduler reports a status change. Status records
+  // are written without an outbox enqueue (invariant #2), so this local signal is
+  // the only wake the library gets — without it a row stays "Syncing…" until the
+  // page remounts. No-op when no production bundle exists (injected-store tests).
+  useEffect(() => {
+    if (bundle === null) return;
+    return bundle.blobChange.subscribe(refresh);
+  }, [bundle, refresh]);
 
   // Load documents + blob statuses whenever loadTick changes
   useEffect(() => {

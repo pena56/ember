@@ -38,6 +38,13 @@ export interface SyncBundle {
    * enqueue) and are local-only / never pushed (invariant #2).
    */
   blobStatus: BlobStatusStore;
+  /**
+   * Local UI-refresh signal fired by the blob-sync scheduler after each pass.
+   * Distinct from `signal` (the reconciler wake) — blob-status writes never
+   * enqueue/notify the outbox (invariant #2), so the library UI has no other way
+   * to learn a row's sync badge changed. Purely local: no enqueue, never pushed.
+   */
+  blobChange: SyncSignal;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -67,6 +74,7 @@ export function StoreProvider({ children, store }: StoreProviderProps) {
 
     const webClock = createWebClock();
     const signal = createSyncSignal();
+    const blobChange = createSyncSignal();
     const repo = withMutationNotify(new DexieRepository('ember'), signal.notify);
     const opfsBlobs = new OpfsBlobStore();
     const webStore = createWebStore({
@@ -86,6 +94,7 @@ export function StoreProvider({ children, store }: StoreProviderProps) {
       // Blob-sync ports: same instances, no new stores.
       blobs: opfsBlobs,
       blobStatus: repo,
+      blobChange,
     };
     return { store: webStore, bundle };
     // store identity is stable at mount — intentionally excluded from deps

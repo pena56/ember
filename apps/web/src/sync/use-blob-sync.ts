@@ -147,6 +147,11 @@ export function useBlobSync(opts?: UseBlobSyncOpts): UseBlobSyncResult {
         // Swallow — local-first; a sync failure is non-fatal.
       } finally {
         inFlightRef.current = false;
+        // Wake the library UI: status records (synced / deferred / over-cap)
+        // are written via put/delete with no outbox enqueue (invariant #2), so
+        // this local signal is the only thing that tells the row to re-read its
+        // badge. Fired even on a swallowed failure — pre-skip writes still land.
+        activeBundle.blobChange.notify();
       }
       return undefined;
     }

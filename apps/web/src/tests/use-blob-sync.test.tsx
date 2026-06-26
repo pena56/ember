@@ -15,6 +15,7 @@
  *  (8) e2e: uploads a pending blob and downloads a missing one via fakes
  *  (9) retryDeferred() one-shot passes retryDeferred:true
  *  (10) over-cap blob is pre-skipped (never uploaded) and marked over-file-cap
+ *  (11) fires bundle.blobChange after each pass so the library UI re-reads badges
  */
 
 import { act, cleanup, render } from '@testing-library/react';
@@ -139,6 +140,7 @@ function makeTestRig(over?: {
     signal,
     blobs,
     blobStatus,
+    blobChange: createSyncSignal(),
   };
   return { bundle, repo, webStore, signal };
 }
@@ -472,5 +474,21 @@ describe('useBlobSync', () => {
 
     // The under-cap file still uploads normally.
     expect(transport.uploadCalls).toContain('doc-small');
+  });
+
+  it('(11) fires bundle.blobChange after a pass so the library UI re-reads', async () => {
+    hoisted.authState.isAuthenticated = true;
+    const { bundle, webStore } = makeTestRig();
+    const transport = makeMemoryTransport();
+
+    const notified = vi.fn();
+    const unsubscribe = bundle.blobChange.subscribe(notified);
+
+    renderHook(bundle, webStore, transport);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    // The mount run completes → the local UI-refresh signal fires at least once.
+    expect(notified).toHaveBeenCalled();
+    unsubscribe();
   });
 });
