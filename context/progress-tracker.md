@@ -236,6 +236,31 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13c SPECCED (2026-06-26) — Issue #115 (umbrella #13 open), branch feat/115-web-blob-sync-wiring,
+  spec specs/13c-web-blob-sync-wiring.md. Route standard** (one boundary `apps/web`, no new dep — Web Crypto +
+  `fetch` are platform built-ins, convex client exists; all umbrella forks resolved). **UI unit** → net-new quota
+  meter + sync badges go through frontend-design → impeccable before code-review. Third slice of #13: wires 13b's pure
+  `blob-sync` engine to the live 13a server inside the web app. Deliverables (all `apps/web/src`): `store/web-crypto-box.ts`
+  (real `CryptoBox` — AES-256-GCM via `crypto.subtle`, 12-byte IV prepended; `loadBlobKey` fetches `getOrCreateBlobKey`
+  once/session → non-extractable CryptoKey); `sync/convex-blob-transport.ts` (`BlobTransport` over `api.files.*` + `fetch`
+  — **storageId/URLs stay inside the binding**); `sync/use-storage-usage.ts` (`useQuery(getStorageUsage)` → BlobLimits);
+  `sync/use-blob-sync.ts` (scheduler mirroring use-reconciler — auth+bundle gated, candidateIds from `listDocuments`, runs
+  13b `reconcileBlobs` on interval+import-signal+online/focus, eager download, **auto loop retryDeferred:false**, exposes a
+  one-shot `retryDeferred()`); extend `SyncBundle` with `blobs`(OpfsBlobStore) + `blobStatus`(same repo); `web-store.ts`
+  gains `listBlobStatuses()` (`repo.query(BLOB_SYNC_COLLECTION)` — read-only, no enqueue); UI: `library/storage-meter.tsx`
+  (quota meter, token-only, aria) + per-row sync badge in DocumentRow via `use-library` doc⨝status join (deferred over-cap
+  = "Too large — kept on this device"; over-quota = "Storage full — kept on this device" + Try-again; synced/pending).
+  `App.tsx` calls `useBlobSync()`. **No core/store/convex package change, no new dep.** Invariants: #1 (bytes move
+  in/out of LOCAL OpfsBlobStore only; reader stays local; eager bg download), #2 (blob metadata = direct authed transport
+  call, NEVER enqueued; `blob-sync` status records written via repo.put/delete — no notify, local-only / never pushed —
+  same as 12c cursor), #5 (content-addressed ⇒ zero merge logic), #6 (token-only UI). Tests (apps/web, vitest+jsdom):
+  crypto round-trip/IV-uniqueness/tamper, transport mapping (fake client + mocked fetch), use-blob-sync (auth-gate, mount/
+  interval/signal/online, offline-skip, overlap-coalesce, error-swallow, e2e on fakes, retryDeferred), use-library join,
+  storage-meter render/aria. Dispatch: Sonnet TDD executor → frontend-design → impeccable → fresh-context Opus reviewer
+  (verify #1/#2/#5 + core purity + no @ember/*/convex package change + storageId/URLs never leave binding + status never
+  enqueued) → PR "Closes #115". **No deploy gate** (client wiring vs deployed 13a). **USER browser-verify before merge**
+  (two profiles, same account): import→sync→eager-download on the other device; >50 MB ⇒ "kept on this device", excluded
+  from quota. Next: 13d (mobile wiring, device-bound). <!-- prior MERGED note retained below for trail -->
 - **Unit 13b MERGED (2026-06-26) — PR #114 (squash, branch deleted), Issue #113 closed; umbrella #13 still open
   (13c/13d remain).** CI `verify` green; Sonnet TDD executor → fresh-context Opus reviewer = CHANGES REQUESTED → fixed.
   **Blocker fixed:** `uploadBlob`'s local-missing-bytes path wrote a `deferred` status — a latent bug that would block a
