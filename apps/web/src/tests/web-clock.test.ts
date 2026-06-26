@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { encode, parse } from '@ember/core';
+import type { Hlc } from '@ember/core';
+
 import { createWebClock } from '../store/web-clock.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -155,5 +158,61 @@ describe('createWebClock', () => {
     const s2 = clock.nextStamp();
 
     expect(s2.counter).toBeGreaterThan(s1.counter);
+  });
+
+  // ── receive (ReconcilerClock source) ──────────────────────────────────────
+
+  describe('receive', () => {
+    it('returns a stamp ≥ both the prior local stamp and the remote stamp', () => {
+      const storage = makeStorage();
+      const clock = createWebClock({ storage, newId: () => 'node-a', now: () => 1000 });
+
+      const local = clock.nextStamp(); // wall 1000
+      // Remote stamp from a different node, far ahead in wall time.
+      const remote: Hlc = { wall: 9000, counter: 3, node: 'node-b' };
+
+      const merged = clock.receive(remote);
+
+      expect(encode(merged) >= encode(local)).toBe(true);
+      expect(encode(merged) >= encode(remote)).toBe(true);
+    });
+
+    it('persists the merged stamp to HLC_KEY', () => {
+      const storage = makeStorage();
+      const clock = createWebClock({ storage, newId: () => 'node-a', now: () => 1000 });
+
+      const remote: Hlc = { wall: 5000, counter: 2, node: 'node-b' };
+      const merged = clock.receive(remote);
+
+      const stored = storage.getItem('ember-hlc');
+      expect(stored).not.toBeNull();
+      expect(parse(stored as string)).toEqual(merged);
+    });
+
+    it('stays monotone across a simulated reload', () => {
+      const storage = makeStorage();
+      const clock1 = createWebClock({ storage, newId: () => 'node-a', now: () => 1000 });
+
+      const remote: Hlc = { wall: 8000, counter: 5, node: 'node-b' };
+      const merged = clock1.receive(remote); // pushes local wall to 8000
+
+      // "Reload" over the same storage.
+      const clock2 = createWebClock({ storage, newId: () => 'node-a', now: () => 1000 });
+      const next = clock2.nextStamp();
+
+      // The resumed clock must stamp strictly after the merged stamp.
+      expect(encode(next) > encode(merged)).toBe(true);
+    });
+
+    it('advances the local clock so subsequent ticks dominate the remote', () => {
+      const storage = makeStorage();
+      const clock = createWebClock({ storage, newId: () => 'node-a', now: () => 1000 });
+
+      const remote: Hlc = { wall: 7000, counter: 9, node: 'node-b' };
+      clock.receive(remote);
+      const next = clock.nextStamp();
+
+      expect(encode(next) > encode(remote)).toBe(true);
+    });
   });
 });

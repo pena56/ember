@@ -1,4 +1,4 @@
-import { encode, initialClock, parse, tick } from '@ember/core';
+import { encode, initialClock, parse, receive as hlcReceive, tick } from '@ember/core';
 import type { Hlc } from '@ember/core';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -12,6 +12,8 @@ export interface WebClock {
   deviceId: string;
   /** Advance the clock, persist it, and return the new stamp. */
   nextStamp(): Hlc;
+  /** Merge a remote stamp into the local clock, persist, return it. */
+  receive(remote: Hlc): Hlc;
   /** Returns a fresh unique id for session records (distinct from outbox ids). */
   newId(): string;
   /** Returns a fresh unique id for outbox entries. */
@@ -62,6 +64,12 @@ export function createWebClock(deps?: {
 
     nextStamp(): Hlc {
       clock = tick(clock, nowFn());
+      storage.setItem(HLC_KEY, encode(clock));
+      return clock;
+    },
+
+    receive(remote: Hlc): Hlc {
+      clock = hlcReceive(clock, remote, nowFn());
       storage.setItem(HLC_KEY, encode(clock));
       return clock;
     },
