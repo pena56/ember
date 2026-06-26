@@ -236,8 +236,22 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 12c SPECCED (2026-06-26) — Issue #107 (umbrella #12 open), branch feat/107-web-reconciler-wiring (not yet
-  cut), spec specs/12c-web-reconciler-wiring.md. Route standard** (one boundary `apps/web`, no new dep, no UI surface
+- **Unit 12c MERGED (2026-06-26) — PR #108 (squash, branch deleted), Issue #107 closed; umbrella #12 still open
+  (only 12d remains).** CI `verify` green; reviewed fresh-context (Opus) APPROVE-WITH-NITS, no blockers. Wired 12b's
+  `reconcile()` to the live 12a server inside the web app. Delivered (all `apps/web/src`): `sync/convex-sync-transport.ts`
+  (`SyncTransport` over `api.sync.push`/`pull`, pure pass-through); `store/web-clock.ts` +`receive(remote)` so WebClock
+  backs a `ReconcilerClock`; `store/store-context.tsx` lifts repo+clock so the **same** repo + **same** clock back both
+  WebStore and reconciler, exposed as `SyncBundle` via `useSyncBundle()` (null when store injected → tests skip prod
+  instantiation; no convex import in store-context); `sync/with-mutation-notify.ts`+`mutation-signal.ts` wake the
+  reconciler at the single `repo.enqueue` chokepoint; `sync/use-reconciler.ts` overlap-guarded trailing-coalescing loop
+  gated on `isAuthenticated`+bundle, triggers = **interval(15s)+lifecycle** (auth-ready, focus/online, debounced-after-
+  mutation), fail-soft offline; `App.tsx` calls `useReconciler()`. Executor deviation: **lazy** `import()` of the convex
+  singleton (keeps the throwing module out of the App test graph; reviewer judged sound). Invariants #1/#2/#5 verified
+  with file:line; overlap guard non-concurrency proven (test holds a `reconcile` open). typecheck 9 ✓ · test 308 (web 41
+  files) ✓ · lint 6 ✓. No store/core/convex change, no new dep, **no deploy gate** (client wiring vs deployed 12a).
+  Next: **12d** (mobile reconciler wiring, device-bound — RN AppState/NetInfo lifecycle; same ports, same `reconcile()`).
+- **Unit 12c SPECCED (2026-06-26) — Issue #107, branch feat/107-web-reconciler-wiring,
+  spec specs/12c-web-reconciler-wiring.md. Route standard** (one boundary `apps/web`, no new dep, no UI surface
   — the reconciler is a side-effect hook, no store/core/convex change, no deploy gate). Wires 12b's `reconcile()` to
   the live 12a server. Deliverables (all `apps/web/src`): `sync/convex-sync-transport.ts` (`SyncTransport` over
   `api.sync.push`/`pull`, pure pass-through — `OutboxEntry` ≡ push validator, pull row ≡ `RemoteEntry`); `store/web-clock.ts`
