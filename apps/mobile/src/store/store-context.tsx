@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import type { Hlc, SyncStore } from '@ember/core';
+import type { BlobBytes, BlobStatusStore, Hlc, SyncStore } from '@ember/core';
 import { SqliteRepository } from '@ember/store';
 
 import { createSyncSignal } from '../sync/mutation-signal.js';
@@ -15,10 +15,10 @@ import type { NativeStore } from './native-store.js';
 import { createNativeStore } from './native-store.js';
 
 // ── Sync bundle ─────────────────────────────────────────────────────────────
-// The shared ports the reconciler needs, built from the SAME repo + clock the
-// NativeStore uses (single HLC source + single outbox). Null when a store is
-// injected (tests / non-production) and in the initial state, so the reconciler
-// tears down / never mounts in headless runs.
+// The shared ports the reconciler + blob-sync hook need, built from the SAME
+// repo + clock the NativeStore uses (single HLC source + single outbox). Null
+// when a store is injected (tests / non-production) and in the initial state,
+// so both schedulers tear down / never mount in headless runs.
 
 export interface SyncBundle {
   /** Structural SyncStore — the same repo instance the NativeStore appends to. */
@@ -29,6 +29,24 @@ export interface SyncBundle {
   newOutboxId(): string;
   /** Wake signal fired on every local outbox append. */
   signal: SyncSignal;
+  /**
+   * The local ExpoFileSystemBlobStore instance — satisfies BlobBytes (has/get/put).
+   * Bytes only move in/out of this local store (invariant #1).
+   */
+  blobs: BlobBytes;
+  /**
+   * The same repo instance cast as BlobStatusStore — satisfies get/put/delete
+   * structurally. Status records are written via put/delete (no notify, no
+   * enqueue) and are local-only / never pushed (invariant #2).
+   */
+  blobStatus: BlobStatusStore;
+  /**
+   * Local UI-refresh signal fired by the blob-sync scheduler after each pass.
+   * Distinct from `signal` (the reconciler wake) — blob-status writes never
+   * enqueue/notify the outbox (invariant #2), so the library UI has no other way
+   * to learn a row's sync badge changed. Purely local: no enqueue, never pushed.
+   */
+  blobChange: SyncSignal;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -82,6 +100,7 @@ export function StoreProvider({ children, store: injectedStore }: StoreProviderP
         // Wrap the repo so every outbox append wakes the reconciler, and share
         // the SAME repo + clock with the NativeStore (single HLC + outbox).
         const signal = createSyncSignal();
+        const blobChange = createSyncSignal();
         const repo = withMutationNotify(rawRepo, signal.notify);
         const store = createNativeStore({ repo, blobs, hasher: expoCryptoHasher, clock });
 
@@ -93,6 +112,12 @@ export function StoreProvider({ children, store: injectedStore }: StoreProviderP
           },
           newOutboxId: () => clock.newOutboxId(),
           signal,
+          // Blob-sync ports: same instances as NativeStore, no new stores.
+          blobs,
+          // The same repo instance cast as BlobStatusStore (satisfies get/put/delete
+          // structurally). Status records are local-only / never pushed (invariant #2).
+          blobStatus: repo,
+          blobChange,
         };
 
         if (!cancelled) {

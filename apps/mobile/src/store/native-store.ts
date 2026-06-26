@@ -1,5 +1,5 @@
-import type { Annotation, AnnotationKind, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { editAnnotation, makeAnnotation } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, editAnnotation, makeAnnotation } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
 import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
@@ -93,6 +93,12 @@ export interface NativeStore {
    * delete tombstone outbox entry (invariant #2).
    */
   deleteAnnotation(id: string): Promise<void>;
+  /**
+   * Return all blob-sync status records (local-only — never enqueued).
+   * Read-only: feeds the library row badges (13d). Invariant #2: no outbox
+   * entry is ever written by this method.
+   */
+  listBlobStatuses(): Promise<BlobStatus[]>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -222,6 +228,13 @@ export function createNativeStore(deps: {
         { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
         id,
       );
+    },
+
+    async listBlobStatuses(): Promise<BlobStatus[]> {
+      // Read-only: query the local blob-sync collection. No outbox entry written
+      // (invariant #2). These records are written by the blob-sync scheduler via
+      // repo.put/delete — this method only reads them back for the library UI.
+      return repo.query<BlobStatus>(BLOB_SYNC_COLLECTION);
     },
   };
 }
