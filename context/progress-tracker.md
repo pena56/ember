@@ -236,6 +236,29 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 12c SPECCED (2026-06-26) — Issue #107 (umbrella #12 open), branch feat/107-web-reconciler-wiring (not yet
+  cut), spec specs/12c-web-reconciler-wiring.md. Route standard** (one boundary `apps/web`, no new dep, no UI surface
+  — the reconciler is a side-effect hook, no store/core/convex change, no deploy gate). Wires 12b's `reconcile()` to
+  the live 12a server. Deliverables (all `apps/web/src`): `sync/convex-sync-transport.ts` (`SyncTransport` over
+  `api.sync.push`/`pull`, pure pass-through — `OutboxEntry` ≡ push validator, pull row ≡ `RemoteEntry`); `store/web-clock.ts`
+  +`receive(remote)` (core `receive`, persists `HLC_KEY`) so WebClock backs a `ReconcilerClock` adapter `{tick:nextStamp,
+  receive}`; `store/store-context.tsx` lifts repo+clock creation so the **same** repo + **same** clock instance back both
+  WebStore and reconciler (clock must be single — two over one localStorage diverge; repo must be shared — one outbox),
+  exposed as a `SyncBundle` via `useSyncBundle()` (null when store injected → tests/jsdom skip prod instantiation, no convex
+  import in store-context); `sync/with-mutation-notify.ts`+`sync/mutation-signal.ts` wake the reconciler at the single
+  `repo.enqueue` chokepoint (covers all 7 mutators + future ones; reconciler's own furthest-page corrective enqueue also
+  fires it → flushes the correction, monotone-join terminates); `sync/use-reconciler.ts` overlap-guarded trailing-coalescing
+  loop gated on `isAuthenticated`+bundle, triggers = **interval(15s) + lifecycle** (auth-ready, window focus/online,
+  debounced-after-mutation), fail-soft offline (skip when `!navigator.onLine`, `online` re-triggers; swallow transport
+  errors); `App.tsx` calls `useReconciler()` next to `useAnonymousAuth()`. **Fork resolved with user (2026-06-26): sync
+  trigger = interval+lifecycle** (rejected: Convex reactive `useQuery(pull)` cursor/effect dance; load-only minimal).
+  `sync-meta`/`pull-cursor` is a normal record in Dexie's generic `[collection+id]` `records` table — verified, no schema
+  change; `DexieRepository` already satisfies structural `SyncStore`. Tests (`apps/web/src/tests`, Vitest+jsdom): clock
+  `receive` monotonicity, transport mapping (fake client), `with-mutation-notify` (notify only on enqueue), `use-reconciler`
+  (auth-gate, auth-ready run, debounce, interval, overlap coalesce, offline skip + online retry, error swallow, e2e
+  push/pull/correct via fake transport + MemoryRepository). Dispatch: Sonnet TDD executor → fresh-context Opus reviewer
+  (verify #1/#2/#5 + no store/core/convex change + shared repo/clock) → branch/commit/PR "Closes #107". **No deploy gate**
+  (client wiring vs already-deployed 12a). Next: 12d (mobile reconciler wiring, device-bound — RN AppState/NetInfo).
 - **Unit 12b MERGED (2026-06-26) — PR #106 (squash, branch deleted), Issue #105 closed; umbrella #12 still open.**
   CI `verify` green; reviewed fresh-context (Opus) APPROVE-WITH-NITS, no blockers (non-resurrection comment nit applied).
   Delivered: `sync-transport.ts` ports, `apply-pull.ts` pure fold, `reconcile.ts` driver, `index.ts` barrel,
