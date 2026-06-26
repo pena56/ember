@@ -236,6 +236,26 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 12b SPECCED (2026-06-25) — Issue #105 (umbrella #12 open), branch feat/105-core-reconciler-merge-fold
+  (not yet cut), spec specs/12b-core-reconciler-merge-fold.md. Route standard** (one boundary `packages/core`
+  + tests, no new dep, no UI, no client wiring; the lone fork resolved with user). Scope (`packages/core` only):
+  the single shared conflict-merge engine (invariant #5) + the reconciler driving push/pull. Ports
+  (`sync-transport.ts`): `SyncTransport` (push/pull), `RemoteEntry`, structural `SyncStore` (subset of
+  `Repository` — core can't import store, store→core already), `ReconcilerClock`. Pure fold (`apply-pull.ts`):
+  `applyPull(local, incoming) → PullDecision` — furthest-page for `reading-positions`, generic HLC-LWW otherwise
+  (sessions insert-only/additive #3, docs idempotent). Driver (`reconcile.ts`): push-drain (`unacked`→`transport.push`
+  →`ack`) then pull-fold (cursor→`transport.pull`→`applyPull`→local `put`/`delete`, advance clock via `receive`),
+  cursor persisted as a **local-only** `sync-meta` record (never enqueued → never pushed; no `Repository`/store change).
+  **Furthest-page lossiness fix — fork resolved with user (2026-06-25): "fold + corrective re-push" (CRDT join).**
+  Pull runs `mergeReadingPosition`; when a local further page beats a **higher-HLC but lower** remote write, the driver
+  re-stamps the winner with a fresh HLC (`clock.tick()`) + re-enqueues it so the Convex canonical converges **upward**
+  (monotone → terminates), fixing brand-new devices too — entirely inside the merge engine (rejected alternatives:
+  fold-only leaves a canonical gap; derive-from-session-log is cross-boundary read-path work). `entry.hlc ===
+  payload.updatedAt` for puts (same `deps.hlc`); deletes carry only entry `hlc` → use entry-level hlc as the incoming
+  LWW stamp. serverSeq order is per-key HLC-monotonic → no local tombstone table needed. No new dep, no `convex/`/store/UI
+  change. Tests: in-memory `SyncStore`/`SyncTransport`/`clock` fakes (no `@ember/store` import). Dispatch: Sonnet TDD
+  executor → fresh-context Opus reviewer (verify #1/#2/#3/#5 + no store/convex change) → branch/commit/PR "Closes #105".
+  **No deploy gate** (pure core). Next: 12c (web reconciler wiring).
 - **Unit 12 (Convex schema + sync server + reconciler) SCORED COMPLEX → split by boundary (2026-06-25)**,
   like 03/04/.../11. The build plan's "hard core" — first cross-device data flow. Split:
   **12a** Convex sync server (`convex/`) → **12b** core reconciler + conflict-merge fold (`packages/core`,
