@@ -15,3 +15,4 @@ export * from './anchor-resolver.js';
 export * from './sync-transport.js';
 export * from './apply-pull.js';
 export * from './reconcile.js';
+export * from './blob-sync.js';
