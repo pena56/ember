@@ -236,6 +236,22 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13c MERGED (2026-06-26) — PR #116 (squash `e716bcf`, branch deleted), Issue #115 closed; umbrella #13
+  — only 13d (mobile wiring) remains.** USER browser-verified (two profiles, same account). Standard route ran
+  end-to-end (executor → frontend-design → impeccable → fresh-context Opus reviewer APPROVE-WITH-NITS). Two
+  post-review refinements landed on the same PR during browser-verify, both to carry into **13d**:
+  1. **Over-cap pre-skip** (`007032f`) — the web scheduler pre-marks any doc whose local `byteSize` > server
+     `fileCap` as `deferred`/`over-file-cap` and excludes it from `candidateIds`, so we never encrypt+upload a
+     file the server will reject (even on a retryDeferred pass). `fileCap` flows from `useStorageUsage()` →
+     `useBlobSync({fileCap})`. Engine stays size-agnostic (byteSize lives in the doc record, not BlobBytes);
+     server stays authoritative for the boundary band.
+  2. **Live badge refresh** (`a253fb7`) — blob-status writes go through repo.put/delete with NO outbox enqueue
+     (invariant #2), so the reconciler wake `signal` never fired for them and a row stayed "Syncing…" until the
+     page remounted. Added a dedicated local UI-refresh signal `SyncBundle.blobChange` the blob-sync scheduler
+     fires after every pass; `useLibrary` subscribes + re-reads. Purely local — no enqueue, never pushed — so #2
+     holds; no-op when no production bundle (injected-store tests). **13d's mobile library must wire an equivalent.**
+  Final gate: **typecheck 9 ✓ · web test 46 files/339 ✓ · lint 6 ✓**; CI `verify` green on head. No core/store/
+  convex package change, no new dep. **Next: 13d — mobile blob-sync wiring (device-bound).** <!-- 13c IN-REVIEW note retained below -->
 - **Unit 13c BUILT — IN REVIEW / awaiting USER browser-verify (2026-06-26) — Issue #115, branch
   feat/115-web-blob-sync-wiring, PR "Closes #115".** Standard route ran end-to-end: Sonnet TDD executor →
   impeccable pass (token-only fix: near-limit meter uses `streak-lit` token not raw amber; `use-storage-usage`
