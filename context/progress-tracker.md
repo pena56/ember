@@ -236,6 +236,30 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **🎉 UMBRELLA #13 COMPLETE (2026-06-26) — encrypted cross-device blob sync wired end-to-end across all three layers:
+  13a Convex file-storage server → 13b core blob-sync engine → 13c web wiring → 13d mobile wiring. All four slices
+  merged; umbrella issue #13 CLOSED.** Client-side symmetric (non-ZK) encryption at rest, eager background download,
+  keep-local-on-over-limit, server-authoritative caps (50 MB/file, 1 GB/user). Invariants #1/#2/#5/#6 held throughout.
+  No next unit queued — awaiting the user's next directive. (Remaining umbrella backlog: #14 conflict-resolution UI,
+  #15 tags/smart-views, #16 notifications, #17 settings.)
+- **Unit 13d MERGED (2026-06-26) — PR #118 (squash `ddab963`, branch deleted), Issue #117 closed; FINAL slice —
+  umbrella #13 COMPLETE.** USER device-verified (two devices, same account: import→badge live Syncing…→synced,
+  eager-download on device B, >50 MB ⇒ "kept on this device" excluded from quota, over-quota ⇒ Try-again). CI `verify`
+  green on head. Standard route ran fully: Sonnet TDD executor (orchestrator finished gate fixes after a subagent
+  session limit) → impeccable a11y pass (`36cb82b`: RN single-element-row — status folded into row accessibilityLabel,
+  retry via accessibilityActions + ≥44pt hit target, long-copy constrained, meter value percentage-based) →
+  fresh-context Opus review = **APPROVE-WITH-NITS, no blockers** (all invariants #1/#2/#5/#6 + no-package-change
+  confirmed file:line) → nit fixed (`8feb3f2`: crypto parity pinned to an independent Node-crypto AES-GCM vector,
+  test 4c). Throwaway dev screen removed post-verify (`62d8942`). Delivered (all `apps/mobile/src`):
+  `store/native-crypto-box.ts` (AES-256-GCM via @noble/ciphers 2.2.0, IV‖ct‖tag byte-compatible w/ web Web Crypto;
+  loadBlobKey via base64ToBytes), `sync/convex-blob-transport.ts` (storageId/URLs stay in binding),
+  `sync/use-storage-usage.ts`, pure `sync/blob-sync-scheduler.ts` + thin `sync/use-blob-sync.ts` (12d
+  pure-scheduler/thin-hook split), `sync/blob-sync-context.tsx` (threads retryDeferred), `SyncBundle` +=
+  blobs/blobStatus/blobChange, `native-store.ts` += listBlobStatuses(), `library/use-library.ts` join + blobChange
+  subscribe, `document-row.tsx` badge, `library/storage-meter.tsx`, `app/_layout.tsx` mounts useBlobSync({fileCap})
+  once. Both 13c refinements carried (over-cap pre-skip + blobChange live refresh). Final gate: **typecheck 9 ✓ ·
+  mobile test 32 files/284 ✓ · lint 6 ✓.** New dep @noble/ciphers 2.2.0 (pure JS). No core/store/convex change,
+  no deploy gate. <!-- 13d BUILT/IN-REVIEW note retained below for trail -->
 - **Unit 13d BUILT — IN REVIEW / awaiting USER device-verify (2026-06-26) — Issue #117, branch
   feat/117-mobile-blob-sync-wiring, PR #118 "Closes #117".** Sonnet TDD executor built it end-to-end (executor hit a
   session limit before reporting; orchestrator finished the gate fixes: exactOptionalPropertyTypes spreads on
