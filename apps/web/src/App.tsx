@@ -24,6 +24,7 @@ import { LibraryPage } from './library/library-page.js';
 import { ReaderPage } from './reader/reader-page.js';
 import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
+import { useReconciler } from './sync/use-reconciler.js';
 import { TodayPage } from './today/today-page.js';
 
 // ── Library route wrapper ────────────────────────────────────────────────────
@@ -78,6 +79,10 @@ function ReaderRoute() {
 export default function App() {
   // Auto sign-in anonymously when online + unauthenticated. No UI — side-effect only.
   useAnonymousAuth();
+
+  // Background sync scheduler — pushes the local outbox + folds in remote
+  // changes when authed. No UI — side-effect only (Convex off the read path).
+  useReconciler();
 
   // After a claim/sign-in reload (see claim-reload.ts), show the carried toast.
   useEffect(() => {
