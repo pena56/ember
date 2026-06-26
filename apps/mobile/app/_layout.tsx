@@ -12,6 +12,7 @@ import { AuthProviderGate } from '../src/auth/auth-provider-gate.js';
 import { useAnonymousAuth } from '../src/auth/use-anonymous-auth.js';
 import { convex, secureStorage } from '../src/convex/convex-client.js';
 import { StoreProvider } from '../src/store/store-context.js';
+import { useReconciler } from '../src/sync/use-reconciler.js';
 import { ThemeProvider } from '../src/theme/theme-provider.js';
 import { useTheme } from '../src/theme/use-theme.js';
 
@@ -26,16 +27,18 @@ export const unstable_settings = {
 // ── Anonymous auth trigger — mounted inside ConvexAuthProvider scope ──────────
 
 /**
- * AnonymousAuthGate — calls useAnonymousAuth() so the hook has access to both
- * the Convex auth context (via ConvexAuthProvider above) and the theme/store
- * context (below). Renders null — no UI.
+ * AnonymousAuthGate — anonymous auth + background sync. Calls useAnonymousAuth()
+ * and useReconciler() so both hooks have access to the Convex auth context (via
+ * ConvexAuthProvider above) and the store/sync-bundle context (below). Renders
+ * null — no UI.
  *
- * When convex is null (missing env), ConvexAuthProvider is not mounted, so
- * this hook would fail. We guard by not mounting it in that case — the app
- * simply runs offline-local (invariant #1).
+ * When convex is null (missing env), ConvexAuthProvider is not mounted, so these
+ * hooks would fail. We guard by not mounting this gate in that case — the app
+ * simply runs offline-local, and the reconciler never mounts (invariant #1).
  */
 function AnonymousAuthGate() {
   useAnonymousAuth();
+  useReconciler();
   return null;
 }
 
