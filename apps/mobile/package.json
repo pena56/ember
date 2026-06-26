@@ -23,6 +23,7 @@
     "@expo-google-fonts/inter": "0.4.2",
     "@expo/log-box": "56.0.12",
     "@expo/metro-runtime": "56.0.14",
+    "@noble/ciphers": "2.2.0",
     "convex": "1.40.0",
     "expo": "56.0.9",
     "expo-constants": "56.0.17",

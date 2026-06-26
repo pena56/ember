@@ -7,12 +7,15 @@ import type { Document } from '@ember/core';
 
 import { AccountButton } from '../auth/account-button.js';
 import { convex } from '../convex/convex-client.js';
+import { useBlobSyncContext } from '../sync/blob-sync-context.js';
 import type { ThemePreference } from '../theme/resolve-app-theme.js';
 import { useTheme } from '../theme/use-theme.js';
 
 import { DocumentRow } from './document-row.js';
 import { EmberFlame } from './ember-flame.js';
 import { ImportCard } from './import-card.js';
+import { StorageMeter } from './storage-meter.js';
+import type { DocumentWithSync } from './use-library.js';
 import { useLibrary } from './use-library.js';
 
 // ── Theme control ─────────────────────────────────────────────────────────────
@@ -96,22 +99,32 @@ function EmptyState() {
 
 // ── Library screen ────────────────────────────────────────────────────────────
 
-function renderRow({ item }: { item: Document }) {
-  return <DocumentRow document={item} />;
-}
-
-function keyExtractor(item: Document) {
-  return item.id;
-}
-
 /**
- * The Library home screen. Composes header, import card, list/empty state, and
- * loading state. The <Toaster /> lives at the root layout, not here.
+ * LibraryScreen — composes header, storage meter, import card, list/empty state.
+ *
+ * The single blob-sync scheduler is mounted in AnonymousAuthGate (_layout.tsx).
+ * retryDeferred is threaded down via BlobSyncContext (one mount, no second scheduler).
  */
 export function LibraryScreen() {
   const { documents, loading, pickAndImport } = useLibrary();
+  const { retryDeferred } = useBlobSyncContext();
   // Token-driven spinner tint (invariant #6) — resolved through uniwind, re-themes with light/dark.
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
+
+  function renderRow({ item }: { item: DocumentWithSync }) {
+    const onRetry =
+      item.syncState === 'over-quota' ? () => { void retryDeferred(); } : undefined;
+    return (
+      <DocumentRow
+        document={item}
+        {...(onRetry !== undefined ? { onRetrySync: onRetry } : {})}
+      />
+    );
+  }
+
+  function keyExtractor(item: Document) {
+    return item.id;
+  }
 
   return (
     // The page background must live on a core View — uniwind's className only
@@ -169,6 +182,9 @@ export function LibraryScreen() {
 
               {/* Import card */}
               <ImportCard onPickPdf={() => { void pickAndImport(); }} disabled={loading} />
+
+              {/* Storage quota meter — hidden when unauthenticated / loading */}
+              {convex !== null && <StorageMeter />}
             </View>
           }
           ListEmptyComponent={<EmptyState />}

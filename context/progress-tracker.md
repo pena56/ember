@@ -236,6 +236,49 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13d BUILT — IN REVIEW / awaiting USER device-verify (2026-06-26) — Issue #117, branch
+  feat/117-mobile-blob-sync-wiring, PR #118 "Closes #117".** Sonnet TDD executor built it end-to-end (executor hit a
+  session limit before reporting; orchestrator finished the gate fixes: exactOptionalPropertyTypes spreads on
+  DocumentRow/SyncBadge props, `DimensionValue` cast on the meter width, `as unknown as` on the transport-test client
+  cast, conditional `fileCap` opt, lint --fix + manual unescaped-quote/unused-import fixes). Delivered (all
+  `apps/mobile/src`): `store/native-crypto-box.ts` (AES-256-GCM via @noble/ciphers, IV‖ct‖tag byte-compatible w/ web
+  Web Crypto; loadBlobKey via base64ToBytes), `sync/convex-blob-transport.ts`, `sync/use-storage-usage.ts`, pure
+  `sync/blob-sync-scheduler.ts` + thin `sync/use-blob-sync.ts`, `SyncBundle` += blobs/blobStatus/blobChange,
+  `native-store.ts` += listBlobStatuses(), `library/use-library.ts` join + blobChange subscribe, `document-row.tsx`
+  badge, `library/storage-meter.tsx`, `app/_layout.tsx` mounts useBlobSync({fileCap}) once + `sync/blob-sync-context.tsx`
+  threads retryDeferred to LibraryScreen. Both 13c refinements carried (over-cap pre-skip + blobChange live refresh).
+  Throwaway `app/dev/blob-sync-13d.tsx` verify screen (delete before merge). **Gate green: typecheck 9 ✓ · mobile test
+  32 files/283 ✓ (4 new: native-crypto-box, convex-blob-transport, blob-sync-scheduler, native-store-blob-status) ·
+  lint 6 ✓.** New dep @noble/ciphers 2.2.0 (pure JS). No core/store/convex change, no deploy gate.
+  **Impeccable a11y pass DONE (`36cb82b`):** RN single-element-row issue — folded sync status into the row
+  accessibilityLabel (badge text was never announced), exposed over-quota retry via accessibilityActions, gave
+  "Try again" a real ≥44pt hit target (was ~16px), constrained long badge copy, meter accessibilityValue now
+  percentage-based. **Fresh-context Opus review DONE = APPROVE-WITH-NITS, NO blockers:** all invariants #1/#2/#5/#6
+  + no-package-change confirmed with file:line; gates re-run green (typecheck 9 / mobile 283 / lint 6). Review nit
+  addressed (`8feb3f2`): crypto cross-device parity now pinned to an independent Node-crypto AES-GCM vector (test 4c),
+  mobile test now 32 files/284. **Remaining before merge:** (1) delete throwaway `app/dev/blob-sync-13d.tsx` + its
+  `app/dev/index.tsx` entry (kept for now so USER can device-verify); (2) **USER device-verify** (two devices, same
+  account): import→badge Syncing…→synced live; eager-download on the other device; >50 MB ⇒ "kept on this device",
+  excluded from quota; over-quota ⇒ "Storage full" + Try-again. On merge: Issue #117 closes, **umbrella #13 COMPLETE**.
+  <!-- 13d SPEC note retained below for trail -->
+- **Unit 13d SPECCED + DISPATCHED (2026-06-26) — Issue #117 (umbrella #13, final slice), branch
+  feat/117-mobile-blob-sync-wiring, spec specs/13d-mobile-blob-sync-wiring.md. Route standard** (one boundary
+  `apps/mobile`; all forks resolved). **Device-bound + UI unit.** Mobile mirror of 13c — wires 13b's `reconcileBlobs`
+  to the deployed 13a server inside the mobile app. **Fork resolved with user (2026-06-26): mobile AES-256-GCM via
+  `@noble/ciphers` (pure JS)** — RN has no `crypto.subtle` and expo-crypto can't do symmetric ciphers; pure-JS lib
+  avoids the SDK-56 native-pin risk (02d) and matches the hand-rolled-base64 ethos. IV(12) from
+  `expo-crypto.getRandomBytes`, layout `IV ‖ ciphertext ‖ tag` byte-compatible with web's Web Crypto ⇒ cross-device
+  decrypt works. Deliverables (all `apps/mobile/src`): `store/native-crypto-box.ts`, `sync/convex-blob-transport.ts`,
+  `sync/use-storage-usage.ts`, pure `sync/blob-sync-scheduler.ts` + thin `sync/use-blob-sync.ts` (the 12d
+  pure-scheduler/thin-hook split, node-testable), `SyncBundle` += `blobs`/`blobStatus`/`blobChange`, `native-store.ts`
+  += `listBlobStatuses()`, `library/use-library.ts` doc⨝status join + blobChange subscribe, `document-row.tsx` badge +
+  `storage-meter.tsx`, `app/_layout.tsx` mounts `useBlobSync({fileCap})`. **Both 13c refinements carried:** (#1)
+  over-cap pre-skip in the scheduler, (#2) local `blobChange` UI-refresh signal so badges update without remount.
+  New dep `@noble/ciphers` (pure JS, npm — not expo install). No core/store/convex change, no deploy gate. Dispatch:
+  Sonnet TDD executor → frontend-design + impeccable (badge/meter) → fresh-context Opus reviewer. Throwaway
+  `app/dev/blob-sync-13d.tsx` device-verify screen. **USER device-verify before merge** (two devices, same account):
+  import→sync→eager-download on the other device; >50 MB ⇒ "kept on this device", excluded from quota. On merge:
+  Issue #117 closes, **umbrella #13 COMPLETE**. <!-- 13c MERGED note retained below for trail -->
 - **Unit 13c MERGED (2026-06-26) — PR #116 (squash `e716bcf`, branch deleted), Issue #115 closed; umbrella #13
   — only 13d (mobile wiring) remains.** USER browser-verified (two profiles, same account). Standard route ran
   end-to-end (executor → frontend-design → impeccable → fresh-context Opus reviewer APPROVE-WITH-NITS). Two

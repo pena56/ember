@@ -4,6 +4,7 @@ import { Fraunces_400Regular, Fraunces_600SemiBold } from '@expo-google-fonts/fr
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
@@ -12,7 +13,10 @@ import { AuthProviderGate } from '../src/auth/auth-provider-gate.js';
 import { useAnonymousAuth } from '../src/auth/use-anonymous-auth.js';
 import { convex, secureStorage } from '../src/convex/convex-client.js';
 import { StoreProvider } from '../src/store/store-context.js';
+import { BlobSyncProvider } from '../src/sync/blob-sync-context.js';
+import { useBlobSync } from '../src/sync/use-blob-sync.js';
 import { useReconciler } from '../src/sync/use-reconciler.js';
+import { useStorageUsage } from '../src/sync/use-storage-usage.js';
 import { ThemeProvider } from '../src/theme/theme-provider.js';
 import { useTheme } from '../src/theme/use-theme.js';
 
@@ -36,10 +40,19 @@ export const unstable_settings = {
  * hooks would fail. We guard by not mounting this gate in that case — the app
  * simply runs offline-local, and the reconciler never mounts (invariant #1).
  */
-function AnonymousAuthGate() {
+function AnonymousAuthGate({ children }: { children: React.ReactNode }) {
   useAnonymousAuth();
   useReconciler();
-  return null;
+  // Mount the single blob-sync scheduler here (inside Convex auth scope).
+  // fileCap comes from getStorageUsage — when undefined (loading/unauthed), the
+  // scheduler runs without a cap guard (server remains authoritative).
+  const usage = useStorageUsage();
+  const { retryDeferred } = useBlobSync(usage ? { fileCap: usage.fileCap } : undefined);
+  return (
+    <BlobSyncProvider retryDeferred={retryDeferred}>
+      {children}
+    </BlobSyncProvider>
+  );
 }
 
 // ── Inner layout — needs ThemeProvider in scope to theme the Toaster ──────────
@@ -51,15 +64,26 @@ function InnerLayout() {
   const toasterTheme =
     preference === 'warm-dark' ? 'dark' : preference === 'warm-light' ? 'light' : 'system';
 
-  return (
-    <StoreProvider>
-      {/* Only trigger anonymous auth when the Convex client is present */}
-      {convex !== null && <AnonymousAuthGate />}
+  const nav = (
+    <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="account" options={{ presentation: 'modal' }} />
       </Stack>
       {/* Toaster is placed outside/above the navigator per sonner-native docs */}
       <Toaster theme={toasterTheme} />
+    </>
+  );
+
+  return (
+    <StoreProvider>
+      {/* Only trigger anonymous auth when the Convex client is present.
+          AnonymousAuthGate mounts the blob-sync scheduler and wraps children
+          in BlobSyncProvider so LibraryScreen can read retryDeferred. */}
+      {convex !== null ? (
+        <AnonymousAuthGate>{nav}</AnonymousAuthGate>
+      ) : (
+        nav
+      )}
     </StoreProvider>
   );
 }
