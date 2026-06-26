@@ -236,6 +236,25 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 12d SPECCED (2026-06-26) — Issue #109, branch feat/109-mobile-reconciler-wiring, PR #110,
+  spec specs/12d-mobile-reconciler-wiring.md. Route standard** (one boundary `apps/mobile`, no new dep, no UI surface).
+  **FINAL slice of umbrella #12.** Device-bound mirror of 12c — wires 12b's `reconcile()` to the deployed 12a server
+  inside the mobile app. Delivered (all `apps/mobile/src`): `store/native-clock.ts` +`receive(remote)`;
+  `sync/{mutation-signal,with-mutation-notify,convex-sync-transport}.ts` (copied from 12c — flagged for future
+  `@ember/store` dedupe); `sync/sync-scheduler.ts` — **pure, injectable, no platform imports** overlap-guarded
+  trailing-coalescing loop (the testable core; mobile vitest is node env, no jsdom, `*.test.ts` only) with structural
+  `AppStateLike`/`NetworkLike` ports + async `isOnline`; `sync/use-reconciler.ts` — thin `.ts` RN adapter wiring
+  `AppState`(foreground)+`expo-network`(connectivity)+lazy convex singleton into the scheduler (intentionally untested
+  glue, like `use-anonymous-auth`); `store/store-context.tsx` lifts repo+clock+signal into async init, exposes
+  `SyncBundle` via `useSyncBundle()` (same repo + same clock back NativeStore and reconciler); `app/_layout.tsx` calls
+  `useReconciler()` in the convex-gated, store-scoped `AnonymousAuthGate`. **Mobile design decision (not a fork):** pure
+  scheduler + thin hook (forced by node test env; matches `reading-position-controller`/`session-tracker` convention).
+  Triggers = interval(15s)+lifecycle (AppState active, network connected, debounced-after-mutation), fail-soft offline,
+  `convex===null` ⇒ scheduler never mounts. `sync-meta`/`pull-cursor` in SQLite generic `records` table (no DDL);
+  `SqliteRepository` satisfies structural `SyncStore`. Reviewed fresh-context (Opus) **APPROVE, no blockers**; gates
+  fresh: typecheck 9 ✓ · test (mobile 254/28 files) ✓ · lint 6 ✓; overlap-guard non-concurrency proven (maxConcurrent===1),
+  teardown + e2e push/pull/furthest-page-correction covered. Invariants #1/#2/#5 intact, zero merge logic in apps/mobile.
+  No store/core/convex change, no new dep, **no deploy gate**. Awaiting CI + user "merge" → then **umbrella #12 COMPLETE**.
 - **Unit 12c MERGED (2026-06-26) — PR #108 (squash, branch deleted), Issue #107 closed; umbrella #12 still open
   (only 12d remains).** CI `verify` green; reviewed fresh-context (Opus) APPROVE-WITH-NITS, no blockers. Wired 12b's
   `reconcile()` to the live 12a server inside the web app. Delivered (all `apps/web/src`): `sync/convex-sync-transport.ts`
