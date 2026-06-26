@@ -46,7 +46,8 @@ export function StorageMeter() {
       <View
         className="w-full h-1.5 rounded-full bg-line overflow-hidden"
         accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: quota, now: used }}
+        // Percentage-based so AT announces "42%", not the raw billion-byte magnitudes.
+        accessibilityValue={{ min: 0, max: 100, now: pct }}
         accessibilityLabel={`${pct.toString()}% of storage used`}
       >
         {/* Filled portion */}

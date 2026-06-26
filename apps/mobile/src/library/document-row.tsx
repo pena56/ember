@@ -23,6 +23,19 @@ function formatDate(epochMs: number): string {
   }).format(new Date(epochMs));
 }
 
+/**
+ * Spoken status for screen readers. A Pressable with an accessibilityLabel is
+ * announced as ONE element, so its child SyncBadge text is never read — the
+ * status must be folded into the row label instead. Comma-phrased (no em dash)
+ * so VoiceOver/TalkBack pause naturally. Empty string = nothing to announce.
+ */
+const STATUS_A11Y: Record<SyncState, string> = {
+  synced: '',
+  pending: 'Syncing',
+  'over-file-cap': 'Too large to sync, kept on this device',
+  'over-quota': 'Storage full, kept on this device',
+};
+
 // ── Sync badge ────────────────────────────────────────────────────────────────
 
 /**
@@ -58,7 +71,10 @@ function SyncBadge({
 
   if (syncState === 'over-file-cap') {
     return (
-      <Text className="font-sans text-xs text-text-muted shrink-0 text-right">
+      <Text
+        className="font-sans text-xs text-text-muted shrink-0 text-right leading-tight"
+        style={{ maxWidth: 150 }}
+      >
         Too large to sync — kept on this device
       </Text>
     );
@@ -66,8 +82,8 @@ function SyncBadge({
 
   if (syncState === 'over-quota') {
     return (
-      <View className="items-end gap-1 shrink-0">
-        <Text className="font-sans text-xs text-text-muted text-right">
+      <View className="items-end gap-1 shrink-0" style={{ maxWidth: 150 }}>
+        <Text className="font-sans text-xs text-text-muted text-right leading-tight">
           Storage full — kept on this device
         </Text>
         {onRetrySync !== undefined && (
@@ -77,8 +93,14 @@ function SyncBadge({
               e.stopPropagation();
               onRetrySync();
             }}
-            accessibilityRole="button"
-            accessibilityLabel="Retry sync"
+            // Pad the hit area out to a comfortable touch target — the visible
+            // text is only ~16px tall (WCAG 2.5.5 / platform HIG want ≥44pt).
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            className="py-1"
+            // The row exposes retry as an accessibilityAction (see DocumentRow),
+            // so hide this visual control from AT to avoid a dead duplicate.
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
           >
             <Text className="font-sans text-xs text-accent">Try again</Text>
           </Pressable>
@@ -108,11 +130,28 @@ export function DocumentRow({ document: doc, onRetrySync }: DocumentRowProps) {
     });
   }
 
+  // Fold sync status into the row label so screen readers announce it (the row
+  // is a single a11y element — the badge Text alone would never be read).
+  const status = STATUS_A11Y[doc.syncState];
+  const accessibilityLabel = status ? `Open ${doc.title}. ${status}` : `Open ${doc.title}`;
+
+  // When over quota, expose "Try again" as a row accessibilityAction (the nested
+  // visual control isn't focusable inside a single-element row).
+  const canRetry = doc.syncState === 'over-quota' && onRetrySync !== undefined;
+
   return (
     <Pressable
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${doc.title}`}
+      accessibilityLabel={accessibilityLabel}
+      {...(canRetry
+        ? {
+            accessibilityActions: [{ name: 'retry', label: 'Try syncing again' }],
+            onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {
+              if (e.nativeEvent.actionName === 'retry') onRetrySync?.();
+            },
+          }
+        : {})}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       <View className="flex-row items-center gap-4 px-5 py-4 bg-surface-raised border-b border-line">
