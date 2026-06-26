@@ -21,4 +21,18 @@ export default defineSchema({
     "by_owner",
     ["owner"],
   ),
+
+  blobs: defineTable({
+    owner: v.id("users"),
+    contentId: v.string(), // = Document.id (sha256 hex of PLAINTEXT bytes, 04a)
+    storageId: v.id("_storage"), // Convex-internal; never sent to clients
+    encryptedSize: v.number(), // actual stored ciphertext byte length (quota unit)
+  })
+    .index("by_owner_content", ["owner", "contentId"])
+    .index("by_owner", ["owner"]),
+
+  userKeys: defineTable({
+    owner: v.id("users"),
+    key: v.string(), // base64 AES-256-GCM key
+  }).index("by_owner", ["owner"]),
 });
