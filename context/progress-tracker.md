@@ -236,8 +236,34 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 13a BUILT + REVIEWED (2026-06-26) — Issue #111 (umbrella #13 open), branch feat/111-convex-file-storage-server,
-  spec specs/13a-convex-file-storage-server.md. PR pending; USER deploy gate still required before merge.** Sonnet TDD
+- **Unit 13b SPECCED (2026-06-26) — Issue #113 (umbrella #13 open), branch feat/113-core-blob-sync-engine,
+  spec specs/13b-core-blob-sync-engine.md. Route standard** (one boundary `packages/core`, pure TS, no new dep —
+  crypto + transport are injected ports tested with in-memory fakes; all product forks resolved at the umbrella level).
+  Second slice of #13. Scope (`packages/core` only): `blob-sync.ts` — the pure platform-free blob-sync engine 13c/13d
+  drive. Result/limit types mirror 13a's return-union: `SaveBlobResult` ({ok:true} | {ok:false,code:over-file-cap|
+  over-quota|missing-upload,...}) + `BlobLimits`. Structural ports (like 12b's sync-transport): `CryptoBox`
+  (encrypt/decrypt opaque bytes — binding builds it from `getOrCreateBlobKey` + WebCrypto/expo-crypto; core stays
+  key-agnostic), `BlobTransport` (upload/saveBlob/download/deleteBlob — **storageId + upload/download URLs stay inside
+  the binding, never enter core**, exactly as 13a keeps storageId server-internal), `BlobBytes` (subset of store's
+  BlobStore: has/get/put), `BlobStatusStore` (local-only per-contentId status; satisfied structurally by Repository,
+  no store change). Functions: `planBlobSync` (pure partition → toUpload [local bytes not yet synced] / toDownload
+  [synced docs not local]; `deferred` excluded unless `retryDeferred`), `uploadBlob` (encrypt→upload→saveBlob, branches
+  on the return-union: ok⇒status `synced`, reject⇒status `deferred`+code, **never throws on a limit**), `downloadBlob`
+  (download→decrypt→BlobBytes.put; null⇒skip), `forgetBlob` (deleteBlob + clear status, idempotent — tombstone GC),
+  `reconcileBlobs` driver (plan→upload pending+download missing, **fail-soft per blob**: network fault⇒`failed` & continue,
+  limit reject⇒`deferred` not `failed`; report {uploaded,downloaded,deferred,failed}). Local-only `blob-sync` status
+  records (BLOB_SYNC_COLLECTION) **never enqueued / never pushed** — same pattern as 12b's `sync-meta` cursor. Invariants:
+  #1 (engine only moves bytes in/out of LOCAL BlobStore; reads stay local; eager download is client-scheduled), #2 (blob
+  metadata = direct authed transport call BY DESIGN, no outbox enqueue; document *record* still syncs via 12), #5 (blobs
+  content-addressed by contentId=sha256 of plaintext ⇒ identical bytes=identical blob ⇒ zero merge logic). Core purity:
+  no convex/@ember/store/platform-crypto/HTTP import — all injected. Tests (core, no @ember/store import): identity/XOR
+  CryptoBox + Map-backed BlobBytes/BlobStatusStore + fake BlobTransport returning canned unions — planner partition,
+  upload ok/each-reject-code/missing-bytes, download null-skip + decrypt round-trip, forgetBlob idempotent, reconcileBlobs
+  e2e + fail-soft. Dispatch: Sonnet TDD executor → fresh-context Opus reviewer (verify #1/#2/#5 + core purity + no store
+  change + storageId/URLs never in core) → branch/commit/PR "Closes #113". **No deploy gate** (pure core).
+  Next: 13c (web upload/download wiring + over-limit UX + quota indicator).
+- **Unit 13a MERGED (2026-06-26) — PR #112 (squash, branch deleted), Issue #111 closed; umbrella #13 still open.**
+  USER deploy gate PASSED (`npx convex dev --once` → 2 tables/3 indexes live on dev necessary-warbler-246). Sonnet TDD
   executor → fresh-context Opus reviewer = APPROVE-WITH-NITS (no blockers, no invariant violation). Built `convex/files.ts`
   (6 fns) + `convex/files.test.ts` (23 tests) + `blobs`/`userKeys` in schema.ts. **Contract correction during build:**
   `saveBlob` rejects limits by **RETURNING `{ok:false, code}`, NOT throwing** — a Convex mutation is a transaction, so a
