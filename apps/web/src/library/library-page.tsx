@@ -1,6 +1,8 @@
 import { DocumentRow } from './document-row.js';
 import { ImportDropzone } from './import-dropzone.js';
+import { StorageMeter } from './storage-meter.js';
 import { useLibrary } from './use-library.js';
+import type { DocumentWithSync } from './use-library.js';
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
@@ -45,9 +47,11 @@ function EmptyState() {
 function DocumentList({
   documents,
   onOpen,
+  onRetrySync,
 }: {
-  documents: ReturnType<typeof useLibrary>['documents'];
+  documents: DocumentWithSync[];
   onOpen: (id: string) => void;
+  onRetrySync: () => void;
 }) {
   if (documents.length === 0) {
     return <EmptyState />;
@@ -57,7 +61,14 @@ function DocumentList({
     <section aria-label="Your library">
       <ul className="rounded-xl overflow-hidden bg-surface-raised border border-line divide-y divide-line">
         {documents.map((doc) => (
-          <DocumentRow key={doc.id} document={doc} onOpen={onOpen} />
+          <DocumentRow
+            key={doc.id}
+            document={doc}
+            onOpen={onOpen}
+            {...(doc.syncState === 'over-quota' && onRetrySync !== undefined
+              ? { onRetrySync }
+              : {})}
+          />
         ))}
       </ul>
     </section>
@@ -69,9 +80,15 @@ function DocumentList({
 interface LibraryPageProps {
   /** Called when the user opens a document row. */
   onOpen?: (id: string) => void;
+  /**
+   * Called when the user taps "Try again" on an over-quota deferred row.
+   * Provided by App.tsx which holds the useBlobSync hook (avoids a nested
+   * useConvexAuth that would require a ConvexProvider in tests).
+   */
+  onRetrySync?: () => void;
 }
 
-export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
+export function LibraryPage({ onOpen, onRetrySync }: LibraryPageProps = {}) {
   const { documents, loading, importFiles } = useLibrary();
 
   return (
@@ -88,6 +105,9 @@ export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
           )}
         </div>
 
+        {/* Quota meter — hidden while unauthenticated / loading */}
+        <StorageMeter />
+
         {/* Import dropzone */}
         <ImportDropzone onFiles={(files) => { void importFiles(files); }} disabled={loading} />
 
@@ -101,7 +121,11 @@ export function LibraryPage({ onOpen }: LibraryPageProps = {}) {
             <div className="w-5 h-5 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
           </div>
         ) : (
-          <DocumentList documents={documents} onOpen={onOpen ?? (() => undefined)} />
+          <DocumentList
+            documents={documents}
+            onOpen={onOpen ?? (() => undefined)}
+            onRetrySync={onRetrySync ?? (() => undefined)}
+          />
         )}
     </div>
   );

@@ -21,6 +21,14 @@ vi.mock('sonner', () => ({
   Toaster: () => null,
 }));
 
+// ── Mock the convex storage-usage boundary ──────────────────────────────────────
+// LibraryPage renders <StorageMeter>, which reads useStorageUsage() (Convex). These
+// tests render the page provider-free to exercise import behaviour, so stub the hook
+// as undefined → the meter hides itself and stays out of the way.
+vi.mock('../sync/use-storage-usage.js', () => ({
+  useStorageUsage: () => undefined,
+}));
+
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 function makeMatchMedia(prefersDark = false) {

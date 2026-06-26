@@ -139,6 +139,7 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     listAnnotations: notUsed('listAnnotations') as WebStore['listAnnotations'],
     updateAnnotation: notUsed('updateAnnotation') as WebStore['updateAnnotation'],
     deleteAnnotation: notUsed('deleteAnnotation') as WebStore['deleteAnnotation'],
+    listBlobStatuses: () => Promise.resolve([]),
   };
 }
 

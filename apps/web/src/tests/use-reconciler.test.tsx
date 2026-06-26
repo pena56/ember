@@ -31,7 +31,7 @@ import {
   PULL_CURSOR_ID,
   SYNC_META_COLLECTION,
 } from '@ember/core';
-import type { Hlc, OutboxEntry, RemoteEntry, SyncTransport } from '@ember/core';
+import type { BlobBytes, BlobStatusStore, Hlc, OutboxEntry, RemoteEntry, SyncTransport } from '@ember/core';
 import { MemoryRepository } from '@ember/store';
 
 import { SyncBundleContext } from '../store/store-context.js';
@@ -67,6 +67,13 @@ function fakeClock(): { tick: () => Hlc; receive: (r: Hlc) => Hlc } {
   };
 }
 
+/** Minimal no-op BlobBytes stub — reconciler tests don't exercise blob-sync. */
+const noopBlobs: BlobBytes = {
+  has: () => Promise.resolve(false),
+  get: () => Promise.resolve(undefined),
+  put: () => Promise.resolve(),
+};
+
 function makeBundle(over?: Partial<SyncBundle>): { bundle: SyncBundle; store: MemoryRepository; signal: ReturnType<typeof createSyncSignal> } {
   const store = new MemoryRepository();
   const signal = createSyncSignal();
@@ -79,6 +86,9 @@ function makeBundle(over?: Partial<SyncBundle>): { bundle: SyncBundle; store: Me
       return () => `oid-${++n}`;
     })(),
     signal,
+    blobs: noopBlobs,
+    blobStatus: store as unknown as BlobStatusStore,
+    blobChange: createSyncSignal(),
     ...over,
   };
   return { bundle, store, signal };
