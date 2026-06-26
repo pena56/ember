@@ -236,9 +236,15 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 12d SPECCED (2026-06-26) — Issue #109, branch feat/109-mobile-reconciler-wiring, PR #110,
-  spec specs/12d-mobile-reconciler-wiring.md. Route standard** (one boundary `apps/mobile`, no new dep, no UI surface).
-  **FINAL slice of umbrella #12.** Device-bound mirror of 12c — wires 12b's `reconcile()` to the deployed 12a server
+- **🎉 UMBRELLA #12 COMPLETE (2026-06-26) — local-first sync stack fully wired end-to-end: 12a Convex sync server →
+  12b core reconciler + conflict-merge fold → 12c web wiring → 12d mobile wiring. All four slices merged.** Both
+  clients (web + mobile) now push their local outbox to Convex and pull+fold remote changes through the single shared
+  `reconcile()`/`applyPull` engine, on an interval+lifecycle schedule, with Convex off the read path (invariant #1),
+  outbox discipline (invariant #2), and ONE merge engine in packages/core (invariant #5). No next unit queued — awaiting
+  the user's next directive.
+- **Unit 12d MERGED (2026-06-26) — PR #110 (squash, branch deleted), Issue #109 closed; FINAL slice — umbrella #12
+  COMPLETE.** CI `verify` green; reviewed fresh-context (Opus) **APPROVE, no blockers**. Device-bound mirror of 12c —
+  wired 12b's `reconcile()` to the deployed 12a server
   inside the mobile app. Delivered (all `apps/mobile/src`): `store/native-clock.ts` +`receive(remote)`;
   `sync/{mutation-signal,with-mutation-notify,convex-sync-transport}.ts` (copied from 12c — flagged for future
   `@ember/store` dedupe); `sync/sync-scheduler.ts` — **pure, injectable, no platform imports** overlap-guarded
@@ -254,7 +260,7 @@ Update after every meaningful change.
   `SqliteRepository` satisfies structural `SyncStore`. Reviewed fresh-context (Opus) **APPROVE, no blockers**; gates
   fresh: typecheck 9 ✓ · test (mobile 254/28 files) ✓ · lint 6 ✓; overlap-guard non-concurrency proven (maxConcurrent===1),
   teardown + e2e push/pull/furthest-page-correction covered. Invariants #1/#2/#5 intact, zero merge logic in apps/mobile.
-  No store/core/convex change, no new dep, **no deploy gate**. Awaiting CI + user "merge" → then **umbrella #12 COMPLETE**.
+  No store/core/convex change, no new dep, **no deploy gate**.
 - **Unit 12c MERGED (2026-06-26) — PR #108 (squash, branch deleted), Issue #107 closed; umbrella #12 still open
   (only 12d remains).** CI `verify` green; reviewed fresh-context (Opus) APPROVE-WITH-NITS, no blockers. Wired 12b's
   `reconcile()` to the live 12a server inside the web app. Delivered (all `apps/web/src`): `sync/convex-sync-transport.ts`
