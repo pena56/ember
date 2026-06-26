@@ -7,6 +7,9 @@
  *  (3) tamper → decrypt throws.
  *  (4) cross-platform layout: fixed key + IV → known split (IV(12) ‖ ciphertext ‖ tag(16)),
  *      byte-identical to web's Web Crypto AES-GCM layout.
+ *  (4c) independent vector: round-trips a frozen AES-256-GCM blob produced by Node's
+ *      own crypto (the same standard Web Crypto implements) — pins cross-device parity
+ *      to an implementation other than noble itself.
  */
 
 import { gcm } from '@noble/ciphers/aes.js';
@@ -33,6 +36,18 @@ function makeIv(seed: number): Uint8Array {
  */
 function makeBox(keyBytes: Uint8Array, ivBytes: Uint8Array) {
   return createNativeCryptoBox(keyBytes, () => ivBytes);
+}
+
+/** Decode a hex string to bytes. */
+function fromHex(hex: string): Uint8Array {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+/** Build a key/IV with sequential bytes starting at `start` (e.g. 0x00,0x01,…). */
+function rangeBytes(length: number, start: number): Uint8Array {
+  return Uint8Array.from({ length }, (_, i) => start + i);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -115,5 +130,25 @@ describe('createNativeCryptoBox', () => {
     const box = makeBox(key, iv); // IV param is only used for encrypt; decrypt reads it from blob.
     const recovered = await box.decrypt(webProduced);
     expect(recovered).toEqual(plaintext);
+  });
+
+  it('(4c) independent vector: round-trips an AES-256-GCM blob made by Node crypto', async () => {
+    // Frozen vector produced by Node's crypto.createCipheriv('aes-256-gcm', …) —
+    // the SAME standard Web Crypto implements — laid out as IV(12) ‖ ciphertext ‖ tag(16).
+    // Pins cross-device parity to an implementation independent of noble itself.
+    const key = rangeBytes(32, 0x00); // 00..1f
+    const iv = rangeBytes(IV_BYTES, 0x40); // 40..4b
+    const plaintext = new TextEncoder().encode('ember blob-sync cross-device vector');
+    const blob = fromHex(
+      '404142434445464748494a4b87d4cc46541ce56fa2a63a45e20a707b1ab43d2fc4186b46012e2d80b76588b8ec67812ad3c4707a281b50c676f5f0c96e561f',
+    );
+
+    // 1. The native box decrypts the independently-produced blob → original plaintext.
+    const box = makeBox(key, iv);
+    expect(await box.decrypt(blob)).toEqual(plaintext);
+
+    // 2. Encrypting the same plaintext with the same IV reproduces the exact blob
+    //    (byte-for-byte) → mobile output is consumable by web and vice versa.
+    expect(await box.encrypt(plaintext)).toEqual(blob);
   });
 });
