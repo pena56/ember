@@ -236,6 +236,49 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13a BUILT + REVIEWED (2026-06-26) — Issue #111 (umbrella #13 open), branch feat/111-convex-file-storage-server,
+  spec specs/13a-convex-file-storage-server.md. PR pending; USER deploy gate still required before merge.** Sonnet TDD
+  executor → fresh-context Opus reviewer = APPROVE-WITH-NITS (no blockers, no invariant violation). Built `convex/files.ts`
+  (6 fns) + `convex/files.test.ts` (23 tests) + `blobs`/`userKeys` in schema.ts. **Contract correction during build:**
+  `saveBlob` rejects limits by **RETURNING `{ok:false, code}`, NOT throwing** — a Convex mutation is a transaction, so a
+  throw would roll back the `ctx.storage.delete()` orphan-cleanup, leaking ciphertext forever. Returning lets cleanup
+  commit; 13b/c/d branch on `result.ok`/`result.code` (codes over-file-cap|over-quota|missing-upload). Unauthenticated
+  still throws. Spec + tests updated to match. Verify: typecheck 9 ✓ · convex test 36 ✓ (23 new) · lint ✓.
+  **USER deploy gate before merge:** `npx convex dev --once` → push 2 tables/3 indexes to dev necessary-warbler-246.
+  Next: 13b (core/store blob-sync engine + CryptoBox port + client crypto contract).
+- **Unit 13a SPEC (2026-06-26) — original spec, route standard** (one boundary `convex/`, no new dep —
+  convex-test already present; well-trodden Convex storage/fn logic; forks resolved). First slice of umbrella #13.
+  Scope (`convex/` only): add `blobs` (owner·contentId·storageId·encryptedSize; by_owner_content/by_owner) + `userKeys`
+  (owner·base64 AES-256-GCM key) tables to schema.ts; `convex/files.ts` with `FILE_CAP`(50 MB)/`USER_QUOTA`(1 GB)
+  constants + 6 authed fns: `generateUploadUrl`, `saveBlob` (reads true ciphertext size via `ctx.db.system.get` →
+  enforces per-file cap + per-user quota server-side, deletes the upload + throws typed `ConvexError`
+  {over-file-cap|over-quota|missing-upload} on reject, upsert replaces+frees old storageId so re-upload doesn't
+  double-count), `getDownloadUrl` (by contentId → url|null), `getOrCreateBlobKey` (mint-once escrow, non-ZK),
+  `deleteBlob` (idempotent GC on tombstone), `getStorageUsage` (used/quota/fileCap for the indicator). **Key design:
+  blobs addressed by `contentId`(=docId sha256 of plaintext, 04a), never by `storageId` on the client — `storageId`
+  stays server-internal; NO change to `records`/`syncState` or the synced `Document` shape.** Ownership via
+  `getAuthUserId` on every fn (throw if null), all rows owner-scoped. Invariants intact: #1 (storage off the read
+  path — clients read LOCAL bytes; Convex only serves download URLs for eager background fetch), #2 (blob metadata is a
+  direct authed storage call BY DESIGN, not an outbox mutation; the document *record* still syncs via 12 unchanged),
+  #5 (no merge logic). Tests: convex-test (store blobs via `t.run(ctx=>ctx.storage.store(...))`), cover cap/quota
+  reject+delete, replace-not-double-count, key mint-once, deleteBlob idempotent, usage accuracy, ownership isolation,
+  unauth throws. Dispatch: Sonnet TDD executor → fresh-context Opus reviewer (verify #1/#2/#5 + no records/Document
+  change + storageId never leaves server) → branch/commit/PR "Closes #111". **USER deploy gate before merge:**
+  `npx convex dev --once` → push 2 tables/3 indexes to dev necessary-warbler-246 (gate class as 11a/12a).
+  Next: 13b (core/store blob-sync engine + CryptoBox port + client crypto contract).
+- **Unit 13 (File storage sync + quota) SCORED COMPLEX → split by boundary (2026-06-26)**, like 03/04/.../12. Needs 12
+  (record sync) — purely additive cross-device BLOB sync on top of the merged 12 stack (blob storage exists locally on
+  all three layers: store `BlobStore` port+`MemoryBlobStore`, web `OpfsBlobStore`, mobile `expo-file-system-blob-store`;
+  zero Convex storage code / no `storageId` anywhere yet). Split (boundary-ordered, server→core→clients like 12a-d):
+  **13a** Convex file-storage server (`convex/`) → **13b** core/store blob-sync engine + `CryptoBox` port + per-file-cap
+  /quota types → **13c** web upload/download wiring + over-limit UX + quota indicator → **13d** mobile wiring
+  (device-bound). **Product/architecture forks resolved with user (2026-06-26):** (1) **encryption at rest = client-side
+  symmetric (non-ZK)** — Convex stores ciphertext + escrows a per-user AES-256-GCM key over the authed channel; full
+  zero-knowledge E2E stays deferred (project-overview out-of-scope). (2) **download = eager background** — after each
+  pull, devices background-download synced blobs not yet local. (3) **over-limit = keep local, skip upload** — an
+  over-cap/over-quota file imports + stays fully readable offline (invariant #1), marked "not synced", upload retries
+  when space frees; server rejects with a typed error, never truncates. (4) **limits = 50 MB/file, 1 GB/user**,
+  server-authoritative.
 - **🎉 UMBRELLA #12 COMPLETE (2026-06-26) — local-first sync stack fully wired end-to-end: 12a Convex sync server →
   12b core reconciler + conflict-merge fold → 12c web wiring → 12d mobile wiring. All four slices merged.** Both
   clients (web + mobile) now push their local outbox to Convex and pull+fold remote changes through the single shared
