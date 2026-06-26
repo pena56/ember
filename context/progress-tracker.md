@@ -236,6 +236,16 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13b MERGED (2026-06-26) — PR #114 (squash, branch deleted), Issue #113 closed; umbrella #13 still open
+  (13c/13d remain).** CI `verify` green; Sonnet TDD executor → fresh-context Opus reviewer = CHANGES REQUESTED → fixed.
+  **Blocker fixed:** `uploadBlob`'s local-missing-bytes path wrote a `deferred` status — a latent bug that would block a
+  later legitimate upload of the same contentId once its bytes are imported (planner skips `deferred` unless
+  `retryDeferred`); changed to a bare `{ok:false,'missing-upload'}` return + regression assertion. Built `blob-sync.ts`
+  (types + `CryptoBox`/`BlobTransport`/`BlobBytes`/`BlobStatusStore` ports + `planBlobSync`/`uploadBlob`/`downloadBlob`/
+  `forgetBlob`/`reconcileBlobs`) + 19 tests; executor named the driver's upload-candidate param `candidateIds` and added
+  `delete` to `BlobStatusStore` (still structural — Repository satisfies it; no store change). typecheck 9 ✓ · test 267
+  core (19 new) ✓ · lint 6 ✓. Invariants #1/#2/#5 + core purity intact. No new dep, no deploy gate.
+  Next: 13c (web upload/download wiring + over-limit UX + quota indicator). <!-- spec note retained below for trail -->
 - **Unit 13b SPECCED (2026-06-26) — Issue #113 (umbrella #13 open), branch feat/113-core-blob-sync-engine,
   spec specs/13b-core-blob-sync-engine.md. Route standard** (one boundary `packages/core`, pure TS, no new dep —
   crypto + transport are injected ports tested with in-memory fakes; all product forks resolved at the umbrella level).
