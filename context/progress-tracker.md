@@ -249,12 +249,18 @@ Update after every meaningful change.
   threads retryDeferred to LibraryScreen. Both 13c refinements carried (over-cap pre-skip + blobChange live refresh).
   Throwaway `app/dev/blob-sync-13d.tsx` verify screen (delete before merge). **Gate green: typecheck 9 ✓ · mobile test
   32 files/283 ✓ (4 new: native-crypto-box, convex-blob-transport, blob-sync-scheduler, native-store-blob-status) ·
-  lint 6 ✓.** New dep @noble/ciphers 2.2.0 (pure JS). No core/store/convex change, no deploy gate. **NOTE: standard-route
-  frontend-design/impeccable + fresh-context Opus review NOT yet run** (subagent session limit; badge/meter are
-  near-verbatim ports of the already-impeccable'd web 13c UI) — offer to run before/after device-verify. **USER
-  device-verify before merge** (two devices, same account): import→badge Syncing…→synced live; eager-download on the
-  other device; >50 MB ⇒ "kept on this device", excluded from quota. On merge: Issue #117 closes, **umbrella #13
-  COMPLETE**. <!-- 13d SPEC note retained below for trail -->
+  lint 6 ✓.** New dep @noble/ciphers 2.2.0 (pure JS). No core/store/convex change, no deploy gate.
+  **Impeccable a11y pass DONE (`36cb82b`):** RN single-element-row issue — folded sync status into the row
+  accessibilityLabel (badge text was never announced), exposed over-quota retry via accessibilityActions, gave
+  "Try again" a real ≥44pt hit target (was ~16px), constrained long badge copy, meter accessibilityValue now
+  percentage-based. **Fresh-context Opus review DONE = APPROVE-WITH-NITS, NO blockers:** all invariants #1/#2/#5/#6
+  + no-package-change confirmed with file:line; gates re-run green (typecheck 9 / mobile 283 / lint 6). Review nit
+  addressed (`8feb3f2`): crypto cross-device parity now pinned to an independent Node-crypto AES-GCM vector (test 4c),
+  mobile test now 32 files/284. **Remaining before merge:** (1) delete throwaway `app/dev/blob-sync-13d.tsx` + its
+  `app/dev/index.tsx` entry (kept for now so USER can device-verify); (2) **USER device-verify** (two devices, same
+  account): import→badge Syncing…→synced live; eager-download on the other device; >50 MB ⇒ "kept on this device",
+  excluded from quota; over-quota ⇒ "Storage full" + Try-again. On merge: Issue #117 closes, **umbrella #13 COMPLETE**.
+  <!-- 13d SPEC note retained below for trail -->
 - **Unit 13d SPECCED + DISPATCHED (2026-06-26) — Issue #117 (umbrella #13, final slice), branch
   feat/117-mobile-blob-sync-wiring, spec specs/13d-mobile-blob-sync-wiring.md. Route standard** (one boundary
   `apps/mobile`; all forks resolved). **Device-bound + UI unit.** Mobile mirror of 13c — wires 13b's `reconcileBlobs`
