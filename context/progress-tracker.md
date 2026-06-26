@@ -236,8 +236,11 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 12b SPECCED (2026-06-25) — Issue #105 (umbrella #12 open), branch feat/105-core-reconciler-merge-fold
-  (not yet cut), spec specs/12b-core-reconciler-merge-fold.md. Route standard** (one boundary `packages/core`
+- **Unit 12b MERGED (2026-06-26) — PR #106 (squash, branch deleted), Issue #105 closed; umbrella #12 still open.**
+  CI `verify` green; reviewed fresh-context (Opus) APPROVE-WITH-NITS, no blockers (non-resurrection comment nit applied).
+  Delivered: `sync-transport.ts` ports, `apply-pull.ts` pure fold, `reconcile.ts` driver, `index.ts` barrel,
+  24 tests (`tests/reconciler.test.ts`). typecheck 9 ✓ · test 248 (+24) ✓ · lint 6 ✓. No deploy gate (pure core).
+  Spec specs/12b-core-reconciler-merge-fold.md. **Route standard** (one boundary `packages/core`
   + tests, no new dep, no UI, no client wiring; the lone fork resolved with user). Scope (`packages/core` only):
   the single shared conflict-merge engine (invariant #5) + the reconciler driving push/pull. Ports
   (`sync-transport.ts`): `SyncTransport` (push/pull), `RemoteEntry`, structural `SyncStore` (subset of
