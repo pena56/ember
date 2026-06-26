@@ -236,6 +236,17 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 13c BUILT — IN REVIEW / awaiting USER browser-verify (2026-06-26) — Issue #115, branch
+  feat/115-web-blob-sync-wiring, PR "Closes #115".** Standard route ran end-to-end: Sonnet TDD executor →
+  impeccable pass (token-only fix: near-limit meter uses `streak-lit` token not raw amber; `use-storage-usage`
+  gated via `useConvexAuth`+`'skip'` — no try/catch around a hook; DocumentRow restructured to overlay pattern
+  so the over-quota "Try again" is no longer an invalid nested `<button>`) → fresh-context Opus reviewer
+  **APPROVE WITH NITS** (no blocking; all invariants #1/#2/#5/#6 + core purity + storageId/URL encapsulation
+  PASS; nits: double dynamic-import collapsed; `Id<'_storage'>` cast kept as `as any` since dataModel isn't an
+  exported subpath of @ember/convex — staying inside the apps/web boundary). Gate green: **typecheck 9 ✓ ·
+  web test 46 files/337 ✓ · lint 6 ✓.** No core/store/convex package change, no new dep. **Next:** USER
+  browser-verify (two profiles, same account: import→sync→eager-download on other device; >50 MB ⇒ "kept on
+  this device", excluded from quota) → merge → 13d (mobile wiring, device-bound). <!-- spec details retained below -->
 - **Unit 13c SPECCED (2026-06-26) — Issue #115 (umbrella #13 open), branch feat/115-web-blob-sync-wiring,
   spec specs/13c-web-blob-sync-wiring.md. Route standard** (one boundary `apps/web`, no new dep — Web Crypto +
   `fetch` are platform built-ins, convex client exists; all umbrella forks resolved). **UI unit** → net-new quota

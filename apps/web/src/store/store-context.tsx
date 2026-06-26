@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
 
-import type { Hlc, SyncStore } from '@ember/core';
+import type { BlobBytes, BlobStatusStore, Hlc, SyncStore } from '@ember/core';
 import { DexieRepository } from '@ember/store';
 
 import { createSyncSignal } from '../sync/mutation-signal.js';
@@ -14,9 +14,9 @@ import { createWebStore } from './web-store.js';
 import type { WebStore } from './web-store.js';
 
 // ── Sync bundle ─────────────────────────────────────────────────────────────
-// The shared ports the reconciler needs, built from the SAME repo + clock the
-// WebStore uses (single HLC source + single outbox). Null when a store is
-// injected (tests / non-production), so the reconciler tears down.
+// The shared ports the reconciler + blob-sync hook need, built from the SAME
+// repo + clock the WebStore uses (single HLC source + single outbox). Null when
+// a store is injected (tests / non-production), so both schedulers tear down.
 
 export interface SyncBundle {
   /** Structural SyncStore — the same repo instance the WebStore appends to. */
@@ -27,6 +27,17 @@ export interface SyncBundle {
   newOutboxId: () => string;
   /** Wake signal fired on every local outbox append. */
   signal: SyncSignal;
+  /**
+   * The local OpfsBlobStore instance — satisfies BlobBytes (has/get/put).
+   * Bytes only move in/out of this local store (invariant #1).
+   */
+  blobs: BlobBytes;
+  /**
+   * The same repo instance cast as BlobStatusStore — satisfies get/put/delete
+   * structurally. Status records are written via put/delete (no notify, no
+   * enqueue) and are local-only / never pushed (invariant #2).
+   */
+  blobStatus: BlobStatusStore;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -57,9 +68,10 @@ export function StoreProvider({ children, store }: StoreProviderProps) {
     const webClock = createWebClock();
     const signal = createSyncSignal();
     const repo = withMutationNotify(new DexieRepository('ember'), signal.notify);
+    const opfsBlobs = new OpfsBlobStore();
     const webStore = createWebStore({
       repo,
-      blobs: new OpfsBlobStore(),
+      blobs: opfsBlobs,
       hasher: subtleCryptoHasher,
       clock: webClock,
     });
@@ -71,6 +83,9 @@ export function StoreProvider({ children, store }: StoreProviderProps) {
       },
       newOutboxId: () => webClock.newOutboxId(),
       signal,
+      // Blob-sync ports: same instances, no new stores.
+      blobs: opfsBlobs,
+      blobStatus: repo,
     };
     return { store: webStore, bundle };
     // store identity is stable at mount — intentionally excluded from deps

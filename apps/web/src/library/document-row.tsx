@@ -2,11 +2,15 @@ import type { Document } from '@ember/core';
 
 import { formatBytes } from '../store/format-bytes.js';
 
+import type { SyncState } from './use-library.js';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DocumentRowProps {
-  document: Document;
+  document: Document & { syncState?: SyncState };
   onOpen: (id: string) => void;
+  /** Called when the user taps "Try again" on an over-quota deferred row. */
+  onRetrySync?: () => void;
 }
 
 // ── PDF page icon ─────────────────────────────────────────────────────────────
@@ -43,21 +47,93 @@ function formatDate(epochMs: number): string {
   }).format(new Date(epochMs));
 }
 
+// ── Sync badge ────────────────────────────────────────────────────────────────
+
+function SyncBadge({
+  syncState,
+  onRetrySync,
+}: {
+  syncState: SyncState;
+  onRetrySync?: () => void;
+}) {
+  if (syncState === 'synced') {
+    // Subtle — no alarming badge; just a calm indicator
+    return null;
+  }
+
+  if (syncState === 'pending') {
+    return (
+      <span className="font-sans text-xs text-text-muted opacity-60 shrink-0">
+        Syncing…
+      </span>
+    );
+  }
+
+  if (syncState === 'over-file-cap') {
+    return (
+      <span className="font-sans text-xs text-text-muted shrink-0 max-w-[160px] text-right leading-tight">
+        Too large to sync — kept on this device
+      </span>
+    );
+  }
+
+  if (syncState === 'over-quota') {
+    return (
+      <span className="flex flex-col items-end gap-1 shrink-0">
+        <span className="font-sans text-xs text-text-muted max-w-[160px] text-right leading-tight">
+          Storage full — kept on this device
+        </span>
+        {onRetrySync !== undefined && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetrySync();
+            }}
+            className={[
+              // pointer-events-auto: re-enable clicks on this control — the content
+              // layer it sits in is pointer-events-none so row clicks fall through to
+              // the full-row open button beneath (avoids an invalid nested <button>).
+              'pointer-events-auto font-sans text-xs text-accent underline-offset-2 hover:underline',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-sm',
+            ].join(' ')}
+          >
+            Try again
+          </button>
+        )}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DocumentRow({ document: doc, onOpen }: DocumentRowProps) {
+export function DocumentRow({ document: doc, onOpen, onRetrySync }: DocumentRowProps) {
+  const syncState = doc.syncState;
+
   return (
-    <li>
+    <li className="relative">
+      {/*
+        Full-row open affordance as a base layer. The visible content sits in a
+        sibling layer above with pointer-events-none, so the whole row stays
+        clickable to open — while the over-quota "Try again" control re-enables
+        its own pointer events. This avoids nesting an interactive button inside
+        the row button (invalid HTML / a11y).
+      */}
       <button
         type="button"
         onClick={() => { onOpen(doc.id); }}
         aria-label={`Open ${doc.title}`}
         className={[
-          'w-full flex items-center gap-4 px-5 py-4 text-left',
+          'absolute inset-0 w-full',
           'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent',
           'hover:bg-surface transition-colors',
         ].join(' ')}
-      >
+      />
+
+      <div className="pointer-events-none relative flex items-center gap-4 px-5 py-4">
         <PdfIcon />
 
         <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -72,6 +148,14 @@ export function DocumentRow({ document: doc, onOpen }: DocumentRowProps) {
             {formatDate(doc.importedAt)}
           </span>
         </div>
+
+        {/* Sync badge — warm, reassuring copy; never alarming */}
+        {syncState !== undefined && (
+          <SyncBadge
+            syncState={syncState}
+            {...(onRetrySync !== undefined ? { onRetrySync } : {})}
+          />
+        )}
 
         {/* Open chevron affordance */}
         <svg
@@ -90,7 +174,7 @@ export function DocumentRow({ document: doc, onOpen }: DocumentRowProps) {
             strokeLinejoin="round"
           />
         </svg>
-      </button>
+      </div>
     </li>
   );
 }

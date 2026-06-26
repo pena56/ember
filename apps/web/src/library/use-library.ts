@@ -1,27 +1,48 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import type { Document } from '@ember/core';
+import type { BlobStatus, Document } from '@ember/core';
 
 import { useWebStore } from '../store/store-context.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/** Derived sync UI state for a document row. */
+export type SyncState =
+  | 'synced'       // uploaded and accessible across devices
+  | 'pending'      // no status yet — next tick will resolve it
+  | 'over-file-cap' // file too large to sync — kept on this device
+  | 'over-quota';  // user quota full — kept on this device, retry available
+
+/** Document record extended with its derived sync state. */
+export type DocumentWithSync = Document & { syncState: SyncState };
+
 export interface LibraryState {
-  documents: Document[];
+  documents: DocumentWithSync[];
   loading: boolean;
   importFiles: (files: File[]) => Promise<void>;
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isPdf(file: File): boolean {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 }
 
+function deriveSyncState(status: BlobStatus | undefined): SyncState {
+  if (!status) return 'pending';
+  if (status.status === 'synced') return 'synced';
+  // deferred: branch on code
+  if (status.code === 'over-file-cap') return 'over-file-cap';
+  if (status.code === 'over-quota') return 'over-quota';
+  return 'pending';
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
 export function useLibrary(): LibraryState {
   const store = useWebStore();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentWithSync[]>([]);
   const [loading, setLoading] = useState(false);
   // Incrementing this triggers the load effect without calling setState inside it.
   const [loadTick, setLoadTick] = useState(0);
@@ -31,16 +52,25 @@ export function useLibrary(): LibraryState {
     setLoadTick((n) => n + 1);
   }, []);
 
-  // Load documents whenever loadTick changes (initial mount + after every import)
+  // Load documents + blob statuses whenever loadTick changes
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       try {
-        const docs = await store.listDocuments();
+        const [docs, statuses] = await Promise.all([
+          store.listDocuments(),
+          store.listBlobStatuses(),
+        ]);
         if (!cancelled) {
-          setDocuments(docs);
+          // Build a status map keyed by document id (= contentId in practice)
+          const statusMap = new Map<string, BlobStatus>(statuses.map((s) => [s.id, s]));
+          const withSync: DocumentWithSync[] = docs.map((doc) => ({
+            ...doc,
+            syncState: deriveSyncState(statusMap.get(doc.id)),
+          }));
+          setDocuments(withSync);
         }
       } finally {
         if (!cancelled) {

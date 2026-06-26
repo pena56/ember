@@ -1,5 +1,5 @@
-import type { Annotation, AnnotationKind, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { editAnnotation, makeAnnotation } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, editAnnotation, makeAnnotation } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
 import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
@@ -53,6 +53,11 @@ export interface WebStore {
    * delete tombstone outbox entry (invariant #2).
    */
   deleteAnnotation(id: string): Promise<void>;
+  /**
+   * Return all local blob-sync status records. Read-only; no enqueue.
+   * Used by the library UI to show per-row sync badges.
+   */
+  listBlobStatuses(): Promise<BlobStatus[]>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -184,6 +189,10 @@ export function createWebStore(deps: {
         { repo, newOutboxId: () => clock.newOutboxId(), hlc: clock.nextStamp() },
         id,
       );
+    },
+
+    async listBlobStatuses(): Promise<BlobStatus[]> {
+      return repo.query<BlobStatus>(BLOB_SYNC_COLLECTION);
     },
   };
 }

@@ -24,16 +24,18 @@ import { LibraryPage } from './library/library-page.js';
 import { ReaderPage } from './reader/reader-page.js';
 import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
+import { useBlobSync } from './sync/use-blob-sync.js';
 import { useReconciler } from './sync/use-reconciler.js';
 import { TodayPage } from './today/today-page.js';
 
 // ── Library route wrapper ────────────────────────────────────────────────────
 
-function LibraryRoute() {
+function LibraryRoute({ onRetrySync }: { onRetrySync: () => void }) {
   const navigate = useNavigate();
   return (
     <LibraryPage
       onOpen={(id) => { void navigate(`/read/${id}`); }}
+      onRetrySync={onRetrySync}
     />
   );
 }
@@ -84,6 +86,12 @@ export default function App() {
   // changes when authed. No UI — side-effect only (Convex off the read path).
   useReconciler();
 
+  // Background blob-sync scheduler — uploads local blobs + downloads missing
+  // ones. Decoupled from record-sync (separate concerns). The library page
+  // reads blob-sync status records directly; retryDeferred is threaded down
+  // as a prop so LibraryPage doesn't need a nested useConvexAuth.
+  const { retryDeferred } = useBlobSync();
+
   // After a claim/sign-in reload (see claim-reload.ts), show the carried toast.
   useEffect(() => {
     const msg = consumePendingAuthToast();
@@ -97,7 +105,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/today" replace />} />
           <Route path="today" element={<TodayPage />} />
-          <Route path="library" element={<LibraryRoute />} />
+          <Route path="library" element={<LibraryRoute onRetrySync={() => { void retryDeferred(); }} />} />
           <Route path="stats" element={<StatsPage />} />
         </Route>
 
