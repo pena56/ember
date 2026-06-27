@@ -80,9 +80,12 @@ function fakeNetwork(): {
   };
 }
 
-/** Flush pending microtasks (the async run loop) without advancing fake timers. */
+/** Flush pending microtasks (the async run loop) without advancing fake timers.
+ *  Iteration count is generous so the deepest path (scenario 9's e2e reconcile —
+ *  push → pull → per-entry policy resolve → furthest-page corrective enqueue)
+ *  fully settles; a too-tight drain reads the outbox before the corrective lands. */
 async function flush(): Promise<void> {
-  for (let i = 0; i < 8; i++) await Promise.resolve();
+  for (let i = 0; i < 24; i++) await Promise.resolve();
 }
 
 function setup(over?: {
