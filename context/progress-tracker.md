@@ -236,6 +236,24 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 14b MERGED (2026-06-27) — PR #122 (squash `029be90`, branch deleted), Issue #121 CLOSED. Second
+  slice of umbrella #14 done — web duplicate-merge UI.** Drives 14a's pure engine for the near-duplicate case
+  inside `apps/web` only (no `packages/*`, no `convex/`, no new dep — the `duplicate-decisions` collection rides
+  12a's generic push/pull). Delivered (all `apps/web/src`): `store/web-store.ts` += `listDuplicateDecisions` +
+  `saveDuplicateDecision` (one `repo.put` + one HLC-stamped outbox entry, `entry.hlc === payload.updatedAt`,
+  mirrors `saveReadingPosition`); `library/use-duplicates.ts` (surfaces undecided pairs over **canonical docs
+  only** via `resolveCanonicalId`, default canonical = larger byteSize, session-only dismiss); `library/use-library.ts`
+  alias-hide; `today/select-continue-reading.ts` alias-collapse (new `decisions` arg defaults `[]` ⇒ existing
+  callers green); `library/duplicate-prompt.tsx` (token-only inline card, `on-accent` Merge CTA, radio keep-which
+  selector, a11y radiogroup/aria-checked/≥44px/focus-visible, no AlertDialog — reversible). **Scope decision
+  (user 2026-06-27):** 14b = duplicate-merge only; the **claim-review screen** is sliced to its own later web
+  unit; policy **settings** = unit 17. Standard route ran fully: Sonnet TDD executor → fresh-context Opus review
+  = **APPROVE, zero blockers** (#2 exactly-once outbox + #5 single engine + #6 token-only + boundary all confirmed
+  file:line); one review nit hardened (detect over canonicals only, so a merged alias can't surface a fresh
+  prompt vs a third near-dup). Final green: typecheck 9 · web test 50 files/372 · lint 6; CI `verify` green on
+  head. **Next: 14c (mobile duplicate-merge UI, device-bound RN mirror of 14b) — last slice of umbrella #14.**
+  (Remaining umbrella backlog: #14 (14c left), #15 tags/smart-views, #16 notifications, #17 settings +
+  deferred claim-review web unit.) <!-- 14a MERGED note retained below for trail -->
 - **Unit 14a MERGED (2026-06-27) — PR #120 (squash `9747e41`, branch deleted), Issue #119 CLOSED. First
   slice of umbrella #14 done.** The pure core conflict engine: near-dupe detection (`duplicate-detection.ts`),
   syncable duplicate-decision + canonical resolver (`duplicate-decision.ts`), global/per-doc position policy
