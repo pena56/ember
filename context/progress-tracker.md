@@ -236,6 +236,12 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 14a BUILT + IN PR REVIEW (2026-06-27) — PR #120 (Closes #119), branch feat/119-core-conflict-merge-engine.**
+  TDD-built (Sonnet executor) → fresh-context Opus review = **APPROVE WITH NITS, zero blocking**; the one
+  user-facing nit (`normalizeTitle` over-stripping legitimate dotted titles like `Vol.II`) fixed via an
+  ebook/doc extension allowlist. Verify all green: typecheck 9 ✓ · **@ember/core 321 tests ✓** (all 12b
+  reconciler/applyPull tests unchanged) · lint 6 ✓. Boundary clean — only `packages/core` + spec/tracker docs,
+  no store/convex/app change. Awaiting merge; on merge → 14b (web conflict UI).
 - **Unit 14a SPECCED + DISPATCHED-READY (2026-06-26) — Issue #119 (umbrella #14, first slice), branch
   feat/119-core-conflict-merge-engine, spec specs/14a-core-conflict-merge-engine.md. Route standard**
   (one boundary `packages/core`, pure TS, no new dep, no UI; new syncable collections ride 12a's generic
