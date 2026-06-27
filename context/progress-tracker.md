@@ -236,6 +236,30 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 14c MERGED (2026-06-27) — PR #124 (squash `3d16a81`, branch deleted), Issue #123 CLOSED. THIRD &
+  final planned slice of umbrella #14 done — mobile duplicate-merge UI.** Device-bound RN mirror of 14b inside
+  `apps/mobile` only (no `packages/*`, `convex/`, or `apps/web` change; no new dep — `duplicate-decisions` rides
+  12a's generic push/pull). Delivered (all `apps/mobile/src`): `store/native-store.ts` += `listDuplicateDecisions`
+  + inline `saveDuplicateDecision` (one shared `clock.nextStamp()` → one `repo.put` + one `makeOutboxEntry`
+  enqueue, `entry.hlc === updatedAt`, mirrors `createAnnotation`); `library/use-duplicates.ts` (detect over
+  **canonical docs only**, default canonical = larger byteSize, session dismiss); `library/use-library.ts`
+  alias-hide; `library/duplicate-prompt.tsx` (uniwind token-only card, `text-on-accent` Merge CTA, RN
+  radiogroup/radio + accessibilityState keep-which selector à la `ThemeControl`, ≥44pt targets, no native Alert);
+  `library/library-screen.tsx` mounts it in the FlatList `ListHeaderComponent` below `ImportCard`;
+  `today/select-continue-reading.ts` + `use-continue-reading.ts` alias-collapse (new `decisions` arg defaults
+  `[]` ⇒ existing callers green). Standard route ran fully: Sonnet TDD executor → I independently re-verified the
+  diff+gates (executor tool-count looked low) → fresh-context Opus review = **APPROVE, zero blockers** (#2/#5/#6
+  + boundary confirmed file:line); one cosmetic nit fixed (dropped redundant `mx-4 mb-4` double-inset vs sibling
+  cards). Final green: typecheck 9 · mobile test 35 files/314 · lint 6; CI `verify` green on head.
+- **🎉 UMBRELLA #14 — all three planned slices MERGED (14a engine · 14b web · 14c mobile).** The near-duplicate
+  merge/keep-separate conflict layer now ships across core + both clients, all through the single shared engine
+  (invariant #5). **Issue #14 kept OPEN** because its body covers two UI surfaces deliberately deferred out of
+  the duplicate-merge scope (user decision 2026-06-27): (1) **account-claim review-before-commit screens** (web +
+  mobile — the pure `planClaimMerge` planner shipped in 14a, but the review UI is its own later unit per client);
+  (2) **per-file/global conflict-policy settings screen** (the `conflict-policy` engine + `applyPull` policy arg
+  shipped in 14a, but the settings UI = **unit 17**). No unit is in flight — awaiting the user's next directive.
+  (Remaining umbrella backlog: #15 tags/smart-views, #16 notifications, #17 settings, + the two deferred
+  claim-review client units.)
 - **Unit 14b MERGED (2026-06-27) — PR #122 (squash `029be90`, branch deleted), Issue #121 CLOSED. Second
   slice of umbrella #14 done — web duplicate-merge UI.** Drives 14a's pure engine for the near-duplicate case
   inside `apps/web` only (no `packages/*`, no `convex/`, no new dep — the `duplicate-decisions` collection rides
