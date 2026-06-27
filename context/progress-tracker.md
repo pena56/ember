@@ -236,12 +236,21 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 14a BUILT + IN PR REVIEW (2026-06-27) — PR #120 (Closes #119), branch feat/119-core-conflict-merge-engine.**
-  TDD-built (Sonnet executor) → fresh-context Opus review = **APPROVE WITH NITS, zero blocking**; the one
-  user-facing nit (`normalizeTitle` over-stripping legitimate dotted titles like `Vol.II`) fixed via an
-  ebook/doc extension allowlist. Verify all green: typecheck 9 ✓ · **@ember/core 321 tests ✓** (all 12b
-  reconciler/applyPull tests unchanged) · lint 6 ✓. Boundary clean — only `packages/core` + spec/tracker docs,
-  no store/convex/app change. Awaiting merge; on merge → 14b (web conflict UI).
+- **Unit 14a MERGED (2026-06-27) — PR #120 (squash `9747e41`, branch deleted), Issue #119 CLOSED. First
+  slice of umbrella #14 done.** The pure core conflict engine: near-dupe detection (`duplicate-detection.ts`),
+  syncable duplicate-decision + canonical resolver (`duplicate-decision.ts`), global/per-doc position policy
+  (`conflict-policy.ts`) threaded through `applyPull`'s additive 3rd arg (defaults `'furthest'` ⇒ 12b
+  byte-identical; `'latest'` → LWW) via `reconcile.ts`, and the review-before-commit `planClaimMerge`
+  (`claim-merge.ts`). New collections ride 12a's generic push/pull — no store/convex change. Invariants
+  #5/#2/#1 held. TDD (Sonnet) → fresh-context Opus review (APPROVE, zero blocking; `normalizeTitle`
+  extension-allowlist nit fixed). **CI gotcha logged:** the reconcile change added two `store.get` reads on
+  the reading-positions fold; mobile's `sync-scheduler` e2e test drained a fixed 8 microtasks via `flush()`
+  and read the outbox before the furthest-page corrective enqueued — local turbo served a stale mobile cache
+  so it only surfaced on CI. Fixed by `Promise.all`-ing the policy reads + widening `flush()` to 24. Final
+  green: core 321 · mobile 284 · web 339 · store 108 (+convex) · typecheck 9 · lint 6. **Next: 14b (web
+  conflict UI) — inline duplicate prompt, claim-review screen, policy-aware library/reader wiring; UI unit →
+  frontend-design + impeccable before review.** (Remaining umbrella backlog: #14 (14b/14c left), #15
+  tags/smart-views, #16 notifications, #17 settings.)
 - **Unit 14a SPECCED + DISPATCHED-READY (2026-06-26) — Issue #119 (umbrella #14, first slice), branch
   feat/119-core-conflict-merge-engine, spec specs/14a-core-conflict-merge-engine.md. Route standard**
   (one boundary `packages/core`, pure TS, no new dep, no UI; new syncable collections ride 12a's generic
