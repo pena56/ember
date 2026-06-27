@@ -78,8 +78,11 @@ export async function reconcile(deps: ReconcileDeps): Promise<ReconcileResult> {
       // Default path (no policy records) resolves to 'furthest' — all 12b tests pass unchanged.
       let decision;
       if (e.collection === READING_POSITIONS_COLLECTION) {
-        const globalPolicy = await store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, GLOBAL_POLICY_ID);
-        const perFilePolicy = await store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, e.recordId);
+        // Independent reads — fetch in parallel to keep the fold path lean.
+        const [globalPolicy, perFilePolicy] = await Promise.all([
+          store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, GLOBAL_POLICY_ID),
+          store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, e.recordId),
+        ]);
         const policyArr: ConflictPolicy[] = [];
         if (globalPolicy) policyArr.push(globalPolicy);
         if (perFilePolicy) policyArr.push(perFilePolicy);
