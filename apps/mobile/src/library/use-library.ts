@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner-native';
 
 import type { BlobStatus, Document } from '@ember/core';
+import { resolveCanonicalId } from '@ember/core';
 
 import { useNativeStore, useSyncBundle } from '../store/store-context.js';
 
@@ -72,14 +73,23 @@ export function useLibrary(): LibraryState {
     async function load() {
       setLoading(true);
       try {
-        const [docs, statuses] = await Promise.all([
+        const [docs, statuses, decisions] = await Promise.all([
           store!.listDocuments(),
           store!.listBlobStatuses(),
+          store!.listDuplicateDecisions(),
         ]);
         if (!cancelled) {
+          // Drop aliases: a doc whose canonical is a different doc is hidden from
+          // the library (it folded into its canonical). resolveCanonicalId from @ember/core
+          // (invariant #5). The count line in LibraryScreen derives from documents.length
+          // so it updates for free.
+          const canonicalDocs = docs.filter(
+            (doc) => resolveCanonicalId(decisions, doc.id) === doc.id,
+          );
+
           // Build a status map keyed by document id (= contentId in practice)
           const statusMap = new Map<string, BlobStatus>(statuses.map((s) => [s.id, s]));
-          const withSync: DocumentWithSync[] = docs.map((doc) => ({
+          const withSync: DocumentWithSync[] = canonicalDocs.map((doc) => ({
             ...doc,
             syncState: deriveSyncState(statusMap.get(doc.id)),
           }));

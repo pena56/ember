@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { Document, ReadingPosition } from '@ember/core';
+import type { Document, DuplicateDecision, ReadingPosition } from '@ember/core';
 
 import { selectContinueReading } from './select-continue-reading.js';
 
@@ -99,5 +99,82 @@ describe('selectContinueReading', () => {
 
     const result = selectContinueReading(positions, docs);
     expect(result).toHaveLength(2);
+  });
+});
+
+// ── 14c: decisions arg — alias filtering ──────────────────────────────────────
+
+describe('selectContinueReading — decisions (14c alias filtering)', () => {
+  function makeDecision(
+    aId: string,
+    bId: string,
+    canonicalId: string,
+    decision: 'merged' | 'separate',
+  ): DuplicateDecision {
+    const aliasId = canonicalId === aId ? bId : aId;
+    const min = aId < bId ? aId : bId;
+    const max = aId < bId ? bId : aId;
+    return {
+      id: `${min}:${max}`,
+      canonicalId,
+      aliasId,
+      decision,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+  }
+
+  it('decisions defaults to [] — existing callers unaffected', () => {
+    const positions = [makePosition('d1', 1, '2026-01-01T00:00:00.000Z')];
+    const docs = [makeDoc('d1', 'Book One')];
+    // Call without decisions arg — should not throw
+    const result = selectContinueReading(positions, docs);
+    expect(result).toHaveLength(1);
+  });
+
+  it('drops alias position when its canonical is a different doc', () => {
+    const positions = [
+      makePosition('d1', 1, '2026-01-01T00:00:00.000Z'), // canonical
+      makePosition('d2', 2, '2026-01-02T00:00:00.000Z'), // alias → d1
+    ];
+    const docs = [makeDoc('d1', 'Book One'), makeDoc('d2', 'Book One')];
+    const decisions = [makeDecision('d1', 'd2', 'd1', 'merged')];
+
+    const result = selectContinueReading(positions, docs, decisions);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.docId).toBe('d1');
+  });
+
+  it('keeps both positions when decision is separate (no alias)', () => {
+    const positions = [
+      makePosition('d1', 1, '2026-01-01T00:00:00.000Z'),
+      makePosition('d2', 2, '2026-01-02T00:00:00.000Z'),
+    ];
+    const docs = [makeDoc('d1', 'Book One'), makeDoc('d2', 'Book One')];
+    const decisions = [makeDecision('d1', 'd2', 'd1', 'separate')];
+
+    // 'separate' — both are canonical, both should appear
+    const result = selectContinueReading(positions, docs, decisions);
+    expect(result).toHaveLength(2);
+  });
+
+  it('keeps canonical position when alias has no position', () => {
+    const positions = [
+      makePosition('d1', 5, '2026-01-05T00:00:00.000Z'),
+    ];
+    const docs = [makeDoc('d1', 'Book One'), makeDoc('d2', 'Book One')];
+    const decisions = [makeDecision('d1', 'd2', 'd1', 'merged')];
+
+    const result = selectContinueReading(positions, docs, decisions);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.docId).toBe('d1');
+  });
+
+  it('empty decisions array produces same result as no decisions', () => {
+    const positions = [makePosition('d1', 1, '2026-01-01T00:00:00.000Z')];
+    const docs = [makeDoc('d1', 'Book One')];
+
+    const withEmpty = selectContinueReading(positions, docs, []);
+    const withDefault = selectContinueReading(positions, docs);
+    expect(withEmpty).toEqual(withDefault);
   });
 });
