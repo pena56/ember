@@ -2,6 +2,7 @@
 // Clock-free: the reconciler driver owns stamping; this function is called per-entry.
 // No platform API imports; no @ember/store import.
 
+import type { PositionPolicyMode } from './conflict-policy.js';
 import type { ReadingPosition } from './reading-position.js';
 import { mergeReadingPosition } from './reading-position.js';
 import type { RemoteEntry } from './sync-transport.js';
@@ -28,8 +29,14 @@ export type PullDecision =
 export function applyPull(
   local: Record<string, unknown> | undefined,
   incoming: RemoteEntry,
+  policy: PositionPolicyMode = 'furthest',
 ): PullDecision {
   if (incoming.collection === READING_POSITIONS) {
+    if (policy === 'latest') {
+      // Latest-write-wins: fall through to LWW (no furthest-page protection, never emits 'correct').
+      return applyLww(local, incoming);
+    }
+    // Default ('furthest'): behaviour is byte-identical to the original implementation.
     return applyReadingPosition(local, incoming);
   }
   return applyLww(local, incoming);

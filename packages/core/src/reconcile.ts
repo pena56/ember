@@ -6,6 +6,8 @@
 // Invariant #5: all merge logic lives in applyPull, not here.
 
 import { applyPull } from './apply-pull.js';
+import { CONFLICT_POLICY_COLLECTION, GLOBAL_POLICY_ID, resolvePositionPolicy } from './conflict-policy.js';
+import type { ConflictPolicy } from './conflict-policy.js';
 import { parse } from './hlc.js';
 import { makeOutboxEntry } from './outbox.js';
 import { makeReadingPosition } from './reading-position.js';
@@ -70,7 +72,22 @@ export async function reconcile(deps: ReconcileDeps): Promise<ReconcileResult> {
       clock.receive(parse(e.hlc));
 
       const local = await store.get<{ id: string; updatedAt?: string }>(e.collection, e.recordId);
-      const decision = applyPull(local, e);
+
+      // For reading-positions, resolve the per-file/global conflict policy (invariant #5).
+      // SyncStore has no list/query method, so we read the two possible policy records directly.
+      // Default path (no policy records) resolves to 'furthest' — all 12b tests pass unchanged.
+      let decision;
+      if (e.collection === READING_POSITIONS_COLLECTION) {
+        const globalPolicy = await store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, GLOBAL_POLICY_ID);
+        const perFilePolicy = await store.get<ConflictPolicy>(CONFLICT_POLICY_COLLECTION, e.recordId);
+        const policyArr: ConflictPolicy[] = [];
+        if (globalPolicy) policyArr.push(globalPolicy);
+        if (perFilePolicy) policyArr.push(perFilePolicy);
+        const mode = resolvePositionPolicy(policyArr, e.recordId);
+        decision = applyPull(local, e, mode);
+      } else {
+        decision = applyPull(local, e);
+      }
 
       switch (decision.kind) {
         case 'put':

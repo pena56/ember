@@ -236,6 +236,23 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 14a SPECCED + DISPATCHED-READY (2026-06-26) — Issue #119 (umbrella #14, first slice), branch
+  feat/119-core-conflict-merge-engine, spec specs/14a-core-conflict-merge-engine.md. Route standard**
+  (one boundary `packages/core`, pure TS, no new dep, no UI; new syncable collections ride 12a's generic
+  `push`/`pull` — no store/convex change). Umbrella **#14 (Conflict-resolution UI + claim merge) SCORED
+  COMPLEX → split by boundary** like 03/04/11/12/13: **14a** core conflict engine → **14b** web conflict UI
+  → **14c** mobile conflict UI (device-bound). **Product forks resolved with user (2026-06-26):** (1)
+  conflict trigger = **near-duplicate detection** (different SHA + equal normalized title + byte size in
+  band; identical bytes already auto-merge per #5); (2) account claim = **review-before-commit** (14a ships
+  a pure planner, not an auto-fold); (3) **14 = engine + inline prompts** — the global/per-file policy
+  **settings screen defers to unit 17**. 14a deliverables (all `packages/core/src`, pure): `duplicate-detection.ts`
+  (`normalizeTitle`/`detectDuplicates`), `duplicate-decision.ts` (syncable `duplicate-decisions` record +
+  `resolveCanonicalId` chain-resolver), `conflict-policy.ts` (syncable `conflict-policy` record `furthest|latest`,
+  global + per-doc) + a backward-compatible 3rd `policy` arg on `applyPull` (defaults `'furthest'` ⇒ all 12b
+  tests unchanged) wired via `reconcile.ts`, `claim-merge.ts` (`planClaimMerge` → review payload). No new dep,
+  no deploy gate. Dispatch: Sonnet TDD executor → fresh-context Opus reviewer (verify #5/#2/#1 + no store/convex
+  change + applyPull default-furthest unchanged) → PR "Closes #119". Deferred to 14b/14c: inline duplicate
+  prompt, claim-review screen, policy-aware library/reader wiring. <!-- prior MERGED note retained below -->
 - **🎉 UMBRELLA #13 COMPLETE (2026-06-26) — encrypted cross-device blob sync wired end-to-end across all three layers:
   13a Convex file-storage server → 13b core blob-sync engine → 13c web wiring → 13d mobile wiring. All four slices
   merged; umbrella issue #13 CLOSED.** Client-side symmetric (non-ZK) encryption at rest, eager background download,
