@@ -1,5 +1,5 @@
-import type { Annotation, AnnotationKind, BlobStatus, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { BLOB_SYNC_COLLECTION, editAnnotation, makeAnnotation } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, editAnnotation, makeAnnotation, makeDuplicateDecision, makeOutboxEntry } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
 import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
@@ -58,6 +58,19 @@ export interface WebStore {
    * Used by the library UI to show per-row sync badges.
    */
   listBlobStatuses(): Promise<BlobStatus[]>;
+  /** Return all persisted duplicate decisions (read-only). */
+  listDuplicateDecisions(): Promise<DuplicateDecision[]>;
+  /**
+   * Persist a duplicate-pair decision. Writes exactly one record + one
+   * HLC-stamped outbox entry (invariant #2). The pair key is order-independent
+   * so concurrent cross-device decisions LWW-converge.
+   */
+  saveDuplicateDecision(input: {
+    aId: string;
+    bId: string;
+    canonicalId: string;
+    decision: 'merged' | 'separate';
+  }): Promise<DuplicateDecision>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -193,6 +206,32 @@ export function createWebStore(deps: {
 
     async listBlobStatuses(): Promise<BlobStatus[]> {
       return repo.query<BlobStatus>(BLOB_SYNC_COLLECTION);
+    },
+
+    async listDuplicateDecisions(): Promise<DuplicateDecision[]> {
+      return repo.query<DuplicateDecision>(DUPLICATE_DECISIONS_COLLECTION);
+    },
+
+    async saveDuplicateDecision(input: {
+      aId: string;
+      bId: string;
+      canonicalId: string;
+      decision: 'merged' | 'separate';
+    }): Promise<DuplicateDecision> {
+      const hlc = clock.nextStamp();
+      const rec = makeDuplicateDecision({ ...input, hlc });
+      await repo.put(DUPLICATE_DECISIONS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: DUPLICATE_DECISIONS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
     },
   };
 }

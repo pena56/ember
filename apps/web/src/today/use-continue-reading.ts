@@ -32,12 +32,13 @@ export function useContinueReading(): ContinueReadingState {
     async function load() {
       setLoading(true);
       try {
-        const [positions, documents] = await Promise.all([
+        const [positions, documents, decisions] = await Promise.all([
           store.listReadingPositions(),
           store.listDocuments(),
+          store.listDuplicateDecisions(),
         ]);
         if (!cancelled) {
-          setItems(selectContinueReading(positions, documents));
+          setItems(selectContinueReading(positions, documents, decisions));
         }
       } catch {
         // Swallow read errors — return empty, never crash Today (invariant #1)

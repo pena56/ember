@@ -1,6 +1,8 @@
 import { DocumentRow } from './document-row.js';
+import { DuplicatePrompt } from './duplicate-prompt.js';
 import { ImportDropzone } from './import-dropzone.js';
 import { StorageMeter } from './storage-meter.js';
+import { useDuplicates } from './use-duplicates.js';
 import { useLibrary } from './use-library.js';
 import type { DocumentWithSync } from './use-library.js';
 
@@ -90,6 +92,7 @@ interface LibraryPageProps {
 
 export function LibraryPage({ onOpen, onRetrySync }: LibraryPageProps = {}) {
   const { documents, loading, importFiles } = useLibrary();
+  const { current, currentDocs, defaultCanonicalId, merge, keepSeparate, dismiss } = useDuplicates();
 
   return (
     <div className="flex flex-col gap-6 mx-auto w-full max-w-2xl px-6 py-8">
@@ -110,6 +113,18 @@ export function LibraryPage({ onOpen, onRetrySync }: LibraryPageProps = {}) {
 
         {/* Import dropzone */}
         <ImportDropzone onFiles={(files) => { void importFiles(files); }} disabled={loading} />
+
+        {/* Duplicate prompt — shown when an undecided pair exists, one at a time */}
+        {current !== undefined && currentDocs !== undefined && defaultCanonicalId !== undefined && (
+          <DuplicatePrompt
+            pair={current}
+            docs={currentDocs}
+            defaultCanonicalId={defaultCanonicalId}
+            onMerge={(canonicalId) => { void merge(current, canonicalId); }}
+            onKeepSeparate={() => { void keepSeparate(current); }}
+            onDismiss={() => { dismiss(current); }}
+          />
+        )}
 
         {/* Document list / empty state */}
         {loading && documents.length === 0 ? (
