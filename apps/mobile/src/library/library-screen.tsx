@@ -12,9 +12,11 @@ import type { ThemePreference } from '../theme/resolve-app-theme.js';
 import { useTheme } from '../theme/use-theme.js';
 
 import { DocumentRow } from './document-row.js';
+import { DuplicatePrompt } from './duplicate-prompt.js';
 import { EmberFlame } from './ember-flame.js';
 import { ImportCard } from './import-card.js';
 import { StorageMeter } from './storage-meter.js';
+import { useDuplicates } from './use-duplicates.js';
 import type { DocumentWithSync } from './use-library.js';
 import { useLibrary } from './use-library.js';
 
@@ -108,6 +110,14 @@ function EmptyState() {
 export function LibraryScreen() {
   const { documents, loading, pickAndImport } = useLibrary();
   const { retryDeferred } = useBlobSyncContext();
+  const {
+    current: currentPair,
+    currentDocs,
+    defaultCanonicalId,
+    merge,
+    keepSeparate,
+    dismiss,
+  } = useDuplicates();
   // Token-driven spinner tint (invariant #6) — resolved through uniwind, re-themes with light/dark.
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
@@ -182,6 +192,18 @@ export function LibraryScreen() {
 
               {/* Import card */}
               <ImportCard onPickPdf={() => { void pickAndImport(); }} disabled={loading} />
+
+              {/* Duplicate prompt — shown when an undecided pair exists (below ImportCard) */}
+              {currentPair !== undefined && currentDocs !== undefined && defaultCanonicalId !== undefined && (
+                <DuplicatePrompt
+                  pair={currentPair}
+                  docs={currentDocs}
+                  defaultCanonicalId={defaultCanonicalId}
+                  onMerge={(canonicalId) => { void merge(currentPair, canonicalId); }}
+                  onKeepSeparate={() => { void keepSeparate(currentPair); }}
+                  onDismiss={() => { dismiss(currentPair); }}
+                />
+              )}
 
               {/* Storage quota meter — hidden when unauthenticated / loading */}
               {convex !== null && <StorageMeter />}

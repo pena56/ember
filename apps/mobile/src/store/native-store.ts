@@ -1,5 +1,5 @@
-import type { Annotation, AnnotationKind, BlobStatus, Document, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { BLOB_SYNC_COLLECTION, editAnnotation, makeAnnotation } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, editAnnotation, makeAnnotation, makeDuplicateDecision, makeOutboxEntry } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
 import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
@@ -99,6 +99,22 @@ export interface NativeStore {
    * entry is ever written by this method.
    */
   listBlobStatuses(): Promise<BlobStatus[]>;
+  /** Return all persisted duplicate decisions (read-only). */
+  listDuplicateDecisions(): Promise<DuplicateDecision[]>;
+  /**
+   * Persist a duplicate-pair decision. Writes exactly one record + one
+   * HLC-stamped outbox entry (invariant #2). ONE nextStamp() call shared by
+   * makeDuplicateDecision (updatedAt) and makeOutboxEntry (hlc) — same raw
+   * stamp, not pre-encoded (invariant #2: entry.hlc === payload.updatedAt).
+   * The pair key is order-independent so concurrent cross-device decisions
+   * LWW-converge. Mirrors web-store's saveDuplicateDecision exactly.
+   */
+  saveDuplicateDecision(input: {
+    aId: string;
+    bId: string;
+    canonicalId: string;
+    decision: 'merged' | 'separate';
+  }): Promise<DuplicateDecision>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -235,6 +251,35 @@ export function createNativeStore(deps: {
       // (invariant #2). These records are written by the blob-sync scheduler via
       // repo.put/delete — this method only reads them back for the library UI.
       return repo.query<BlobStatus>(BLOB_SYNC_COLLECTION);
+    },
+
+    async listDuplicateDecisions(): Promise<DuplicateDecision[]> {
+      return repo.query<DuplicateDecision>(DUPLICATE_DECISIONS_COLLECTION);
+    },
+
+    async saveDuplicateDecision(input: {
+      aId: string;
+      bId: string;
+      canonicalId: string;
+      decision: 'merged' | 'separate';
+    }): Promise<DuplicateDecision> {
+      // ONE nextStamp() call shared by makeDuplicateDecision (updatedAt) and
+      // makeOutboxEntry (hlc). Do NOT pre-encode — pass the raw Hlc to both
+      // so entry.hlc === payload.updatedAt (invariant #2).
+      const hlc = clock.nextStamp();
+      const rec = makeDuplicateDecision({ ...input, hlc });
+      await repo.put(DUPLICATE_DECISIONS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: DUPLICATE_DECISIONS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
     },
   };
 }
