@@ -236,6 +236,16 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16a BUILT + IN REVIEW → PR #132 "Closes #131" (2026-06-28) — Issue #131 (umbrella #16, first
+  slice), branch feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md.** Standard
+  route ran fully: Sonnet TDD executor built `packages/core/src/notification.ts` (planNotifications →
+  {candidates, selected} + learnBestHour + NotificationConfig) + 18 tests → fresh-context Opus review =
+  **APPROVE-WITH-NITS, no blockers** (purity #1, spec fidelity, both tz signs hand-checked, #7 dedupeKey,
+  boundary all confirmed file:line). Applied the one substantive nit: a mislabeled lapse-only test now
+  pushes best-time out of the quiet window so lapse-reengage is the genuine sole survivor + asserts its
+  type. Gates: **typecheck 9 · core test 450 (+18) · lint 6**; pushed, CI `verify` pending. No store/
+  convex/apps change, no new dep. **Next on merge: 16b — Convex scheduled push + delivery ledger +
+  primary-device election (invariant #7), keyed on 16a's `dedupeKey`.** <!-- 16a SPEC note retained below -->
 - **Unit 16a SPECCED + DISPATCH-READY (2026-06-28) — Issue #131 (umbrella #16, first slice), branch
   feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md. Route standard** (one
   boundary `packages/core`, pure TS, no new dep, no UI; no store/convex/apps change — no syncable record
