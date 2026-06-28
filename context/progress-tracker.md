@@ -236,6 +236,17 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 15b SPECCED + DISPATCH-READY (2026-06-28) — Issue #127 (umbrella #15, slice 2), branch
+  feat/127-web-library-tags-smart-views, spec specs/15b-web-library-tags-smart-views.md. Route standard**
+  (one logic boundary `apps/web`; consumes 15a's merged pure model — adds NO core logic; writes
+  `tags`/`doc-tags`/`smart-views` via the inline put+enqueue path like `saveDuplicateDecision`, reads via
+  `evaluateSmartView` — invariant #5; rides 12a push/pull, no store/convex change). **UI unit →
+  frontend-design + impeccable before code-review.** Plus a small shared `--color-tag-*` token addition in
+  `packages/tokens` (theme.css + theme.uniwind.css), forward-shared to 15c. **Product forks resolved with
+  user (2026-06-28):** (1) smart-view nav = **horizontal filter bar** (pills above the centered list), not a
+  left sidebar; (2) tag mgmt = create · tag/untag · rename · recolor · **delete** (tombstone; doc-tags and
+  smart-view tagIds referencing a deleted tag go inert at resolve-time — lazy, convergent, no fan-out).
+  Next: dispatch (Sonnet TDD executor → fresh-context Opus review → PR `Closes #127`). <!-- 15a note below for trail -->
 - **Unit 15a MERGED (2026-06-28) — PR #126 (squash `fe8c89a`, branch deleted), Issue #125 CLOSED; CI `verify`
   green on head. FIRST slice of umbrella #15 done — pure core tags + smart-views model.** Standard route ran
   fully: Sonnet TDD executor built all
