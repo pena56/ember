@@ -15,3 +15,7 @@
    included here defensively so that if the mapping ever becomes dynamic they still emit.
    Token-driven only (invariant #6). */
 @source inline("bg-highlight-yellow bg-highlight-green bg-highlight-blue bg-highlight-pink");
+/* 15c: Tag colors — applied via the dynamic TAG_BG[color] map (tag-colors.ts), so the
+   content scan can't see the literal class; force-emit like the highlight swatches above.
+   Token-driven only (invariant #6) — these surface the existing --color-tag-* tokens. */
+@source inline("bg-tag-gray bg-tag-red bg-tag-amber bg-tag-green bg-tag-blue bg-tag-purple");
