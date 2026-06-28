@@ -20,3 +20,6 @@ export * from './duplicate-detection.js';
 export * from './duplicate-decision.js';
 export * from './conflict-policy.js';
 export * from './claim-merge.js';
+export * from './tag.js';
+export * from './doc-tag.js';
+export * from './smart-view.js';
