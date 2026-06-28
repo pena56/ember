@@ -1,7 +1,10 @@
-import type { Document } from '@ember/core';
+import { PlusIcon } from 'lucide-react';
+
+import type { Document, Tag, TagColor } from '@ember/core';
 
 import { formatBytes } from '../store/format-bytes.js';
 
+import { TagPicker } from './tag-picker.js';
 import type { SyncState } from './use-library.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -11,6 +14,32 @@ interface DocumentRowProps {
   onOpen: (id: string) => void;
   /** Called when the user taps "Try again" on an over-quota deferred row. */
   onRetrySync?: () => void;
+  // ── Tag props (15b) — optional so existing tests compile without changes ──
+  tags?: Tag[];
+  /** The doc's resolved (live) tags — already joined against the live tag set. */
+  appliedTags?: Tag[];
+  onTagDoc?: (tagId: string) => Promise<void>;
+  onUntagDoc?: (tagId: string) => Promise<void>;
+  onCreateTag?: (name: string, color: TagColor) => Promise<void>;
+  onEditTag?: (tag: Tag, patch: { name?: string; color?: TagColor }) => Promise<void>;
+  onDeleteTag?: (tag: Tag) => Promise<void>;
+  /** When clicking a tag chip, set the active view to filter by that tag. */
+  onTagClick?: (tagId: string) => void;
+}
+
+// ── Tag color utility ─────────────────────────────────────────────────────────
+
+const TAG_BG: Record<string, string> = {
+  gray:   'bg-tag-gray',
+  red:    'bg-tag-red',
+  amber:  'bg-tag-amber',
+  green:  'bg-tag-green',
+  blue:   'bg-tag-blue',
+  purple: 'bg-tag-purple',
+};
+
+function tagColorClass(color: string): string {
+  return TAG_BG[color] ?? TAG_BG['gray']!;
 }
 
 // ── PDF page icon ─────────────────────────────────────────────────────────────
@@ -57,7 +86,6 @@ function SyncBadge({
   onRetrySync?: () => void;
 }) {
   if (syncState === 'synced') {
-    // Subtle — no alarming badge; just a calm indicator
     return null;
   }
 
@@ -108,19 +136,137 @@ function SyncBadge({
   return null;
 }
 
+// ── Tag chips ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tag chip strip — rendered inside the pointer-events-none layer.
+ * Each chip's × and the add-tag trigger are pointer-events-auto + stopPropagation
+ * so they don't bubble to the full-row open <button> beneath.
+ */
+function TagChips({
+  appliedTags,
+  allTags,
+  onUntagDoc,
+  onTagDoc,
+  onCreateTag,
+  onEditTag,
+  onDeleteTag,
+  onTagClick,
+}: {
+  appliedTags: Tag[];
+  allTags: Tag[];
+  onUntagDoc: (tagId: string) => Promise<void>;
+  onTagDoc: (tagId: string) => Promise<void>;
+  onCreateTag: (name: string, color: TagColor) => Promise<void>;
+  onEditTag: (tag: Tag, patch: { name?: string; color?: TagColor }) => Promise<void>;
+  onDeleteTag: (tag: Tag) => Promise<void>;
+  onTagClick?: (tagId: string) => void;
+}) {
+  const appliedIds = new Set(appliedTags.map((t) => t.id));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      {appliedTags.map((tag) => (
+        <span
+          key={tag.id}
+          className="pointer-events-auto flex items-center gap-0.5"
+        >
+          {/* Chip body — primary click sets the active filter view */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTagClick?.(tag.id);
+            }}
+            className={[
+              'flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-xs font-medium text-text leading-tight',
+              tagColorClass(tag.color),
+              'hover:opacity-80 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+            ].join(' ')}
+          >
+            {tag.name}
+          </button>
+          {/* Remove × — independent interactive control */}
+          <button
+            type="button"
+            aria-label={`Remove tag ${tag.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void onUntagDoc(tag.id);
+            }}
+            className={[
+              'pointer-events-auto flex items-center justify-center w-3.5 h-3.5 rounded-full text-text-muted hover:text-text hover:bg-line',
+              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+              '-ml-1',
+            ].join(' ')}
+          >
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+              <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </span>
+      ))}
+
+      {/* Add-tag trigger — pointer-events-auto, opens TagPicker */}
+      <span className="pointer-events-auto">
+        <TagPicker
+          tags={allTags}
+          appliedTagIds={appliedIds}
+          onTagDoc={onTagDoc}
+          onUntagDoc={onUntagDoc}
+          onCreateTag={onCreateTag}
+          onEditTag={onEditTag}
+          onDeleteTag={onDeleteTag}
+        >
+          <button
+            type="button"
+            aria-label="Add tag"
+            onClick={(e) => { e.stopPropagation(); }}
+            className={[
+              'flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-line text-text-muted',
+              'hover:border-accent/50 hover:text-accent transition-colors',
+              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+            ].join(' ')}
+          >
+            <PlusIcon className="size-3" aria-hidden="true" />
+          </button>
+        </TagPicker>
+      </span>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DocumentRow({ document: doc, onOpen, onRetrySync }: DocumentRowProps) {
+export function DocumentRow({
+  document: doc,
+  onOpen,
+  onRetrySync,
+  tags = [],
+  appliedTags = [],
+  onTagDoc,
+  onUntagDoc,
+  onCreateTag,
+  onEditTag,
+  onDeleteTag,
+  onTagClick,
+}: DocumentRowProps) {
   const syncState = doc.syncState;
+  const hasTagHandlers =
+    onTagDoc !== undefined &&
+    onUntagDoc !== undefined &&
+    onCreateTag !== undefined &&
+    onEditTag !== undefined &&
+    onDeleteTag !== undefined;
 
   return (
     <li className="relative">
       {/*
         Full-row open affordance as a base layer. The visible content sits in a
         sibling layer above with pointer-events-none, so the whole row stays
-        clickable to open — while the over-quota "Try again" control re-enables
-        its own pointer events. This avoids nesting an interactive button inside
-        the row button (invalid HTML / a11y).
+        clickable to open — while interactive tag controls re-enable their own
+        pointer events. This avoids nesting an interactive button inside the row
+        button (invalid HTML / a11y).
       */}
       <button
         type="button"
@@ -133,10 +279,10 @@ export function DocumentRow({ document: doc, onOpen, onRetrySync }: DocumentRowP
         ].join(' ')}
       />
 
-      <div className="pointer-events-none relative flex items-center gap-4 px-5 py-4">
+      <div className="pointer-events-none relative flex items-start gap-4 px-5 py-4">
         <PdfIcon />
 
-        <div className="flex flex-col gap-1 min-w-0 flex-1">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           <span className="font-serif text-base font-medium text-text leading-snug truncate">
             {doc.title}
           </span>
@@ -147,6 +293,20 @@ export function DocumentRow({ document: doc, onOpen, onRetrySync }: DocumentRowP
             <span className="mx-1.5 opacity-40">·</span>
             {formatDate(doc.importedAt)}
           </span>
+
+          {/* Tag chips — only rendered when tag handlers are wired */}
+          {hasTagHandlers && (
+            <TagChips
+              appliedTags={appliedTags}
+              allTags={tags}
+              onTagDoc={onTagDoc!}
+              onUntagDoc={onUntagDoc!}
+              onCreateTag={onCreateTag!}
+              onEditTag={onEditTag!}
+              onDeleteTag={onDeleteTag!}
+              {...(onTagClick !== undefined ? { onTagClick } : {})}
+            />
+          )}
         </div>
 
         {/* Sync badge — warm, reassuring copy; never alarming */}
@@ -164,7 +324,7 @@ export function DocumentRow({ document: doc, onOpen, onRetrySync }: DocumentRowP
           viewBox="0 0 16 16"
           fill="none"
           aria-hidden="true"
-          className="shrink-0 text-text-muted opacity-50"
+          className="shrink-0 text-text-muted opacity-50 mt-0.5"
         >
           <path
             d="M6 4L10 8L6 12"

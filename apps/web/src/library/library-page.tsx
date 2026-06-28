@@ -1,9 +1,14 @@
+import type { Tag, TagColor } from '@ember/core';
+
+import { useWebStore } from '../store/store-context.js';
+
 import { DocumentRow } from './document-row.js';
 import { DuplicatePrompt } from './duplicate-prompt.js';
 import { ImportDropzone } from './import-dropzone.js';
+import { SmartViewBar, isAdHocTagFilter } from './smart-view-bar.js';
 import { StorageMeter } from './storage-meter.js';
 import { useDuplicates } from './use-duplicates.js';
-import { useLibrary } from './use-library.js';
+import { useLibraryTags } from './use-library-tags.js';
 import type { DocumentWithSync } from './use-library.js';
 
 // ── Empty state ───────────────────────────────────────────────────────────────
@@ -44,19 +49,53 @@ function EmptyState() {
   );
 }
 
+// ── Filtered empty state ──────────────────────────────────────────────────────
+
+function FilteredEmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-center">
+      <p className="font-serif text-base text-text-muted">
+        Nothing here yet
+      </p>
+      <p className="font-sans text-sm text-text-muted opacity-70 max-w-xs text-balance">
+        Books you tag will gather here. Try a different view, or add a tag to a book below.
+      </p>
+    </div>
+  );
+}
+
 // ── Document list ─────────────────────────────────────────────────────────────
 
 function DocumentList({
   documents,
+  totalDocCount,
   onOpen,
   onRetrySync,
+  tagHandlers,
 }: {
   documents: DocumentWithSync[];
+  totalDocCount: number;
   onOpen: (id: string) => void;
   onRetrySync: () => void;
+  tagHandlers: {
+    tags: Tag[];
+    tagsByDoc: Map<string, Tag[]>;
+    onTagDoc: (docId: string, tagId: string) => Promise<void>;
+    onUntagDoc: (docId: string, tagId: string) => Promise<void>;
+    onCreateTag: (name: string, color: TagColor) => Promise<void>;
+    onEditTag: (tag: Tag, patch: { name?: string; color?: TagColor }) => Promise<void>;
+    onDeleteTag: (tag: Tag) => Promise<void>;
+    onTagClick: (tagId: string) => void;
+  };
 }) {
-  if (documents.length === 0) {
+  // No documents at all in the library
+  if (totalDocCount === 0) {
     return <EmptyState />;
+  }
+
+  // Documents in library but none match the active filter
+  if (documents.length === 0) {
+    return <FilteredEmptyState />;
   }
 
   return (
@@ -67,6 +106,14 @@ function DocumentList({
             key={doc.id}
             document={doc}
             onOpen={onOpen}
+            tags={tagHandlers.tags}
+            appliedTags={tagHandlers.tagsByDoc.get(doc.id) ?? []}
+            onTagDoc={(tagId) => tagHandlers.onTagDoc(doc.id, tagId)}
+            onUntagDoc={(tagId) => tagHandlers.onUntagDoc(doc.id, tagId)}
+            onCreateTag={tagHandlers.onCreateTag}
+            onEditTag={tagHandlers.onEditTag}
+            onDeleteTag={tagHandlers.onDeleteTag}
+            onTagClick={tagHandlers.onTagClick}
             {...(doc.syncState === 'over-quota' && onRetrySync !== undefined
               ? { onRetrySync }
               : {})}
@@ -84,64 +131,158 @@ interface LibraryPageProps {
   onOpen?: (id: string) => void;
   /**
    * Called when the user taps "Try again" on an over-quota deferred row.
-   * Provided by App.tsx which holds the useBlobSync hook (avoids a nested
-   * useConvexAuth that would require a ConvexProvider in tests).
+   * Provided by App.tsx which holds the useBlobSync hook.
    */
   onRetrySync?: () => void;
 }
 
 export function LibraryPage({ onOpen, onRetrySync }: LibraryPageProps = {}) {
-  const { documents, loading, importFiles } = useLibrary();
+  const store = useWebStore();
+
+  const {
+    documents,
+    totalDocCount,
+    loading,
+    importFiles,
+    tags,
+    tagsByDoc,
+    smartViews,
+    activeView,
+    setActiveView,
+    refresh,
+  } = useLibraryTags();
+
   const { current, currentDocs, defaultCanonicalId, merge, keepSeparate, dismiss } = useDuplicates();
+
+  // ── Tag handlers (call store, then refresh) ────────────────────────────────
+
+  async function handleTagDoc(docId: string, tagId: string) {
+    await store.tagDoc({ documentId: docId, tagId });
+    refresh();
+  }
+
+  async function handleUntagDoc(docId: string, tagId: string) {
+    await store.untagDoc({ documentId: docId, tagId });
+    refresh();
+  }
+
+  async function handleCreateTag(name: string, color: TagColor) {
+    await store.createTag({ name, color });
+    refresh();
+  }
+
+  async function handleEditTag(tag: Tag, patch: { name?: string; color?: TagColor }) {
+    await store.editTag({ tag, patch });
+    refresh();
+  }
+
+  async function handleDeleteTag(tag: Tag) {
+    await store.deleteTag(tag.id);
+    refresh();
+  }
+
+  async function handleRenameView(view: import('@ember/core').SmartView, newName: string) {
+    await store.editSmartView({ view, patch: { name: newName } });
+    refresh();
+  }
+
+  async function handleDeleteView(view: import('@ember/core').SmartView) {
+    await store.deleteSmartView(view.id);
+    // If the deleted view was active, reset to "All"
+    if (activeView.kind === 'saved' && activeView.id === view.id) {
+      setActiveView({ kind: 'builtin', key: 'all', query: {} });
+    }
+    refresh();
+  }
+
+  async function handleSaveView(name: string) {
+    const view = await store.createSmartView({ name, query: activeView.query });
+    refresh();
+    // Switch to the newly saved view
+    setActiveView({ kind: 'saved', id: view.id, query: view.query });
+  }
+
+  function handleTagClick(tagId: string) {
+    setActiveView({
+      kind: 'builtin',
+      key: `tag:${tagId}`,
+      query: { tagIds: [tagId], tagMatch: 'any' },
+    });
+  }
+
+  // Detect ad-hoc tag filter (query has tagIds set, not a saved view)
+  const adHocFilter = isAdHocTagFilter(activeView, activeView.query);
 
   return (
     <div className="flex flex-col gap-6 mx-auto w-full max-w-2xl px-6 py-8">
-        {/* Page title */}
-        <div className="flex flex-col gap-1">
-          <h2 className="font-serif text-3xl font-semibold text-text">Library</h2>
-          {documents.length > 0 && (
-            <p className="font-sans text-sm text-text-muted">
-              {documents.length === 1
-                ? '1 book in your collection'
-                : `${documents.length.toString()} books in your collection`}
-            </p>
-          )}
+      {/* Page title */}
+      <div className="flex flex-col gap-1">
+        <h2 className="font-serif text-3xl font-semibold text-text">Library</h2>
+        {totalDocCount > 0 && (
+          <p className="font-sans text-sm text-text-muted">
+            {totalDocCount === 1
+              ? '1 book in your collection'
+              : `${totalDocCount.toString()} books in your collection`}
+          </p>
+        )}
+      </div>
+
+      {/* Quota meter — hidden while unauthenticated / loading */}
+      <StorageMeter />
+
+      {/* Import dropzone */}
+      <ImportDropzone onFiles={(files) => { void importFiles(files); }} disabled={loading} />
+
+      {/* Duplicate prompt — shown when an undecided pair exists, one at a time */}
+      {current !== undefined && currentDocs !== undefined && defaultCanonicalId !== undefined && (
+        <DuplicatePrompt
+          pair={current}
+          docs={currentDocs}
+          defaultCanonicalId={defaultCanonicalId}
+          onMerge={(canonicalId) => { void merge(current, canonicalId); }}
+          onKeepSeparate={() => { void keepSeparate(current); }}
+          onDismiss={() => { dismiss(current); }}
+        />
+      )}
+
+      {/* Smart-view filter bar */}
+      <SmartViewBar
+        smartViews={smartViews}
+        activeView={activeView}
+        onSelectView={setActiveView}
+        isAdHocTagFilter={adHocFilter}
+        onRenameView={handleRenameView}
+        onDeleteView={handleDeleteView}
+        onSaveView={handleSaveView}
+      />
+
+      {/* Document list / empty state */}
+      {loading && documents.length === 0 ? (
+        <div
+          className="flex items-center justify-center py-16"
+          role="status"
+          aria-label="Loading your library"
+        >
+          <div className="w-5 h-5 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
         </div>
-
-        {/* Quota meter — hidden while unauthenticated / loading */}
-        <StorageMeter />
-
-        {/* Import dropzone */}
-        <ImportDropzone onFiles={(files) => { void importFiles(files); }} disabled={loading} />
-
-        {/* Duplicate prompt — shown when an undecided pair exists, one at a time */}
-        {current !== undefined && currentDocs !== undefined && defaultCanonicalId !== undefined && (
-          <DuplicatePrompt
-            pair={current}
-            docs={currentDocs}
-            defaultCanonicalId={defaultCanonicalId}
-            onMerge={(canonicalId) => { void merge(current, canonicalId); }}
-            onKeepSeparate={() => { void keepSeparate(current); }}
-            onDismiss={() => { dismiss(current); }}
-          />
-        )}
-
-        {/* Document list / empty state */}
-        {loading && documents.length === 0 ? (
-          <div
-            className="flex items-center justify-center py-16"
-            role="status"
-            aria-label="Loading your library"
-          >
-            <div className="w-5 h-5 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
-          </div>
-        ) : (
-          <DocumentList
-            documents={documents}
-            onOpen={onOpen ?? (() => undefined)}
-            onRetrySync={onRetrySync ?? (() => undefined)}
-          />
-        )}
+      ) : (
+        <DocumentList
+          documents={documents}
+          totalDocCount={totalDocCount}
+          onOpen={onOpen ?? (() => undefined)}
+          onRetrySync={onRetrySync ?? (() => undefined)}
+          tagHandlers={{
+            tags,
+            tagsByDoc,
+            onTagDoc: handleTagDoc,
+            onUntagDoc: handleUntagDoc,
+            onCreateTag: handleCreateTag,
+            onEditTag: handleEditTag,
+            onDeleteTag: handleDeleteTag,
+            onTagClick: handleTagClick,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -142,6 +142,17 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     listBlobStatuses: () => Promise.resolve([]),
     listDuplicateDecisions: () => Promise.resolve([]),
     saveDuplicateDecision: notUsed('saveDuplicateDecision') as WebStore['saveDuplicateDecision'],
+    listTags: () => Promise.resolve([]),
+    listDocTags: () => Promise.resolve([]),
+    listSmartViews: () => Promise.resolve([]),
+    createTag: notUsed('createTag') as WebStore['createTag'],
+    editTag: notUsed('editTag') as WebStore['editTag'],
+    deleteTag: notUsed('deleteTag') as WebStore['deleteTag'],
+    tagDoc: notUsed('tagDoc') as WebStore['tagDoc'],
+    untagDoc: notUsed('untagDoc') as WebStore['untagDoc'],
+    createSmartView: notUsed('createSmartView') as WebStore['createSmartView'],
+    editSmartView: notUsed('editSmartView') as WebStore['editSmartView'],
+    deleteSmartView: notUsed('deleteSmartView') as WebStore['deleteSmartView'],
   };
 }
 
