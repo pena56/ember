@@ -36,6 +36,15 @@
   --color-highlight-green:  #9fc08a;
   --color-highlight-blue:   #93b7d4;
   --color-highlight-pink:   #e3a7be;
+
+  /* ── Tag colors (theme-independent — warm, muted palette; 15b/15c) ── */
+  /* One semantic var per TagColor; dark-mode foreground ink stays dark (same as on-accent rationale). */
+  --color-tag-gray:   #d4cdc4;
+  --color-tag-red:    #e8b4a8;
+  --color-tag-amber:  #e8cea0;
+  --color-tag-green:  #aac9a0;
+  --color-tag-blue:   #a0bdd4;
+  --color-tag-purple: #c4add4;
   /* Blend mode the highlight tint composites with against the page. `multiply` darkens the
      hue into light paper/sepia (ink reads through); flipped to `screen` on the dark night
      surface so the same palette lightens and stays legible. Only the blend varies per reader

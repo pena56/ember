@@ -21,6 +21,13 @@
   --color-highlight-green:  #9fc08a;
   --color-highlight-blue:   #93b7d4;
   --color-highlight-pink:   #e3a7be;
+  /* ── Tag colors (theme-independent — warm, muted palette; 15b/15c) ── */
+  --color-tag-gray:   #d4cdc4;
+  --color-tag-red:    #e8b4a8;
+  --color-tag-amber:  #e8cea0;
+  --color-tag-green:  #aac9a0;
+  --color-tag-blue:   #a0bdd4;
+  --color-tag-purple: #c4add4;
   --font-serif: 'Fraunces Variable', 'Fraunces', serif;
   --font-sans:  'Inter', sans-serif;
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
