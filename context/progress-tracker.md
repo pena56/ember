@@ -236,8 +236,9 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 15a BUILT + REVIEWED APPROVE → PR open (2026-06-28) — Issue #125 (umbrella #15, first slice), branch
-  feat/125-core-tags-smart-views, PR "Closes #125".** Standard route ran fully: Sonnet TDD executor built all
+- **Unit 15a MERGED (2026-06-28) — PR #126 (squash `fe8c89a`, branch deleted), Issue #125 CLOSED; CI `verify`
+  green on head. FIRST slice of umbrella #15 done — pure core tags + smart-views model.** Standard route ran
+  fully: Sonnet TDD executor built all
   three modules + tests (hit a session limit before reporting gates) → I independently finished verification +
   fixed 4 trivial gate issues the executor didn't reach (3× `exactOptionalPropertyTypes` explicit-`undefined`
   in test fixtures/`deriveReadingState` call → omit-the-prop; import-order autofix) → fresh-context Opus review =
@@ -248,9 +249,12 @@ Update after every meaningful change.
   tagDedupeKey + TagColor palette), `doc-tag.ts` (deterministic `docTagId`=`${docId}:${tagId}`, union-merge
   inherent), `smart-view.ts` (SmartView + SmartViewQuery + BUILT_IN_SMART_VIEWS constants + pure
   `deriveReadingState` + `evaluateSmartView`), barrel. Final green: **typecheck 9 · core test 407 (18 files,
-  +72: tag 24 / doc-tag 10 / smart-view 52) · web 372 · lint 6.** No new dep, no store/convex/apps change,
-  no deploy gate. **Next:** await CI `verify` on head → merge → 15b (web Library tagging + smart-view UI; UI
-  unit → frontend-design + impeccable). <!-- 15a SPEC note retained below for trail -->
+  +72: tag 24 / doc-tag 10 / smart-view 52) · web 372 · lint 6.** Three new syncable collections (`tags`/
+  `doc-tags`/`smart-views`) ride 12a's generic push/pull — no store/convex/apps change, no new dep, no deploy
+  gate. **Next: 15b (web Library tagging + smart-view UI) — drives 15a's evaluator inside `apps/web`; writes
+  tag/link/view records through the outbox. UI unit → frontend-design + impeccable before review.** (Remaining
+  umbrella backlog: #15 (15b/15c left), #16 notifications, #17 settings, + two deferred claim-review client
+  units.) <!-- 15a SPEC note retained below for trail -->
 - **Unit 15a SPECCED + DISPATCH-READY (2026-06-27) — Issue #125 (umbrella #15, first slice), branch
   feat/125-core-tags-smart-views, spec specs/15a-core-tags-smart-views.md. Route standard** (one boundary
   `packages/core`, pure TS, no new dep, no UI; three new syncable collections ride 12a's generic push/pull —
