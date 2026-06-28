@@ -89,6 +89,13 @@ Adopt the stack's official/recommended configs rather than hand-rolled rules. Fl
    `packages/core/` — clients never invent their own merge logic.
 6. Design tokens are defined once (semantic tokens) and consumed by both clients; no
    hardcoded colors/spacing in components.
+   - **Mobile (uniwind/Tailwind v4) corollary:** any token utility applied through a
+     *dynamic index* (e.g. `MAP[color]` like `SWATCH_CLASS`/`TAG_BG`) is invisible to the
+     content scan and gets tree-shaken — the element renders with no fill. Every such class
+     must be force-emitted via `@source inline("…")` in `apps/mobile/global.css` (precedents:
+     `bg-highlight-*` 10d, `bg-streak-*` 08c, `bg-tag-*` 15c). This is a build-config gap that
+     headless tests cannot catch — it surfaces only in **device-bound acceptance**, so any new
+     dynamically-indexed token class needs both the safelist map *and* the `@source inline` line.
 7. A given (notification-type, local-day) fires on at most one device — enforced by
    primary-device election + server delivery ledger.
 
