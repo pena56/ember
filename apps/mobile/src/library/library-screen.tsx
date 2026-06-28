@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ColorValue } from 'react-native';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ import type { Document } from '@ember/core';
 
 import { AccountButton } from '../auth/account-button.js';
 import { convex } from '../convex/convex-client.js';
+import { useNativeStore } from '../store/store-context.js';
 import { useBlobSyncContext } from '../sync/blob-sync-context.js';
 import type { ThemePreference } from '../theme/resolve-app-theme.js';
 import { useTheme } from '../theme/use-theme.js';
@@ -15,10 +17,12 @@ import { DocumentRow } from './document-row.js';
 import { DuplicatePrompt } from './duplicate-prompt.js';
 import { EmberFlame } from './ember-flame.js';
 import { ImportCard } from './import-card.js';
+import { SmartViewBar } from './smart-view-bar.js';
 import { StorageMeter } from './storage-meter.js';
+import { TagPicker } from './tag-picker.js';
 import { useDuplicates } from './use-duplicates.js';
+import { DEFAULT_VIEW, useLibraryTags } from './use-library-tags.js';
 import type { DocumentWithSync } from './use-library.js';
-import { useLibrary } from './use-library.js';
 
 // ── Theme control ─────────────────────────────────────────────────────────────
 
@@ -99,6 +103,23 @@ function EmptyState() {
   );
 }
 
+// ── Filtered empty state ──────────────────────────────────────────────────────
+
+function FilteredEmptyState() {
+  return (
+    <View className="flex-1 items-center justify-center gap-4 py-16 px-8">
+      <View className="items-center gap-2">
+        <Text className="font-serif text-lg text-text-muted text-center">
+          Nothing here yet
+        </Text>
+        <Text className="font-sans text-sm text-text-muted text-center opacity-70">
+          Books you tag will gather here.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 // ── Library screen ────────────────────────────────────────────────────────────
 
 /**
@@ -108,7 +129,18 @@ function EmptyState() {
  * retryDeferred is threaded down via BlobSyncContext (one mount, no second scheduler).
  */
 export function LibraryScreen() {
-  const { documents, loading, pickAndImport } = useLibrary();
+  const {
+    documents,
+    totalDocCount,
+    loading,
+    tags,
+    tagsByDoc,
+    smartViews,
+    activeView,
+    setActiveView,
+    pickAndImport,
+    refresh,
+  } = useLibraryTags();
   const { retryDeferred } = useBlobSyncContext();
   const {
     current: currentPair,
@@ -121,13 +153,32 @@ export function LibraryScreen() {
   // Token-driven spinner tint (invariant #6) — resolved through uniwind, re-themes with light/dark.
   const accent = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
 
+  // Tag picker state: which doc's picker is open
+  const [pickerDocId, setPickerDocId] = useState<string | null>(null);
+  const pickerDoc = pickerDocId !== null ? documents.find((d) => d.id === pickerDocId) : undefined;
+  const pickerTags = pickerDocId !== null ? (tagsByDoc.get(pickerDocId) ?? []) : [];
+
+  // We need the store for tag write operations — access via the native store hook
+  const { store } = useNativeStore();
+
   function renderRow({ item }: { item: DocumentWithSync }) {
     const onRetry =
       item.syncState === 'over-quota' ? () => { void retryDeferred(); } : undefined;
+    const docTags = tagsByDoc.get(item.id) ?? [];
+
     return (
       <DocumentRow
         document={item}
         {...(onRetry !== undefined ? { onRetrySync: onRetry } : {})}
+        tags={docTags}
+        onTagPress={(tagId) => {
+          setActiveView({ kind: 'builtin', key: `tag-${tagId}`, query: { tagIds: [tagId], tagMatch: 'any' } });
+        }}
+        onUntagDoc={(tagId) => {
+          if (!store) return;
+          void store.untagDoc({ documentId: item.id, tagId }).then(() => { refresh(); });
+        }}
+        onAddTag={() => { setPickerDocId(item.id); }}
       />
     );
   }
@@ -135,6 +186,9 @@ export function LibraryScreen() {
   function keyExtractor(item: Document) {
     return item.id;
   }
+
+  // The filtered list is empty but the library has docs → filtered-empty state
+  const isFilteredEmpty = documents.length === 0 && totalDocCount > 0;
 
   return (
     // The page background must live on a core View — uniwind's className only
@@ -157,7 +211,7 @@ export function LibraryScreen() {
       </View>
 
       {/* Content */}
-      {loading && documents.length === 0 ? (
+      {loading && totalDocCount === 0 ? (
         <View
           className="flex-1 items-center justify-center"
           accessibilityRole="none"
@@ -177,42 +231,110 @@ export function LibraryScreen() {
           renderItem={renderRow}
           contentContainerStyle={{ flexGrow: 1 }}
           ListHeaderComponent={
-            <View className="px-4 pt-6 pb-4 gap-4">
-              {/* Page title */}
-              <View className="gap-1">
+            <View className="pt-6 pb-2 gap-4">
+              {/* Page title + count */}
+              <View className="gap-1 px-4">
                 <Text className="font-serif text-3xl text-text">Library</Text>
-                {documents.length > 0 && (
+                {totalDocCount > 0 && (
                   <Text className="font-sans text-sm text-text-muted">
-                    {documents.length === 1
+                    {totalDocCount === 1
                       ? '1 book in your collection'
-                      : `${documents.length.toString()} books in your collection`}
+                      : `${totalDocCount.toString()} books in your collection`}
                   </Text>
                 )}
               </View>
 
+              {/* Smart-view filter bar */}
+              <SmartViewBar
+                activeView={activeView}
+                setActiveView={setActiveView}
+                savedViews={smartViews}
+                onSaveView={async (name) => {
+                  if (!store) return;
+                  await store.createSmartView({ name, query: activeView.query });
+                  refresh();
+                }}
+                onRenameView={async (view, newName) => {
+                  if (!store) return;
+                  await store.editSmartView({ view, patch: { name: newName } });
+                  refresh();
+                }}
+                onDeleteView={async (id) => {
+                  if (!store) return;
+                  await store.deleteSmartView(id);
+                  // Reset to All if the deleted view was active
+                  if (activeView.kind === 'saved' && activeView.id === id) {
+                    setActiveView(DEFAULT_VIEW);
+                  }
+                  refresh();
+                }}
+              />
+
               {/* Import card */}
-              <ImportCard onPickPdf={() => { void pickAndImport(); }} disabled={loading} />
+              <View className="px-4">
+                <ImportCard onPickPdf={() => { void pickAndImport(); }} disabled={loading} />
+              </View>
 
               {/* Duplicate prompt — shown when an undecided pair exists (below ImportCard) */}
               {currentPair !== undefined && currentDocs !== undefined && defaultCanonicalId !== undefined && (
-                <DuplicatePrompt
-                  pair={currentPair}
-                  docs={currentDocs}
-                  defaultCanonicalId={defaultCanonicalId}
-                  onMerge={(canonicalId) => { void merge(currentPair, canonicalId); }}
-                  onKeepSeparate={() => { void keepSeparate(currentPair); }}
-                  onDismiss={() => { dismiss(currentPair); }}
-                />
+                <View className="px-4">
+                  <DuplicatePrompt
+                    pair={currentPair}
+                    docs={currentDocs}
+                    defaultCanonicalId={defaultCanonicalId}
+                    onMerge={(canonicalId) => { void merge(currentPair, canonicalId); }}
+                    onKeepSeparate={() => { void keepSeparate(currentPair); }}
+                    onDismiss={() => { dismiss(currentPair); }}
+                  />
+                </View>
               )}
 
               {/* Storage quota meter — hidden when unauthenticated / loading */}
-              {convex !== null && <StorageMeter />}
+              {convex !== null && <View className="px-4"><StorageMeter /></View>}
             </View>
           }
-          ListEmptyComponent={<EmptyState />}
+          ListEmptyComponent={
+            isFilteredEmpty ? <FilteredEmptyState /> : <EmptyState />
+          }
         />
       )}
       </SafeAreaView>
+
+      {/* Tag picker — opened per-row via the + add-tag button */}
+      {pickerDoc !== undefined && (
+        <TagPicker
+          visible={pickerDocId !== null}
+          onClose={() => { setPickerDocId(null); }}
+          tags={tags}
+          appliedTagIds={pickerTags.map((t) => t.id)}
+          onTagDoc={async (tagId) => {
+            if (!store || !pickerDocId) return;
+            await store.tagDoc({ documentId: pickerDocId, tagId });
+            refresh();
+          }}
+          onUntagDoc={async (tagId) => {
+            if (!store || !pickerDocId) return;
+            await store.untagDoc({ documentId: pickerDocId, tagId });
+            refresh();
+          }}
+          onCreateTag={async (name, color) => {
+            if (!store || !pickerDocId) return;
+            const tag = await store.createTag({ name, color });
+            await store.tagDoc({ documentId: pickerDocId, tagId: tag.id });
+            refresh();
+          }}
+          onEditTag={async (tag, patch) => {
+            if (!store) return;
+            await store.editTag({ tag, patch });
+            refresh();
+          }}
+          onDeleteTag={async (id) => {
+            if (!store) return;
+            await store.deleteTag(id);
+            refresh();
+          }}
+        />
+      )}
     </View>
   );
 }
