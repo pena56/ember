@@ -236,8 +236,14 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 15c SPECCED + DISPATCH-READY (2026-06-28) — Issue #129 (umbrella #15, slice 3 / LAST), branch
+- **Unit 15c IN REVIEW (2026-06-28) — PR #130, Issue #129 (umbrella #15, slice 3 / LAST), branch
   feat/129-mobile-library-tags-smart-views, spec specs/15c-mobile-library-tags-smart-views.md. Route standard.**
+  Built test-first (Sonnet executor) → fresh-context Opus review **APPROVE WITH NITS** → both Should-fixes
+  (node-env contract tests now import the real `TAG_BG`/`isAdHocTagFilter` via pure leaf modules
+  `tag-colors.ts`/`smart-view-filters.ts` — no drift) + `useMemo`/`DEFAULT_VIEW` nits applied. Gates green:
+  typecheck 9/9 · mobile test 353 · lint 6. **Umbrella #15 COMPLETE on merge.** Next: merge PR #130 when CI
+  green (device-bound acceptance per spec). <!-- spec/dispatch detail below for trail -->
+- **(specced+dispatched) Unit 15c — Issue #129, branch feat/129-mobile-library-tags-smart-views, spec specs/15c-mobile-library-tags-smart-views.md. Route standard.**
   THIRD/final slice of #15 — mobile (Expo RN / uniwind) Library tagging + smart-view UI, a **device-bound
   mirror of the merged 15b** (the 14b→14c precedent). Consumes 15a's pure model; adds NO core logic; **no
   packages/tokens change** (15b already put `--color-tag-*` in theme.uniwind.css); no store/convex change; no
