@@ -1,5 +1,5 @@
-import type { Annotation, AnnotationKind, BlobStatus, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, TextAnchor } from '@ember/core';
-import { BLOB_SYNC_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, editAnnotation, makeAnnotation, makeDuplicateDecision, makeOutboxEntry } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, DocTag, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, SmartView, SmartViewQuery, Tag, TagColor, TextAnchor } from '@ember/core';
+import { BLOB_SYNC_COLLECTION, DOC_TAGS_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, SMART_VIEWS_COLLECTION, TAGS_COLLECTION, docTagId, editAnnotation, editSmartView, editTag, makeAnnotation, makeDocTag, makeDuplicateDecision, makeOutboxEntry, makeSmartView, makeTag } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
 import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
 
@@ -115,6 +115,49 @@ export interface NativeStore {
     canonicalId: string;
     decision: 'merged' | 'separate';
   }): Promise<DuplicateDecision>;
+
+  // ── Tags (15c) ─────────────────────────────────────────────────────────────
+  /** Return all stored tags (unsorted). */
+  listTags(): Promise<Tag[]>;
+  /** Return all stored doc-tag links (unsorted). */
+  listDocTags(): Promise<DocTag[]>;
+  /** Return all stored smart views (unsorted). */
+  listSmartViews(): Promise<SmartView[]>;
+  /**
+   * Create a new tag. One HLC stamp shared by the record's updatedAt and
+   * the outbox entry (invariant #2). Color defaults to DEFAULT_TAG_COLOR.
+   */
+  createTag(input: { name: string; color?: TagColor }): Promise<Tag>;
+  /**
+   * Rename or recolor an existing tag. One HLC stamp (invariant #2).
+   */
+  editTag(input: { tag: Tag; patch: { name?: string; color?: TagColor } }): Promise<Tag>;
+  /**
+   * Delete a tag. Removes the record + enqueues one delete tombstone (invariant #2).
+   * Links and smart-view queries referencing the tag go inert at resolve-time — no fan-out.
+   */
+  deleteTag(id: string): Promise<void>;
+  /**
+   * Tag a document (create a doc-tag link). id is deterministic (docTagId).
+   * Re-tagging the same pair converges by LWW (invariant #2).
+   */
+  tagDoc(input: { documentId: string; tagId: string }): Promise<DocTag>;
+  /**
+   * Untag a document. Removes the link + enqueues a delete tombstone (invariant #2).
+   */
+  untagDoc(input: { documentId: string; tagId: string }): Promise<void>;
+  /**
+   * Create a new saved smart view. One HLC stamp (invariant #2).
+   */
+  createSmartView(input: { name: string; query: SmartViewQuery }): Promise<SmartView>;
+  /**
+   * Rename or re-query a smart view. One HLC stamp (invariant #2).
+   */
+  editSmartView(input: { view: SmartView; patch: { name?: string; query?: SmartViewQuery } }): Promise<SmartView>;
+  /**
+   * Delete a saved smart view. Removes the record + enqueues a delete tombstone (invariant #2).
+   */
+  deleteSmartView(id: string): Promise<void>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -280,6 +323,169 @@ export function createNativeStore(deps: {
         }),
       );
       return rec;
+    },
+
+    // ── Tags (15c) ─────────────────────────────────────────────────────────────
+
+    async listTags(): Promise<Tag[]> {
+      return repo.query<Tag>(TAGS_COLLECTION);
+    },
+
+    async listDocTags(): Promise<DocTag[]> {
+      return repo.query<DocTag>(DOC_TAGS_COLLECTION);
+    },
+
+    async listSmartViews(): Promise<SmartView[]> {
+      return repo.query<SmartView>(SMART_VIEWS_COLLECTION);
+    },
+
+    async createTag(input: { name: string; color?: TagColor }): Promise<Tag> {
+      // ONE nextStamp() shared by makeTag (updatedAt) and the outbox entry (hlc).
+      // Invariant #2: every create = exactly one HLC-stamped outbox put entry.
+      const hlc = clock.nextStamp();
+      const rec = makeTag(
+        {
+          id: clock.newId(),
+          name: input.name,
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          createdAt: clock.now(),
+        },
+        { hlc },
+      );
+      await repo.put(TAGS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: TAGS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
+    },
+
+    async editTag(input: { tag: Tag; patch: { name?: string; color?: TagColor } }): Promise<Tag> {
+      // ONE nextStamp() shared by editTag (updatedAt) and the outbox entry (hlc).
+      const hlc = clock.nextStamp();
+      const rec = editTag(input.tag, input.patch, { hlc });
+      await repo.put(TAGS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: TAGS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
+    },
+
+    async deleteTag(id: string): Promise<void> {
+      // Invariant #2: one delete = exactly one HLC-stamped delete tombstone (payload-less).
+      const hlc = clock.nextStamp();
+      await repo.delete(TAGS_COLLECTION, id);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: TAGS_COLLECTION,
+          recordId: id,
+          op: 'delete',
+        }),
+      );
+    },
+
+    async tagDoc(input: { documentId: string; tagId: string }): Promise<DocTag> {
+      // Deterministic id (docTagId) — same pair always converges by LWW (invariant #2).
+      const hlc = clock.nextStamp();
+      const rec = makeDocTag(
+        { documentId: input.documentId, tagId: input.tagId, createdAt: clock.now() },
+        { hlc },
+      );
+      await repo.put(DOC_TAGS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: DOC_TAGS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
+    },
+
+    async untagDoc(input: { documentId: string; tagId: string }): Promise<void> {
+      // Invariant #2: one delete = exactly one HLC-stamped delete tombstone (payload-less).
+      const hlc = clock.nextStamp();
+      const id = docTagId(input.documentId, input.tagId);
+      await repo.delete(DOC_TAGS_COLLECTION, id);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: DOC_TAGS_COLLECTION,
+          recordId: id,
+          op: 'delete',
+        }),
+      );
+    },
+
+    async createSmartView(input: { name: string; query: SmartViewQuery }): Promise<SmartView> {
+      const hlc = clock.nextStamp();
+      const rec = makeSmartView(
+        { id: clock.newId(), name: input.name, query: input.query, createdAt: clock.now() },
+        { hlc },
+      );
+      await repo.put(SMART_VIEWS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: SMART_VIEWS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
+    },
+
+    async editSmartView(input: { view: SmartView; patch: { name?: string; query?: SmartViewQuery } }): Promise<SmartView> {
+      const hlc = clock.nextStamp();
+      const rec = editSmartView(input.view, input.patch, { hlc });
+      await repo.put(SMART_VIEWS_COLLECTION, rec);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: SMART_VIEWS_COLLECTION,
+          recordId: rec.id,
+          op: 'put',
+          payload: rec,
+        }),
+      );
+      return rec;
+    },
+
+    async deleteSmartView(id: string): Promise<void> {
+      // Invariant #2: one delete = exactly one HLC-stamped delete tombstone (payload-less).
+      const hlc = clock.nextStamp();
+      await repo.delete(SMART_VIEWS_COLLECTION, id);
+      await repo.enqueue(
+        makeOutboxEntry({
+          id: clock.newOutboxId(),
+          hlc,
+          collection: SMART_VIEWS_COLLECTION,
+          recordId: id,
+          op: 'delete',
+        }),
+      );
     },
   };
 }

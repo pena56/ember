@@ -236,9 +236,30 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 15b IN REVIEW (2026-06-28) — PR #128 open (`Closes #127`), branch
-  feat/127-web-library-tags-smart-views, spec specs/15b-web-library-tags-smart-views.md. Route standard.**
-  SECOND slice of umbrella #15 — web Library tagging + smart-view UI, consuming 15a's merged pure model
+- **Unit 15c IN REVIEW (2026-06-28) — PR #130, Issue #129 (umbrella #15, slice 3 / LAST), branch
+  feat/129-mobile-library-tags-smart-views, spec specs/15c-mobile-library-tags-smart-views.md. Route standard.**
+  Built test-first (Sonnet executor) → fresh-context Opus review **APPROVE WITH NITS** → both Should-fixes
+  (node-env contract tests now import the real `TAG_BG`/`isAdHocTagFilter` via pure leaf modules
+  `tag-colors.ts`/`smart-view-filters.ts` — no drift) + `useMemo`/`DEFAULT_VIEW` nits applied. Gates green:
+  typecheck 9/9 · mobile test 353 · lint 6. **Umbrella #15 COMPLETE on merge.** Next: merge PR #130 when CI
+  green (device-bound acceptance per spec). <!-- spec/dispatch detail below for trail -->
+- **(specced+dispatched) Unit 15c — Issue #129, branch feat/129-mobile-library-tags-smart-views, spec specs/15c-mobile-library-tags-smart-views.md. Route standard.**
+  THIRD/final slice of #15 — mobile (Expo RN / uniwind) Library tagging + smart-view UI, a **device-bound
+  mirror of the merged 15b** (the 14b→14c precedent). Consumes 15a's pure model; adds NO core logic; **no
+  packages/tokens change** (15b already put `--color-tag-*` in theme.uniwind.css); no store/convex change; no
+  new runtime dep. Mirrors 15b into `native-store.ts` (same 9 methods, inline put+enqueue / delete-tombstone
+  like `saveDuplicateDecision`, invariant #2), `use-library-tags.ts` (tagsByDoc orphan-drop + `LibraryEntry[]`
+  on canonical set, all filtering via `evaluateSmartView` — invariant #5), and RN UI (horizontal pill
+  smart-view bar reusing the ThemeControl accent-underline idiom; row tag chips as RN Pressables w/
+  stopPropagation + real a11y controls; `tag-picker` as an RN `Modal` mirroring `annotation-editor`; `bg-tag-*`
+  safelist, invariant #6). **UI unit → frontend-design + impeccable before code-review.** **Forks inherited
+  from 15b (not re-litigated):** horizontal filter bar; tag delete tombstones the tag, links/view-tagIds go
+  inert at resolve-time (lazy, no fan-out). **Mobile vitest = node env (no jsdom/RN renderer):** tests are
+  store + pure-logic/props-contract only; visual/interaction is **device-bound acceptance** (like 14c / 02d).
+  Next: dispatch (Sonnet TDD executor → fresh-context Opus review → PR `Closes #129`). Umbrella #15 COMPLETE
+  on merge. <!-- 15b/15a notes below for trail -->
+- **Unit 15b MERGED (2026-06-28) — PR #128 (squash `6fe9875`, branch deleted), Issue #127 CLOSED; CI `verify`
+  green.** SECOND slice of #15 — web Library tagging + smart-view UI, consuming 15a's merged pure model
   (NO core logic added; no store/convex change; no new runtime dep). Standard route ran fully: Sonnet TDD
   executor built tokens + 9 `web-store` methods (inline put+enqueue / delete-tombstone, invariant #2) +
   `use-library-tags` hook (tagsByDoc orphan-drop + `LibraryEntry[]` on canonical set, all filtering via
@@ -248,9 +269,8 @@ Update after every meaningful change.
   Opus review = APPROVE** (all graded invariants verified file:line; 3 non-blocking nits — prop name,
   header-count source, hex casing — all applied). Gates: typecheck 9/9 · web test 402/402 · lint clean.
   Shared `--color-tag-*` palette added to theme.css + theme.uniwind.css (forward-shared to 15c).
-  **Forks resolved (2026-06-28):** (1) smart-view nav = horizontal filter bar; (2) tag delete tombstones
-  the tag, links/view-tagIds go inert at resolve-time (lazy, no fan-out). Next: merge PR #128 → close #127
-  → 15c (mobile, inherits the tokens) is the last slice of #15. <!-- 15a note below for trail -->
+  Forks: (1) smart-view nav = horizontal filter bar; (2) tag delete tombstones the tag, links/view-tagIds
+  go inert at resolve-time (lazy, no fan-out). <!-- 15a note below for trail -->
 - **Unit 15a MERGED (2026-06-28) — PR #126 (squash `fe8c89a`, branch deleted), Issue #125 CLOSED; CI `verify`
   green on head. FIRST slice of umbrella #15 done — pure core tags + smart-views model.** Standard route ran
   fully: Sonnet TDD executor built all

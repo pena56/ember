@@ -1,8 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+
+import type { Tag } from '@ember/core';
 
 import { formatBytes } from '../store/format-bytes.js';
 
+import { TAG_BG } from './tag-colors.js';
 import type { DocumentWithSync, SyncState } from './use-library.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -11,6 +14,14 @@ interface DocumentRowProps {
   document: DocumentWithSync;
   /** Called when the user taps "Try again" on an over-quota deferred row. */
   onRetrySync?: () => void;
+  /** Tags currently applied to this document (live, orphan-free). */
+  tags?: Tag[];
+  /** Called when a tag chip is tapped — sets the active view to that tag filter. */
+  onTagPress?: (tagId: string) => void;
+  /** Called when the × on a chip is tapped — untags this doc. */
+  onUntagDoc?: (tagId: string) => void;
+  /** Called when the + add-tag button is tapped — opens the picker. */
+  onAddTag?: () => void;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -120,7 +131,7 @@ function SyncBadge({
  * Uses useRouter() directly (no prop drilling through FlatList renderItem)
  * per the spec preference. Token-driven: no hardcoded colors (invariant #6).
  */
-export function DocumentRow({ document: doc, onRetrySync }: DocumentRowProps) {
+export function DocumentRow({ document: doc, onRetrySync, tags, onTagPress, onUntagDoc, onAddTag }: DocumentRowProps) {
   const router = useRouter();
 
   function handlePress() {
@@ -154,51 +165,116 @@ export function DocumentRow({ document: doc, onRetrySync }: DocumentRowProps) {
         : {})}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
-      <View className="flex-row items-center gap-4 px-5 py-4 bg-surface-raised border-b border-line">
-        {/* PDF page icon (purely decorative) */}
-        <View
-          className="w-8 h-9 rounded bg-line items-center justify-center shrink-0"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <Text className="font-sans text-xs text-text-muted">PDF</Text>
+      <View className="bg-surface-raised border-b border-line">
+        {/* Main row */}
+        <View className="flex-row items-center gap-4 px-5 py-4">
+          {/* PDF page icon (purely decorative) */}
+          <View
+            className="w-8 h-9 rounded bg-line items-center justify-center shrink-0"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Text className="font-sans text-xs text-text-muted">PDF</Text>
+          </View>
+
+          <View className="flex-1 gap-1 min-w-0">
+            <Text
+              className="font-serif text-base text-text leading-snug"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {doc.title}
+            </Text>
+            <Text
+              className="font-sans text-xs text-text-muted"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {doc.filename}
+              {' · '}
+              {formatBytes(doc.byteSize)}
+              {' · '}
+              {formatDate(doc.importedAt)}
+            </Text>
+          </View>
+
+          {/* Sync badge — warm, reassuring copy; never alarming */}
+          <SyncBadge
+            syncState={doc.syncState}
+            {...(onRetrySync !== undefined ? { onRetrySync } : {})}
+          />
+
+          {/* Chevron hint */}
+          <Text
+            className="font-sans text-base text-text-muted shrink-0"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            ›
+          </Text>
         </View>
 
-        <View className="flex-1 gap-1 min-w-0">
-          <Text
-            className="font-serif text-base text-text leading-snug"
-            numberOfLines={1}
-            ellipsizeMode="tail"
+        {/* Tag chips — rendered below the main row when tags are present or add-tag is available */}
+        {((tags !== undefined && tags.length > 0) || onAddTag !== undefined) && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 6 }}
           >
-            {doc.title}
-          </Text>
-          <Text
-            className="font-sans text-xs text-text-muted"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {doc.filename}
-            {' · '}
-            {formatBytes(doc.byteSize)}
-            {' · '}
-            {formatDate(doc.importedAt)}
-          </Text>
-        </View>
+            {(tags ?? []).map((tag) => (
+              <View key={tag.id} className={`flex-row items-center rounded-full px-2.5 py-1 gap-1 ${TAG_BG[tag.color]}`}>
+                {/* Chip tap → set ad-hoc tag filter */}
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onTagPress?.(tag.id);
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 0 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by ${tag.name}`}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                  <Text className="font-sans text-xs text-text" numberOfLines={1} style={{ maxWidth: 120 }}>
+                    {tag.name}
+                  </Text>
+                </Pressable>
 
-        {/* Sync badge — warm, reassuring copy; never alarming */}
-        <SyncBadge
-          syncState={doc.syncState}
-          {...(onRetrySync !== undefined ? { onRetrySync } : {})}
-        />
+                {/* × untag */}
+                {onUntagDoc !== undefined && (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onUntagDoc(tag.id);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${tag.name} tag`}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 0.6 })}
+                  >
+                    <Text className="font-sans text-xs text-text">×</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
 
-        {/* Chevron hint */}
-        <Text
-          className="font-sans text-base text-text-muted shrink-0"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          ›
-        </Text>
+            {/* + add tag */}
+            {onAddTag !== undefined && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onAddTag();
+                }}
+                className="flex-row items-center rounded-full px-2.5 py-1 border border-line"
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel="Add tag"
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 0.7 })}
+              >
+                <Text className="font-sans text-xs text-text-muted">＋</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        )}
       </View>
     </Pressable>
   );
