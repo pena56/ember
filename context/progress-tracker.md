@@ -236,6 +236,38 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 15a BUILT + REVIEWED APPROVE → PR open (2026-06-28) — Issue #125 (umbrella #15, first slice), branch
+  feat/125-core-tags-smart-views, PR "Closes #125".** Standard route ran fully: Sonnet TDD executor built all
+  three modules + tests (hit a session limit before reporting gates) → I independently finished verification +
+  fixed 4 trivial gate issues the executor didn't reach (3× `exactOptionalPropertyTypes` explicit-`undefined`
+  in test fixtures/`deriveReadingState` call → omit-the-prop; import-order autofix) → fresh-context Opus review =
+  **APPROVE, zero blockers/should-fixes** (#1 core-purity, #2 encoded-HLC `updatedAt`, #5 single evaluator,
+  arch:76 union-by-UUID, boundary all confirmed file:line; re-ran all gates). Applied both optional nits:
+  defensive `{ ...query }` copy in make/editSmartView (immutability), hoisted the duplicated `Set` in
+  `evaluateSmartView`. Delivered (all `packages/core/src`): `tag.ts` (Tag + makeTag/editTag + normalizeTagName/
+  tagDedupeKey + TagColor palette), `doc-tag.ts` (deterministic `docTagId`=`${docId}:${tagId}`, union-merge
+  inherent), `smart-view.ts` (SmartView + SmartViewQuery + BUILT_IN_SMART_VIEWS constants + pure
+  `deriveReadingState` + `evaluateSmartView`), barrel. Final green: **typecheck 9 · core test 407 (18 files,
+  +72: tag 24 / doc-tag 10 / smart-view 52) · web 372 · lint 6.** No new dep, no store/convex/apps change,
+  no deploy gate. **Next:** await CI `verify` on head → merge → 15b (web Library tagging + smart-view UI; UI
+  unit → frontend-design + impeccable). <!-- 15a SPEC note retained below for trail -->
+- **Unit 15a SPECCED + DISPATCH-READY (2026-06-27) — Issue #125 (umbrella #15, first slice), branch
+  feat/125-core-tags-smart-views, spec specs/15a-core-tags-smart-views.md. Route standard** (one boundary
+  `packages/core`, pure TS, no new dep, no UI; three new syncable collections ride 12a's generic push/pull —
+  no store/convex change). Umbrella **#15 (Tags + smart views) SCORED COMPLEX → split by boundary** like
+  03/04/11/12/13/14: **15a** core model + evaluator → **15b** web Library tagging/smart-view UI → **15c**
+  mobile (device-bound). **Product forks resolved with user (2026-06-27):** (1) tag model = **entity
+  (`tags`) + UUID-keyed link records (`doc-tags`)** — global rename/recolor propagates, union-merge per
+  arch:76 — NOT a string array; (2) smart views = **user-defined syncable saved views (`smart-views`)**,
+  built-ins ship as constants. 15a deliverables (all `packages/core/src`, pure): `tag.ts` (Tag + makeTag/
+  editTag + normalizeTagName/tagDedupeKey + TagColor palette), `doc-tag.ts` (deterministic `docTagId` =
+  `${docId}:${tagId}` link, union-merge inherent), `smart-view.ts` (SmartView record + SmartViewQuery +
+  BUILT_IN_SMART_VIEWS constants + pure `deriveReadingState` + `evaluateSmartView`), barrel exports. All
+  records mirror annotation.ts factory/edit pattern (encoded-HLC `updatedAt`, caller supplies id/time/hlc);
+  LWW-converge via existing pipeline. No new dep, no deploy gate. Dispatch: Sonnet TDD executor →
+  fresh-context Opus reviewer (verify #5 single evaluator + #2 encoded-HLC updatedAt + #1 core purity + no
+  store/convex change + arch:76 union-by-UUID) → PR "Closes #125". Deferred to 15b/15c: all UI + outbox
+  writes (`repo.put(make…)` / `repo.delete` for untag), tag-color→token mapping. <!-- 14c MERGED note retained below for trail -->
 - **Unit 14c MERGED (2026-06-27) — PR #124 (squash `3d16a81`, branch deleted), Issue #123 CLOSED. THIRD &
   final planned slice of umbrella #14 done — mobile duplicate-merge UI.** Device-bound RN mirror of 14b inside
   `apps/mobile` only (no `packages/*`, `convex/`, or `apps/web` change; no new dep — `duplicate-decisions` rides
