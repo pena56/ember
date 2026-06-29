@@ -1,5 +1,5 @@
 /**
- * derive-notification-sync.test.ts — pure planner adapter.
+ * notification-sync.test.ts — pure planner adapter.
  *
  * Asserts:
  *  (1) goal met → intent === null + all four ${type}:${today} suppress keys
@@ -12,11 +12,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { NotificationType, ReadingSession } from '@ember/core';
-import { localDayOf, NOTIFICATION_PRIORITY } from '@ember/core';
+import { notificationCopy } from '../notification-copy.js';
+import { deriveNotificationSync } from '../notification-sync.js';
+import type { NotificationType } from '../notification.js';
+import { NOTIFICATION_PRIORITY } from '../notification.js';
+import type { ReadingSession } from '../session.js';
+import { localDayOf } from '../session.js';
 
-import { deriveNotificationSync } from './derive-notification-sync.js';
-import { notificationCopy } from './notification-copy.js';
 
 // All notification types, in priority order
 const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_PRIORITY) as NotificationType[];

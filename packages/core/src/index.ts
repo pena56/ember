@@ -24,3 +24,5 @@ export * from './tag.js';
 export * from './doc-tag.js';
 export * from './smart-view.js';
 export * from './notification.js';
+export * from './notification-copy.js';
+export * from './notification-sync.js';

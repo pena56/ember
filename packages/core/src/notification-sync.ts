@@ -1,23 +1,23 @@
 /**
- * derive-notification-sync.ts — pure planner adapter for web notification sync.
+ * notification-sync.ts — pure planner adapter for notification sync.
  *
- * Bridges 16a's planNotifications engine to the web hook's submit/suppress logic.
+ * Bridges 16a's planNotifications engine to the client hook's submit/suppress logic.
  * No I/O, no new Date() — caller injects now/tz (invariant #1: no clock calls here).
  *
  * Invariant #5: zero decision logic reinvented — all planning defers to 16a's engine.
- * Invariant #7: web submits the single selected + suppresses. The 16b ledger dedupes.
+ * Invariant #7: client submits the single selected + suppresses. The 16b ledger dedupes.
  */
 
+import { notificationCopy } from './notification-copy.js';
 import {
-  DEFAULT_GOAL_ACTIVE_MS,
-  deriveTodayGoal,
-  localDayOf,
   NOTIFICATION_PRIORITY,
   planNotifications,
-} from '@ember/core';
-import type { NotificationConfig, NotificationPlan, NotificationType, ReadingSession } from '@ember/core';
+} from './notification.js';
+import type { NotificationConfig, NotificationPlan, NotificationType } from './notification.js';
+import { localDayOf } from './session.js';
+import type { ReadingSession } from './session.js';
+import { DEFAULT_GOAL_ACTIVE_MS, deriveTodayGoal } from './streak.js';
 
-import { notificationCopy } from './notification-copy.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_PRIORITY) as NotificationTyp
 // ── Pure adapter ───────────────────────────────────────────────────────────────
 
 /**
- * Pure planner adapter: maps local sessions + wall-clock snapshot to the web
+ * Pure planner adapter: maps local sessions + wall-clock snapshot to the client
  * hook's submit/suppress plan.
  *
  * Two paths:

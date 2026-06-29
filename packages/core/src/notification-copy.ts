@@ -1,11 +1,11 @@
 /**
- * notification-copy.ts — pure copy map for web notification messages.
+ * notification-copy.ts — pure copy map for notification messages.
  *
  * Warm, literary voice matching the app. Exhaustive switch over NotificationType
  * (no default branch → adding a type without copy fails typecheck).
  */
 
-import type { NotificationType } from '@ember/core';
+import type { NotificationType } from './notification.js';
 
 export function notificationCopy(type: NotificationType): { title: string; body: string } {
   switch (type) {

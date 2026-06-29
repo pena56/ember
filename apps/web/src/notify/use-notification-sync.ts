@@ -21,10 +21,10 @@
 import { useConvexAuth } from 'convex/react';
 import { useEffect, useRef } from 'react';
 
+import { deriveNotificationSync } from '@ember/core';
+
 import { useSyncBundle } from '../store/store-context.js';
 import { useWebStore } from '../store/store-context.js';
-
-import { deriveNotificationSync } from './derive-notification-sync.js';
 
 const DEBOUNCE_MS = 500;
 
