@@ -12,6 +12,7 @@ import { Toaster } from 'sonner-native';
 import { AuthProviderGate } from '../src/auth/auth-provider-gate.js';
 import { useAnonymousAuth } from '../src/auth/use-anonymous-auth.js';
 import { convex, secureStorage } from '../src/convex/convex-client.js';
+import { useNotificationSync } from '../src/notify/use-notification-sync.js';
 import { StoreProvider } from '../src/store/store-context.js';
 import { BlobSyncProvider } from '../src/sync/blob-sync-context.js';
 import { useBlobSync } from '../src/sync/use-blob-sync.js';
@@ -43,6 +44,7 @@ export const unstable_settings = {
 function AnonymousAuthGate({ children }: { children: React.ReactNode }) {
   useAnonymousAuth();
   useReconciler();
+  useNotificationSync();
   // Mount the single blob-sync scheduler here (inside Convex auth scope).
   // fileCap comes from getStorageUsage — when undefined (loading/unauthed), the
   // scheduler runs without a cap guard (server remains authoritative).
