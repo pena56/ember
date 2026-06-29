@@ -236,6 +236,18 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16b MERGED (2026-06-29) — PR #134 (squash `3968af1`, branch deleted), Issue #133 closed.** Convex
+  notification server live on dev `necessary-warbler-246`: 3 owner-scoped tables (`pushDevices` w/ `hasToken`
+  bool, `notificationIntents`, `notificationLedger`, 5 indexes) + official `@convex-dev/expo-push-notifications@0.3.1`
+  component installed + "notification push sweep" 5-min cron registered (USER deploy gate cleared — indexes added,
+  component installed, functions ready; codegen confirmed faithful to executor's hand-edit). `notifications.ts`:
+  pure `electPrimaryDevice` + `registerDevice`/`submitIntent`/`claimSlot`/`getNotificationState` + internal
+  `runDueSweep` (send runs INSIDE the claim mutation = atomic race-free at-most-once; `(owner,dedupeKey)` ledger
+  insert is the single #7 enforcement point). 26 new convex tests; typecheck 9 / test 6 / lint 6 green. Fresh-context
+  Opus review APPROVE (confirmed #7 race-free, #5 no-core-import, ownership isolation, no raw-token leak). Imports
+  NO `@ember/core`. **Next: umbrella #16 has 16c (web wiring) + 16d (mobile, device-bound) left.** (Remaining overall
+  backlog: #16 16c/16d, #17 settings, + two deferred claim-review client units.)
+  <!-- 16b SPECCED note retained below for trail -->
 - **Unit 16b SPECCED + DISPATCH-READY (2026-06-29) — Issue #133 (umbrella #16, second slice), branch
   feat/133-convex-notification-server, spec specs/16b-convex-notification-server.md. Route standard** (one
   boundary `convex/`, well-trodden Convex fn/schema/cron; **one new dep: official
