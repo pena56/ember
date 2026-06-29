@@ -236,16 +236,22 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
-- **Unit 16a BUILT + IN REVIEW → PR #132 "Closes #131" (2026-06-28) — Issue #131 (umbrella #16, first
-  slice), branch feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md.** Standard
-  route ran fully: Sonnet TDD executor built `packages/core/src/notification.ts` (planNotifications →
-  {candidates, selected} + learnBestHour + NotificationConfig) + 18 tests → fresh-context Opus review =
+- **Unit 16a MERGED (2026-06-29) — PR #132 (squash `078fc41`, branch deleted), Issue #131 CLOSED; CI
+  `verify` green on head. FIRST slice of umbrella #16 done — pure core notification-decision engine.**
+  Standard route ran fully: Sonnet TDD executor built `packages/core/src/notification.ts`
+  (planNotifications → {candidates, selected} = single highest-priority plan / ≤1-per-day cap +
+  learnBestHour + NotificationConfig/DEFAULT_NOTIFICATION_CONFIG) + tests → fresh-context Opus review =
   **APPROVE-WITH-NITS, no blockers** (purity #1, spec fidelity, both tz signs hand-checked, #7 dedupeKey,
-  boundary all confirmed file:line). Applied the one substantive nit: a mislabeled lapse-only test now
-  pushes best-time out of the quiet window so lapse-reengage is the genuine sole survivor + asserts its
-  type. Gates: **typecheck 9 · core test 450 (+18) · lint 6**; pushed, CI `verify` pending. No store/
-  convex/apps change, no new dep. **Next on merge: 16b — Convex scheduled push + delivery ledger +
-  primary-device election (invariant #7), keyed on 16a's `dedupeKey`.** <!-- 16a SPEC note retained below -->
+  boundary all confirmed file:line); applied the one substantive nit (mislabeled lapse-only test now
+  pushes best-time out of the quiet window so lapse-reengage is the genuine sole survivor + asserts type).
+  4 types (streak-risk > goal-progress > best-time > lapse-reengage), quiet-hours [8,22) filter, best-time
+  = modal recent-session hour + default fallback; reuses deriveStreak/deriveTodayGoal/localDayOf, caller
+  supplies now/tz (no Date.now()). `dedupeKey = ${type}:${localDay}` is the per-(type,day) key 16b's
+  server ledger dedupes (engine does NO cross-device election). Final green: **typecheck 9 · core test
+  450 (+18) · lint 6.** No store/convex/apps change, no new dep, no deploy gate. **Next: 16b — Convex
+  scheduled push + delivery ledger + primary-device election (invariant #7), keyed on 16a's `dedupeKey`.**
+  (Remaining umbrella backlog: #16 (16b/16c/16d left), #17 settings, + two deferred claim-review client
+  units.) <!-- 16a SPEC note retained below for trail -->
 - **Unit 16a SPECCED + DISPATCH-READY (2026-06-28) — Issue #131 (umbrella #16, first slice), branch
   feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md. Route standard** (one
   boundary `packages/core`, pure TS, no new dep, no UI; no store/convex/apps change — no syncable record
