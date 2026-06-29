@@ -89,6 +89,7 @@ function makeBundle(over?: Partial<SyncBundle>): { bundle: SyncBundle; store: Me
     blobs: noopBlobs,
     blobStatus: store as unknown as BlobStatusStore,
     blobChange: createSyncSignal(),
+    deviceId: 'test-device',
     ...over,
   };
   return { bundle, store, signal };
