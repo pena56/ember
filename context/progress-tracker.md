@@ -236,6 +236,16 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16c MERGED (2026-06-29) — PR #136 (squash `e54ff4a`, branch deleted), Issue #135 closed.** Web
+  notification wiring: auth+bundle-gated `useNotificationSync` runs 16a's engine over the local session log,
+  submits the day's `selected` plan as an intent, and `claimSlot('suppressed')` for today's keys once the
+  goal is met. No UI, no local fire, no permission prompt (deferred to #17). 25 new tests; Sonnet TDD →
+  fresh-context Opus review APPROVE-WITH-NITS, both nits fixed. Sensible deviation: lazy Convex adapter
+  factored into `notify/convex-notification-port.ts` (mirrors `convex-sync-transport.ts`). typecheck 9 /
+  test 56 files·425 / lint 6 green. No deploy gate (no schema/cron change). **Umbrella #16: 16a/16b/16c
+  MERGED — only 16d (mobile, device-bound: expo-notifications permission + token + local scheduling +
+  claimSlot) remains to close #16.** Spec/dispatch trail retained below.
+  <!-- 16c dispatch + spec notes retained below for trail -->
 - **Unit 16c DISPATCHED + PR OPEN, IN REVIEW (2026-06-29) — PR #136, Issue #135 (umbrella #16, third
   slice), branch feat/135-web-notification-sync.** Sonnet TDD executor built it (25 new tests) → fresh-context
   Opus review = **APPROVE WITH NITS**, both nits fixed (the "Convex singleton never imported when a port is
