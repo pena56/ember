@@ -30,6 +30,11 @@ export interface SyncBundle {
   /** Wake signal fired on every local outbox append. */
   signal: SyncSignal;
   /**
+   * Stable per-install device id from the native clock — used by the
+   * notification-sync hook to register/claim under invariant #7.
+   */
+  deviceId: string;
+  /**
    * The local ExpoFileSystemBlobStore instance — satisfies BlobBytes (has/get/put).
    * Bytes only move in/out of this local store (invariant #1).
    */
@@ -112,6 +117,7 @@ export function StoreProvider({ children, store: injectedStore }: StoreProviderP
           },
           newOutboxId: () => clock.newOutboxId(),
           signal,
+          deviceId: clock.deviceId,
           // Blob-sync ports: same instances as NativeStore, no new stores.
           blobs,
           // The same repo instance cast as BlobStatusStore (satisfies get/put/delete
