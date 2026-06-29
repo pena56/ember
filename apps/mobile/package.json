@@ -5,7 +5,7 @@
   "scripts": {
     "bundle-pdfjs": "node scripts/bundle-pdfjs.mjs",
     "predev": "node scripts/bundle-pdfjs.mjs",
-    "start": "expo start",
+    "start": "expo start -c",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "build": "echo 'mobile build runs via EAS'",
@@ -28,6 +28,7 @@
     "expo": "56.0.9",
     "expo-constants": "56.0.17",
     "expo-crypto": "~56.0.4",
+    "expo-dev-client": "~56.0.20",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.7",
     "expo-font": "56.0.5",
