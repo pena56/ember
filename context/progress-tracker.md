@@ -236,6 +236,24 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16c SPECCED + DISPATCH-READY (2026-06-29) — Issue #135 (umbrella #16, third slice), branch
+  feat/135-web-notification-sync, spec specs/16c-web-notification-sync.md. Route standard, NON-UI** (one
+  boundary `apps/web`, background-hook wiring mirroring `useReconciler`/`useBlobSync`; no new dep; reuses
+  16a `planNotifications` + 16b `api.notifications.*`). **Forks resolved with user (2026-06-29):**
+  (1) **no local web fire** — web shows no Notification, schedules no timer; all delivery rides mobile
+  push (16d); web's job is engine → `submitIntent` → suppress-on-read only; (2) **permission UX deferred
+  to #17 Settings** — no prompt this slice (web never needs `requestPermission`). So **no
+  frontend-design/impeccable step** (no UI). Deliverables (all `apps/web`): `notify/notification-copy.ts`
+  (pure warm-voice `notificationCopy(type)→{title,body}`); `notify/derive-notification-sync.ts` (pure
+  `deriveNotificationSync(input)→{intent,suppress}` — goal-met ⇒ intent=null + suppress all four
+  `${type}:${today}` keys; else submit 16a's `selected` + copy); `notify/use-notification-sync.ts`
+  (auth+bundle-gated hook, injectable `NotificationPort`, lazy convex singleton, swallow errors, triggers
+  mount/focus/signal); add `deviceId` to `SyncBundle` (store-context.tsx); mount `useNotificationSync()`
+  in App.tsx after `useReconciler()`. Dispatch: Sonnet TDD executor (pure derive tests + hook test
+  mirroring use-reconciler.test.tsx) → fresh-context Opus reviewer (verify #1 reads-local/write-only,
+  #2 direct-call exception, #5 reuse-engine, #7 submit+suppress-only) → PR "Closes #135". No deploy gate
+  (no schema/cron change). **Next after 16c: 16d (mobile, device-bound) closes umbrella #16.**
+  <!-- 16b MERGED note retained below for trail -->
 - **Unit 16b MERGED (2026-06-29) — PR #134 (squash `3968af1`, branch deleted), Issue #133 closed.** Convex
   notification server live on dev `necessary-warbler-246`: 3 owner-scoped tables (`pushDevices` w/ `hasToken`
   bool, `notificationIntents`, `notificationLedger`, 5 indexes) + official `@convex-dev/expo-push-notifications@0.3.1`
