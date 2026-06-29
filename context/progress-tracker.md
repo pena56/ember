@@ -236,6 +236,32 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16e SPECCED + DISPATCH-READY (2026-06-29) — Issue #139 (umbrella #16, FINAL slice), branch
+  feat/139-mobile-notification-sync, spec specs/16e-mobile-notification-sync.md. Route standard, NON-UI**
+  (one boundary `apps/mobile`; renders nothing → no design skills; fully resolved). The mobile twin of 16c,
+  now consuming the hoisted core `deriveNotificationSync`/`notificationCopy` (16d). **Forks (all settled
+  2026-06-29):** server-push-only (no local fire) · permission+token deferred to #17 (registers **no-token**,
+  so no device is push-eligible until #17) · derivation single-sourced in core. **Deliverables:** add
+  `deviceId` to mobile `SyncBundle` (from `clock.deviceId`); new `apps/mobile/src/notify/` —
+  `notification-port.ts` (RN-free `NotificationPort`, platform `ios|android`), node-tested
+  `run-notification-sync.ts` (register no-token → derive → submitIntent → claimSlot('suppressed')),
+  `convex-notification-port.ts` (mirror web), thin `use-notification-sync.ts` adapter **reusing the existing
+  pure `createSyncScheduler`** (gated auth+bundle, lazy convex port, NativeStore via ref) — mount in
+  `AnonymousAuthGate` after `useReconciler()`. **Differs from web:** follows mobile's scheduler+adapter split
+  (not web's inline hook); only `run-notification-sync` is node-tested, the hook is untested thin glue like
+  `use-reconciler`. No new deps (NO `expo-notifications` — that's #17). Dispatch: Sonnet TDD → fresh-context
+  Opus reviewer (verify #1/#2/#5/#7 + core untouched + no expo-notifications) → PR "Closes #139". No deploy
+  gate. Device verification optional/non-blocking (no token → nothing fires; logic is headless-verifiable).
+  **Merging 16e CLOSES umbrella #16** (core decides → server dedupes/relays → both clients submit/suppress
+  from one derivation). Remaining notification work → #17 Settings + two deferred claim-review client units.
+  <!-- 16d MERGED note retained below for trail -->
+- **Unit 16d MERGED (2026-06-29) — PR #138 (squash `6bd7ac8`, branch deleted), Issue #137 closed.** Pure-code
+  hoist: `deriveNotificationSync` + `notificationCopy` (+ both tests) now in `@ember/core`; web repointed; four
+  old web files deleted. Reviewer APPROVE; typecheck 9 / test core 462 (+2) web 413 (−2) / lint 6 green; no
+  `Date.now()`/platform API added to core; #5 single-sourcing strengthened. Local `main` fast-forwarded cleanly
+  (doc commits squashed in — no divergence this time). **Umbrella #16: 16a/16b/16c/16d MERGED — only 16e
+  (mobile sync) remains; it closes #16.**
+  <!-- 16d dispatch + spec notes retained below for trail -->
 - **Unit 16d DISPATCHED + PR OPEN, IN REVIEW (2026-06-29) — PR #138, Issue #137 (umbrella #16), branch
   feat/137-notify-core-hoist (commit `3fc2e77`).** Pure-code move executed (Sonnet TDD) → fresh-context Opus
   reviewer = **APPROVE** (no behavior/logic/copy drift, core purity preserved, #5 single-sourcing strengthened,
