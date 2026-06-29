@@ -236,6 +236,17 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16d DISPATCHED + PR OPEN, IN REVIEW (2026-06-29) — PR #138, Issue #137 (umbrella #16), branch
+  feat/137-notify-core-hoist (commit `3fc2e77`).** Pure-code move executed (Sonnet TDD) → fresh-context Opus
+  reviewer = **APPROVE** (no behavior/logic/copy drift, core purity preserved, #5 single-sourcing strengthened,
+  no dangling imports). `deriveNotificationSync` + `notificationCopy` + both tests now live in `packages/core`
+  (`notification-sync.ts`/`notification-copy.ts`, tests in `core/src/tests`); core index re-exports both; web
+  `use-notification-sync.ts` repointed to `@ember/core`; four old web files deleted (git renames). Engine-symbol
+  imports rewritten intra-core relative (`./notification.js`, `./session.js`, `./streak.js` for
+  `deriveTodayGoal`/`DEFAULT_GOAL_ACTIVE_MS`). Verify: typecheck 9 ✓ · test core 462 (+2) / web 413 (−2), total
+  preserved ✓ · lint 6 ✓ · no `Date.now()`/`new Date()` in core. No deploy gate. **Awaiting merge → then 16e
+  (mobile sync, closes #16).**
+  <!-- 16d spec note retained below for trail -->
 - **Unit 16d SPECCED + DISPATCH-READY (2026-06-29) — Issue #137 (umbrella #16), branch
   feat/137-notify-core-hoist, spec specs/16d-notify-core-hoist.md. Route standard** (pure-code hoist, zero
   behavior change). **Umbrella #16 reshaped (forks 2026-06-29):** the remaining "mobile" work splits into

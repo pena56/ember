@@ -8,10 +8,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { NotificationType } from '@ember/core';
-import { NOTIFICATION_PRIORITY } from '@ember/core';
+import { notificationCopy } from '../notification-copy.js';
+import type { NotificationType } from '../notification.js';
+import { NOTIFICATION_PRIORITY } from '../notification.js';
 
-import { notificationCopy } from './notification-copy.js';
 
 // Derive the full list of types from NOTIFICATION_PRIORITY (same source deriveNotificationSync uses)
 const ALL_TYPES = Object.keys(NOTIFICATION_PRIORITY) as NotificationType[];
