@@ -236,6 +236,15 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16c DISPATCHED + PR OPEN, IN REVIEW (2026-06-29) — PR #136, Issue #135 (umbrella #16, third
+  slice), branch feat/135-web-notification-sync.** Sonnet TDD executor built it (25 new tests) → fresh-context
+  Opus review = **APPROVE WITH NITS**, both nits fixed (the "Convex singleton never imported when a port is
+  injected" test now genuinely enforces the guarantee + a positive control; `store` dropped from the effect
+  deps to mirror `useReconciler`). One sensible deviation from spec: the lazy Convex adapter was factored into
+  `notify/convex-notification-port.ts` (mirrors `convex-sync-transport.ts`) instead of inlined. typecheck 9 /
+  test 56 files·425 / lint 6 all green. **Awaiting merge (no deploy gate — no schema/cron change).** Spec
+  details retained below.
+  <!-- 16c spec note retained below for trail -->
 - **Unit 16c SPECCED + DISPATCH-READY (2026-06-29) — Issue #135 (umbrella #16, third slice), branch
   feat/135-web-notification-sync, spec specs/16c-web-notification-sync.md. Route standard, NON-UI** (one
   boundary `apps/web`, background-hook wiring mirroring `useReconciler`/`useBlobSync`; no new dep; reuses
