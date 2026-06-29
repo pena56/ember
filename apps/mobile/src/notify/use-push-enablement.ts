@@ -19,7 +19,8 @@
 
 import { useConvexAuth } from 'convex/react';
 import Constants from 'expo-constants';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 
 import { useSyncBundle } from '../store/store-context.js';
@@ -84,10 +85,15 @@ export function usePushEnablement(opts?: { port?: NotificationPort }): PushEnabl
   }, []);
 
   // ── Read permission on mount and on focus ──────────────────────────────────
+  // useFocusEffect (not useEffect) so returning from the OS Settings app — e.g.
+  // the user granted permission there after an 'open-settings' deep-link — re-reads
+  // the status and flips the row without requiring a second tap (spec §5).
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   // ── enable() ─────────────────────────────────────────────────────────────
 

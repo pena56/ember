@@ -36,7 +36,7 @@ export async function getPermissionStatus(): Promise<PermissionStatus> {
     const { granted, canAskAgain, ios } = await Notifications.getPermissionsAsync();
     // iOS provisional is treated as granted (user sees no sheet, but app can post quietly)
     const effectiveGranted = granted || ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
-    return mapStatus(effectiveGranted ?? granted, canAskAgain);
+    return mapStatus(effectiveGranted, canAskAgain);
   } catch {
     return 'undetermined';
   }
