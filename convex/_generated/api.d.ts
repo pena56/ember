@@ -9,8 +9,10 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as notifications from "../notifications.js";
 import type * as sync from "../sync.js";
 import type * as users from "../users.js";
 
@@ -22,8 +24,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  crons: typeof crons;
   files: typeof files;
   http: typeof http;
+  notifications: typeof notifications;
   sync: typeof sync;
   users: typeof users;
 }>;
@@ -54,4 +58,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  pushNotifications: import("@convex-dev/expo-push-notifications/_generated/component.js").ComponentApi<"pushNotifications">;
+};
