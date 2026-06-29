@@ -236,6 +236,30 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17a SPECCED + DISPATCH-READY (2026-06-29) — Issue #141 (umbrella #17, FIRST slice), branch
+  feat/141-mobile-push-enablement, spec specs/17a-mobile-push-enablement.md. Route standard, NET-NEW UI**
+  (one boundary `apps/mobile`; product resolved → builds a new Settings screen, so `frontend-design` +
+  `impeccable` run before `code-review`). **This is the slice that turns #16 delivery ON:** today every
+  mobile device registers no-token (16e) so `electPrimaryDevice` finds no target; 17a adds permission +
+  `getExpoPushTokenAsync` → `registerDevice({expoPushToken})` (flips `hasToken` true) + foreground handler
+  + tap responder. **Forks (settled 2026-06-29 with user):** Settings screen is the home (not Today card /
+  launch modal) · 17a includes the foreground+tap handlers (end-to-end) · preferences (quiet-hours/types/
+  primary) → 17b, web settings + claim-review → later · token needs an EAS `projectId` (absent today →
+  flow+UI ship, real acquisition activates once `extra.eas.projectId` exists, #16 "ships dark" precedent;
+  hook fail-softs when absent) · permission-denied deep-links to system settings. **Deliverables:**
+  `expo install expo-notifications` (+ app.json plugin); `src/notify/native-notifications.ts` (thin RN
+  wrapper, untested), `src/notify/push-control-state.ts` (**pure, node-tested** `derivePushControlState`),
+  `src/notify/use-push-enablement.ts` (thin hook `{state, enable()}`), extend `NotificationPort.registerDevice`
+  arg with optional `expoPushToken` (convex adapter+mutation already accept it — no convex change);
+  `src/settings/settings-screen.tsx` + `app/settings.tsx` (modal route mirroring account.tsx) +
+  `settings-button.tsx` gear in Today header (mirrors AccountButton); `use-notification-handlers.ts`
+  mounted once in `AnonymousAuthGate`. **Test:** `push-control-state.test.ts` (4 cases); hooks/native/UI
+  are thin glue / design surfaces (typecheck+impeccable+review). No core/store/convex schema change —
+  raw token still never in our schema (only the Expo component). Dispatch: Sonnet TDD → frontend-design →
+  impeccable → fresh-context Opus reviewer (verify #1/#6/#7 + token-never-stored + core untouched) → PR
+  "Closes #141". Device verification (with a projectId, real device) is the first time real push delivery
+  matters; headless+design-verifiable without one. **17a is the FIRST slice of umbrella #17.**
+  <!-- #16 COMPLETE note retained below for trail -->
 - **🎉 UMBRELLA #16 (Notification engine) COMPLETE (2026-06-29) — Issue #16 CLOSED.** End-to-end:
   core decides (16a) → server dedupes/relays (16b) → both clients submit/suppress (16c web, 16e
   mobile) from one hoisted derivation (16d). All five slices MERGED. **Remaining notification work →
