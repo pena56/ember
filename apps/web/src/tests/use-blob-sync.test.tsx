@@ -141,6 +141,7 @@ function makeTestRig(over?: {
     blobs,
     blobStatus,
     blobChange: createSyncSignal(),
+    deviceId: 'test-device',
   };
   return { bundle, repo, webStore, signal };
 }

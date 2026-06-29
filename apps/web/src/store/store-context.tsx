@@ -45,6 +45,13 @@ export interface SyncBundle {
    * to learn a row's sync badge changed. Purely local: no enqueue, never pushed.
    */
   blobChange: SyncSignal;
+  /**
+   * Stable device identity (the `ember-device-id` from localStorage).
+   * Used by the notification-sync hook to register the device and key
+   * notification intents/claims (16c). Derived from webClock.deviceId in the
+   * production builder; tests supply their own string.
+   */
+  deviceId: string;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -95,6 +102,9 @@ export function StoreProvider({ children, store }: StoreProviderProps) {
       blobs: opfsBlobs,
       blobStatus: repo,
       blobChange,
+      // Stable device identity from the web clock (persisted in localStorage as
+      // 'ember-device-id'). Used by the notification-sync hook (16c).
+      deviceId: webClock.deviceId,
     };
     return { store: webStore, bundle };
     // store identity is stable at mount — intentionally excluded from deps

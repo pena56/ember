@@ -21,6 +21,7 @@ import { AppShell } from './app-shell.js';
 import { consumePendingAuthToast } from './auth/claim-reload.js';
 import { useAnonymousAuth } from './auth/use-anonymous-auth.js';
 import { LibraryPage } from './library/library-page.js';
+import { useNotificationSync } from './notify/use-notification-sync.js';
 import { ReaderPage } from './reader/reader-page.js';
 import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
@@ -86,6 +87,10 @@ export default function App() {
   // Background sync scheduler — pushes the local outbox + folds in remote
   // changes when authed. No UI — side-effect only (Convex off the read path).
   useReconciler();
+
+  // Background notification scheduler — registers the device + submits today's intent;
+  // no UI, no local fire (delivery rides mobile). Convex off the read path.
+  useNotificationSync();
 
   // Background blob-sync scheduler — uploads local blobs + downloads missing
   // ones. Decoupled from record-sync (separate concerns). The library page
