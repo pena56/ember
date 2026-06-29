@@ -8,7 +8,7 @@
  */
 
 export interface NotificationPort {
-  registerDevice(args: { deviceId: string; platform: 'ios' | 'android' }): Promise<unknown>;
+  registerDevice(args: { deviceId: string; platform: 'ios' | 'android'; expoPushToken?: string }): Promise<unknown>;
   submitIntent(args: {
     deviceId: string;
     dedupeKey: string;

@@ -12,6 +12,7 @@ import { Toaster } from 'sonner-native';
 import { AuthProviderGate } from '../src/auth/auth-provider-gate.js';
 import { useAnonymousAuth } from '../src/auth/use-anonymous-auth.js';
 import { convex, secureStorage } from '../src/convex/convex-client.js';
+import { useNotificationHandlers } from '../src/notify/use-notification-handlers.js';
 import { useNotificationSync } from '../src/notify/use-notification-sync.js';
 import { StoreProvider } from '../src/store/store-context.js';
 import { BlobSyncProvider } from '../src/sync/blob-sync-context.js';
@@ -45,6 +46,9 @@ function AnonymousAuthGate({ children }: { children: React.ReactNode }) {
   useAnonymousAuth();
   useReconciler();
   useNotificationSync();
+  // Mount the foreground banner handler + push tap responder once (global,
+  // same Convex-auth scope). Renders nothing; routes taps to the Today tab.
+  useNotificationHandlers();
   // Mount the single blob-sync scheduler here (inside Convex auth scope).
   // fileCap comes from getStorageUsage — when undefined (loading/unauthed), the
   // scheduler runs without a cap guard (server remains authoritative).
@@ -70,6 +74,7 @@ function InnerLayout() {
     <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="account" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
       </Stack>
       {/* Toaster is placed outside/above the navigator per sonner-native docs */}
       <Toaster theme={toasterTheme} />
