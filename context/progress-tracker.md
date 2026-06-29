@@ -236,6 +236,25 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16d SPECCED + DISPATCH-READY (2026-06-29) — Issue #137 (umbrella #16), branch
+  feat/137-notify-core-hoist, spec specs/16d-notify-core-hoist.md. Route standard** (pure-code hoist, zero
+  behavior change). **Umbrella #16 reshaped (forks 2026-06-29):** the remaining "mobile" work splits into
+  **16d = hoist notify derivation into @ember/core** (this) → **16e = mobile notification sync** (closes #16).
+  Forks resolved with user: (1) **server-push-only** — mobile does NOT schedule local notifications; the 16b
+  cron is the sole deliverer; (2) **permission fully deferred to #17** — mobile gets no Expo token this
+  slice, so #17 owns the entire device-notification surface (permission/priming, token, handler+responder,
+  delivery); (3) **hoist-to-core first** — single-source the decision (invariant #5) so web (16c) + mobile
+  (16e) share one `deriveNotificationSync`/`notificationCopy` rather than duplicating. **16d deliverables:**
+  move `deriveNotificationSync` (+ `NotificationSyncInput`/`SubmitIntent`/`NotificationSyncPlan` types) →
+  `packages/core/src/notification-sync.ts` and `notificationCopy` → `packages/core/src/notification-copy.ts`
+  (+ move both tests to core/src/tests), re-export from core index; repoint `apps/web` `use-notification-sync.ts`
+  import to `@ember/core`; delete the four moved web files. `NotificationPort` stays web-local. Dispatch:
+  Sonnet TDD executor (verify the moved tests pass in core, web hook test still green) → fresh-context Opus
+  reviewer (verify #5 single-sourcing strengthened, core purity preserved — no `Date.now()`/platform API
+  introduced) → PR "Closes #137". No deploy gate. **16e (next): mobile twin of 16c — add `deviceId` to mobile
+  SyncBundle, `useNotificationSync` hook (register no-token → submitIntent → claimSlot suppressed), mount in
+  AnonymousAuthGate; no expo-notifications/permission/local-fire. Closes #16.**
+  <!-- 16c MERGED note retained below for trail -->
 - **Unit 16c MERGED (2026-06-29) — PR #136 (squash `e54ff4a`, branch deleted), Issue #135 closed.** Web
   notification wiring: auth+bundle-gated `useNotificationSync` runs 16a's engine over the local session log,
   submits the day's `selected` plan as an intent, and `claimSlot('suppressed')` for today's keys once the
