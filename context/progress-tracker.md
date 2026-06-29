@@ -236,6 +236,35 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 16a BUILT + IN REVIEW → PR #132 "Closes #131" (2026-06-28) — Issue #131 (umbrella #16, first
+  slice), branch feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md.** Standard
+  route ran fully: Sonnet TDD executor built `packages/core/src/notification.ts` (planNotifications →
+  {candidates, selected} + learnBestHour + NotificationConfig) + 18 tests → fresh-context Opus review =
+  **APPROVE-WITH-NITS, no blockers** (purity #1, spec fidelity, both tz signs hand-checked, #7 dedupeKey,
+  boundary all confirmed file:line). Applied the one substantive nit: a mislabeled lapse-only test now
+  pushes best-time out of the quiet window so lapse-reengage is the genuine sole survivor + asserts its
+  type. Gates: **typecheck 9 · core test 450 (+18) · lint 6**; pushed, CI `verify` pending. No store/
+  convex/apps change, no new dep. **Next on merge: 16b — Convex scheduled push + delivery ledger +
+  primary-device election (invariant #7), keyed on 16a's `dedupeKey`.** <!-- 16a SPEC note retained below -->
+- **Unit 16a SPECCED + DISPATCH-READY (2026-06-28) — Issue #131 (umbrella #16, first slice), branch
+  feat/131-core-notification-engine, spec specs/16a-core-notification-engine.md. Route standard** (one
+  boundary `packages/core`, pure TS, no new dep, no UI; no store/convex/apps change — no syncable record
+  added here). Umbrella **#16 (Notification engine) SCORED COMPLEX → split by boundary** like 13/14/15:
+  **16a** pure core decision engine → **16b** Convex scheduled push + delivery ledger + primary-device
+  election (invariant #7) → **16c** web wiring → **16d** mobile wiring (expo-notifications, device-bound).
+  **Product forks resolved with user (2026-06-28):** (1) four types — streak-risk, best-time daily nudge,
+  goal-progress, re-engagement-after-lapse; (2) best-time = **modal start-hour over recent sessions +
+  fixed default fallback** (≥5 sessions, window 30, default 20:00); (3) guardrails = **quiet-hours window
+  [8,22) + ≤1 nudge/local-day, priority-ordered** (streak-risk > goal-progress > best-time > lapse).
+  16a deliverable (`packages/core/src/notification.ts` + barrel): pure `planNotifications(input)` →
+  `{ candidates: NotificationPlan[]; selected }` (single highest-priority plan = the ≤1/day cap) +
+  `learnBestHour` + `NotificationConfig`/`DEFAULT_NOTIFICATION_CONFIG`. Reuses `deriveStreak`/
+  `deriveTodayGoal`/`localDayOf` (units 07/08); suppress-if-already-read derives from sessions; caller
+  supplies `now`/`tz` (no `Date.now()`). `dedupeKey = ${type}:${localDay}` is the per-(type,day) key the
+  **server delivery ledger (16b)** dedupes — engine does NOT do cross-device election. Settings
+  persistence/sync defers to #17. Dispatch: Sonnet TDD executor → fresh-context Opus reviewer (verify #1
+  core purity, no platform API/`Date.now()`, no store/convex change, dedupeKey shape) → PR "Closes #131".
+  <!-- 15 COMPLETE note retained below for trail -->
 - **Umbrella #15 COMPLETE (2026-06-28) — Library tagging + smart views shipped across core + web + mobile.**
   15a core model + evaluator (#126) → 15b web UI (#128) → 15c mobile UI (#130, Issue #129 CLOSED, squash
   `b54083f`). Umbrella issue #15 closed. Post-merge fix: `bg-tag-*` were tree-shaken on RN (dynamic

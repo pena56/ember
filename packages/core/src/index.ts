@@ -23,3 +23,4 @@ export * from './claim-merge.js';
 export * from './tag.js';
 export * from './doc-tag.js';
 export * from './smart-view.js';
+export * from './notification.js';
