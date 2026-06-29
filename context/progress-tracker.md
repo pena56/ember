@@ -238,7 +238,9 @@ Update after every meaningful change.
 ## Current Goal
 - **Unit 16b SPECCED + DISPATCH-READY (2026-06-29) — Issue #133 (umbrella #16, second slice), branch
   feat/133-convex-notification-server, spec specs/16b-convex-notification-server.md. Route standard** (one
-  boundary `convex/`, well-trodden Convex fn/schema/cron, no new dep — Expo push via raw `fetch`; no
+  boundary `convex/`, well-trodden Convex fn/schema/cron; **one new dep: official
+  `@convex-dev/expo-push-notifications@0.3.1` component** (user direction 2026-06-29 — owns token
+  storage/batching/retry/receipts/dead-token cleanup; replaces hand-rolled raw `fetch`); no
   core/store/apps change; imports NO `@ember/core`). The dumb arbiter+relay enforcing invariant #7.
   **Forks resolved with user (2026-06-29):** (1) **client decides, server relays+dedupes** — 16a engine
   runs on-device (16c/d), client submits its `selected` plan as an *intent*, server schedules/relays +
@@ -246,17 +248,19 @@ Update after every meaningful change.
   sync.ts's inline-LWW); (2) **Expo push only (mobile)** — web rides local-scheduled + shared ledger, no
   VAPID; (3) **most-recently-active device wins** election (tie-break deviceId); (4) suppress-if-read is
   client-driven via `claimSlot('local'|'suppressed')`. 16b deliverables (all `convex/`): schema += 3
-  owner-scoped tables `pushDevices`/`notificationIntents`/`notificationLedger` (6 indexes); `notifications.ts`
-  = pure `electPrimaryDevice` + `registerDevice`/`submitIntent`/`claimSlot`/`getNotificationState` +
-  internal `claimAndCollectDuePushes` (transactional dedupe: due-scan → election → ledger claim → mark
-  sent/canceled, skips stale>2h & already-claimed, leaves web-only pending) + thin `sweepDuePushes`
-  internalAction (raw `fetch` to exp.host, at-most-once); `crons.ts` 5-min sweep. `claimSlot`'s
-  `(owner, dedupeKey)` ledger insert is the single #7 enforcement point (serializable txn = race-free).
-  Server `Date.now()` allowed (no-Date.now() is a core-purity rule only). Dispatch: Sonnet TDD executor
-  (convex-test; action's fetch NOT unit-tested — assert the collecting mutation) → fresh-context Opus
-  reviewer (verify #1/#2-exception/#5-no-core-import/#7-single-claim + ownership isolation) → **USER deploy
-  gate** (`npx convex dev --once` pushes 3 tables + registers cron to dev necessary-warbler-246, like
-  11a/12a/13a) → PR "Closes #133". Deferred to 16c/16d: client engine wiring, local scheduling, permission
+  owner-scoped tables `pushDevices`(now `hasToken` bool, raw token lives in component)/`notificationIntents`/`notificationLedger`
+  (5 indexes); new `convex/convex.config.ts` registers the component; `notifications.ts`
+  = pure `electPrimaryDevice` + `registerDevice` (upsert + `push.recordToken`)/`submitIntent`/`claimSlot`/`getNotificationState` +
+  internal `runDueSweep` (transactional: due-scan → election → ledger claim → mark sent/cancel siblings →
+  `push.sendPushNotification(deviceId)`, skips stale>2h & already-claimed, leaves web-only pending — the
+  send runs INSIDE the mutation so claim+queue commit atomically; no separate action). `crons.ts` 5-min
+  → `runDueSweep`. `claimSlot`'s `(owner, dedupeKey)` ledger insert is the single #7 enforcement point
+  (serializable txn = race-free). Server `Date.now()` allowed (no-Date.now() is a core-purity rule only).
+  Dispatch: Sonnet TDD executor (convex-test, register the push component; `sendPushNotification` is the
+  un-headless seam — assert ledger/intent state) → fresh-context Opus reviewer (verify
+  #1/#2-exception/#5-no-core-import/#7-single-claim + ownership isolation) → **USER deploy gate**
+  (`npx convex dev --once` installs component + pushes 3 tables + registers cron to dev
+  necessary-warbler-246, like 11a/12a/13a) → PR "Closes #133". Deferred to 16c/16d: client engine wiring, local scheduling, permission
   UX, token registration, device-bound acceptance; #17: quiet-hours/enabled-types/explicit-primary overrides.
   <!-- 16a MERGED note retained below for trail -->
 - **Unit 16a MERGED (2026-06-29) — PR #132 (squash `078fc41`, branch deleted), Issue #131 CLOSED; CI
