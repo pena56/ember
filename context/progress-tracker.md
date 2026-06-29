@@ -236,6 +236,27 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **🎉 UMBRELLA #16 (Notification engine) COMPLETE (2026-06-29) — Issue #16 CLOSED.** End-to-end:
+  core decides (16a) → server dedupes/relays (16b) → both clients submit/suppress (16c web, 16e
+  mobile) from one hoisted derivation (16d). All five slices MERGED. **Remaining notification work →
+  #17 Settings** (the device-notification surface: `expo-notifications` permission + priming UI,
+  `getExpoPushTokenAsync` → `registerDevice(token)`, foreground handler + tap responder, quiet-hours
+  / enabled-types / explicit-primary overrides — until #17 grants a token no device is push-eligible,
+  so #16 ships the full decide→submit→dedupe→relay pipeline with delivery activated in #17) **plus two
+  deferred claim-review client units (web + mobile).**
+- **Unit 16e MERGED (2026-06-29) — PR #140 (squash `4a15663`, branch deleted), Issue #139 closed;
+  CLOSES umbrella #16.** Mobile notification-sync pipeline: added `deviceId` to mobile `SyncBundle`
+  (from `clock.deviceId`); new `apps/mobile/src/notify/` — RN-free `notification-port.ts`, node-tested
+  `run-notification-sync.ts` (register no-token → core `deriveNotificationSync` → submitIntent →
+  claimSlot('suppressed')), `convex-notification-port.ts` (mirrors web), thin `use-notification-sync.ts`
+  reusing the pure `createSyncScheduler`; mounted in `AnonymousAuthGate` after `useReconciler()`.
+  Sonnet TDD → fresh-context Opus reviewer = **APPROVE** (traced all 4 test cases incl. the
+  no-candidate fixture through the real engine; verified #1/#2/#5/#7, core untouched, no
+  `expo-notifications`/token/local-fire, no new deps). One cosmetic nit fixed pre-merge (dead-code
+  fallback store re-hardcoding `DEFAULT_GOAL_ACTIVE_MS` → honest `store===null` guard). typecheck 9 ✓ ·
+  test mobile 357 (+4) ✓ · lint 6 ✓ · CI verify green. Local `main` fast-forwarded cleanly (spec/tracker
+  commit `ab7f6a4` already on main — no divergence). Permission/token/local-fire deferred to #17.
+  <!-- 16e spec note retained below for trail -->
 - **Unit 16e SPECCED + DISPATCH-READY (2026-06-29) — Issue #139 (umbrella #16, FINAL slice), branch
   feat/139-mobile-notification-sync, spec specs/16e-mobile-notification-sync.md. Route standard, NON-UI**
   (one boundary `apps/mobile`; renders nothing → no design skills; fully resolved). The mobile twin of 16c,
