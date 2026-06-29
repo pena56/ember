@@ -58,8 +58,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-import type { ComponentApi as PushNotificationsComponentApi } from "@convex-dev/expo-push-notifications/_generated/component.js";
-
 export declare const components: {
-  pushNotifications: PushNotificationsComponentApi<"pushNotifications">;
+  pushNotifications: import("@convex-dev/expo-push-notifications/_generated/component.js").ComponentApi<"pushNotifications">;
 };
