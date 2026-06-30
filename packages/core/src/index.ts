@@ -26,3 +26,4 @@ export * from './smart-view.js';
 export * from './notification.js';
 export * from './notification-copy.js';
 export * from './notification-sync.js';
+export * from './notification-preferences.js';
