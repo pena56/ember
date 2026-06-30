@@ -236,6 +236,24 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17c SPECCED + DISPATCH-READY (2026-06-30) — Issue #145 (umbrella #17, THIRD slice), branch
+  feat/145-store-notification-preferences, spec specs/17c-store-notification-preferences.md. Route standard,
+  NON-UI** (one boundary `packages/store`, no new dep). Persist + sync the 17b `NotificationPreferences`
+  value as a singleton settings record — **near-clone of `packages/store/src/goal-config.ts`**, riding the
+  existing generic outbox/`records` pipeline (LWW by `updatedAt` HLC; verified sync.ts keys `collection:
+  v.string()` with NO allowlist, so a new collection syncs for free → **no convex change**; reuses 17b core
+  symbols → **no core change**). **Deliverables (all `packages/store`):** new `notification-preferences.ts` —
+  `NOTIFICATION_PREFERENCES_COLLECTION`/`_ID`(`'default'`), `NotificationPreferencesRecord` ({id, prefs,
+  updatedAt}), `getNotificationPreferences(repo)` (stored→normalized, else default w/ `updatedAt:''`),
+  `setNotificationPreferences(deps, prefs)` (normalize → put + exactly one HLC-stamped outbox entry), private
+  `normalizePrefs` (fill enabledTypes keys from default, clamp quiet hours int[0,24]); barrel export. **Test:**
+  MemoryRepository, mirrors `goal-config.test.ts` — default-on-empty, set persists + one outbox entry/call,
+  updatedAt encoded HLC > '', normalize fills/clamps. No UI; platform-store exposure + Settings wiring land in
+  the next mobile/web slices. Dispatch: Sonnet TDD → fresh-context Opus reviewer (verify #2 outbox+HLC, #5 no
+  bespoke merge, exactly-one-entry, singleton id) → PR "Closes #145". No deploy gate. **Next after 17c:**
+  mobile Settings UI wiring (expose via native-store + toggles/quiet-hours pickers into 17a's screen), then web
+  settings parity + explicit-primary (convex election) + the two deferred claim-review client units.
+  <!-- 17b MERGED note retained below for trail -->
 - **Unit 17b MERGED (2026-06-30) — PR #144 (squash `86ca013`, branch deleted), Issue #143 CLOSED;
   CI `verify` green (1m37s). Umbrella #17 (Settings) OPEN — 17a + 17b done.** Pure-core preference model
   now feeds the planner: per-type `enabledTypes` gate + quiet-hours, single-sourced from `NOTIFICATION_PRIORITY`,
