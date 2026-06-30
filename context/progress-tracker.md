@@ -236,6 +236,27 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17b SPECCED + DISPATCH-READY (2026-06-30) — Issue #143 (umbrella #17, SECOND slice), branch
+  feat/143-core-notification-preferences, spec specs/17b-core-notification-preferences.md. Route standard,
+  NON-UI** (one boundary `packages/core`, pure TS, no new dep). The preference model that feeds the
+  planner. **Forks settled with user (2026-06-30):** (1) **core-model-only slice** — persistence/sync,
+  mobile/web Settings UI, and explicit-primary all defer to later slices (mirrors #16's by-boundary split);
+  (2) **explicit-primary OUT** — it changes 16b's convex `electPrimaryDevice`, a different boundary;
+  (3) **per-type, all 4** independent on/off (streak-risk/goal-progress/best-time/lapse-reengage);
+  (4) **local-first synced record** — `NotificationPreferences` is the per-account persisted shape a later
+  slice writes through the outbox (LWW via shared engine); this slice only defines its shape. **Deliverables
+  (all `packages/core`):** add `enabledTypes: Record<NotificationType, boolean>` to `NotificationConfig` +
+  default all-true (keys derived from `NOTIFICATION_PRIORITY`) and filter disabled types out of
+  `planNotifications` candidates (pre-quiet-hours); new `notification-preferences.ts` — `NotificationPreferences`
+  type + `DEFAULT_NOTIFICATION_PREFERENCES` + pure `resolveNotificationConfig(prefs)→Partial<NotificationConfig>`
+  (clamps quiet hours to int[0,24], degenerate start>=end falls back to 8/22, sparse partial output); barrel
+  export. No persistence/UI/convex/store change; no `Date.now()`, no zod. **Test:** default-parity, per-type
+  disable shifts selection, all-disabled⇒null, custom/degenerate quiet-hours, partial-prefs passthrough; all
+  existing 16a/16d tests stay green. Dispatch: Sonnet TDD → fresh-context Opus reviewer (verify #1 core purity
+  + #5 single-source decision, default behaviour byte-identical) → PR "Closes #143". No deploy gate.
+  **Next after 17b:** preference persistence + sync (store/outbox record), then mobile Settings UI wiring,
+  then web settings parity + explicit-primary (convex election) + the two deferred claim-review client units.
+  <!-- 17a MERGED note retained below for trail -->
 - **Unit 17a MERGED (2026-06-30) — PR #142 (squash `a7dc064`, branch deleted), Issue #141 CLOSED.
   Umbrella #17 (Settings) OPEN — 17a is its FIRST slice; #16 push delivery now lights up on-device.**
   Built Sonnet-TDD (pure `derivePushControlState`, 4 tests; thin native/hook/UI glue) → frontend-design +
@@ -256,10 +277,12 @@ Update after every meaningful change.
   (reviewer nit #1 as a real bug) → `refresh()` now reconciles `hasToken` from server `getNotificationState`
   for this deviceId on focus (added to `NotificationPort` + convex adapter + sync-test fake), keeping the
   optimistic flip on `enable()`. Toggle now turns on AND persists; token acquired (`hasToken:true`).
-  **Remaining device step (user):** Part B — upload `ember-service-account.json` via `eas credentials`
-  (FCM V1) so Expo actually SENDS, then trigger a due intent to confirm a real push lands. **Next: 17b**
-  notification preferences (quiet-hours / enabled-types / explicit-primary + the preference model feeding
-  `deriveNotificationSync`); then 17c+ web settings parity + the two deferred claim-review client units.
+  **Device delivery VERIFIED (2026-06-30):** Part B done — `ember-service-account.json` uploaded via
+  `eas credentials` (FCM V1); a due intent fired and a real push LANDED on device. End-to-end
+  decide→submit→dedupe→relay→deliver is now proven green on hardware. **17a fully complete (in-repo +
+  on-device); nothing left hanging.** **Next: 17b** notification preferences (quiet-hours / enabled-types
+  / explicit-primary + the preference model feeding `deriveNotificationSync`); then 17c+ web settings
+  parity + the two deferred claim-review client units.
   <!-- 17a SPECCED note retained below for trail -->
 - **Unit 17a SPECCED + DISPATCH-READY (2026-06-29) — Issue #141 (umbrella #17, FIRST slice), branch
   feat/141-mobile-push-enablement, spec specs/17a-mobile-push-enablement.md. Route standard, NET-NEW UI**
