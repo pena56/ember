@@ -5,8 +5,9 @@
  * Presented as a modal (presentation: 'modal' set in _layout.tsx).
  * Dismisses via swipe/back.
  *
- * The route owns usePushEnablement() and passes pushState + onEnablePush into
- * the presentational <SettingsScreen/> (same hook-in-route split as AccountSheet).
+ * The route owns usePushEnablement() and useNotificationPreferences() and passes
+ * state + callbacks into the presentational <SettingsScreen/> (same hook-in-route
+ * split as AccountSheet). No hooks in SettingsScreen itself.
  *
  * Token-only styling (invariant #6).
  */
@@ -16,6 +17,7 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { convex } from '../src/convex/convex-client.js';
+import { useNotificationPreferences } from '../src/notify/use-notification-preferences.js';
 import { usePushEnablement } from '../src/notify/use-push-enablement.js';
 import { SettingsScreen } from '../src/settings/settings-screen.js';
 
@@ -30,10 +32,11 @@ export default function SettingsRoute() {
   return <SettingsRouteInner />;
 }
 
-// Inner component so the hook is only mounted when convex !== null (Redirect above
+// Inner component so hooks are only mounted when convex !== null (Redirect above
 // returns before any hook runs — keeps hook order stable under the guard).
 function SettingsRouteInner() {
   const { state, enable } = usePushEnablement();
+  const { prefs, setEnabledType, setQuietHours } = useNotificationPreferences();
 
   // bg-surface must live on a plain View (uniwind className paints it); the
   // native-stack modal's container defaults to a light background, so the token
@@ -41,7 +44,14 @@ function SettingsRouteInner() {
   return (
     <View className="flex-1 bg-surface">
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
-        <SettingsScreen pushState={state} onEnablePush={enable} />
+        <SettingsScreen
+          pushState={state}
+          onEnablePush={enable}
+          prefs={prefs}
+          pushEnabled={state.enabled}
+          onToggleType={setEnabledType}
+          onChangeQuietHours={setQuietHours}
+        />
       </SafeAreaView>
     </View>
   );

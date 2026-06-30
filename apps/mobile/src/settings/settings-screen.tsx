@@ -2,15 +2,15 @@
  * settings-screen.tsx — Settings modal screen for Ember Reader.
  *
  * Presented as a modal (presentation: 'modal' in _layout.tsx) via app/settings.tsx.
- * Currently contains only the Notifications section; the section-card layout
- * leaves room for Account and Theme sections in 17b/17c.
+ * Contains the Notifications section; the section-card layout leaves room for
+ * Account and Theme sections in later slices.
  *
- * The route (app/settings.tsx) owns usePushEnablement() and passes pushState +
- * onEnablePush down — this component is presentational (props in, no hooks beyond
- * token resolution), matching the AccountSheet/AccountButton split.
+ * The route (app/settings.tsx) owns all hooks and passes state + callbacks down —
+ * this component is presentational (props in, no hooks beyond token resolution),
+ * matching the AccountSheet/AccountButton split.
  *
- * Token-only styling (invariant #6 — no hardcoded colors). Full a11y on the
- * Enable row (accessibilityRole="switch" + accessibilityState + label).
+ * Token-only styling (invariant #6 — no hardcoded colors). Full a11y on every
+ * interactive control (accessibilityRole + accessibilityState + label/hint).
  */
 
 import type React from 'react';
@@ -18,7 +18,12 @@ import type { ColorValue } from 'react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useResolveClassNames } from 'uniwind';
 
+import type { NotificationPreferences, NotificationType } from '@ember/core';
+import { NOTIFICATION_PRIORITY } from '@ember/core';
+
 import type { PushControlState } from '../notify/push-control-state.js';
+
+import { HourField } from './hour-field.js';
 
 // ── Bespoke toggle ────────────────────────────────────────────────────────────
 // A pill-track with a sliding dot, driven entirely by token classes via
@@ -76,14 +81,44 @@ function Section({ label, children }: SectionProps) {
   );
 }
 
+// ── Per-type label map ────────────────────────────────────────────────────────
+// Keys come from NOTIFICATION_PRIORITY so a new type surfaces as a missing-label
+// TS error (exhaustive Record) rather than a silent drop. Only this screen owns
+// human copy; the model has no display strings (single-responsibility).
+
+const TYPE_LABELS: Record<NotificationType, string> = {
+  'streak-risk': 'Streak risk',
+  'goal-progress': 'Goal progress',
+  'best-time': 'Best time',
+  'lapse-reengage': 'Lapse re-engage',
+};
+
+// Priority-ordered type list derived once at module level (invariant #5 — single source).
+const ORDERED_TYPES: NotificationType[] = (
+  Object.entries(NOTIFICATION_PRIORITY) as [NotificationType, number][]
+)
+  .sort(([, a], [, b]) => a - b)
+  .map(([type]) => type);
+
 // ── Notifications section ─────────────────────────────────────────────────────
 
 interface NotificationsSectionProps {
   pushState: PushControlState;
   onEnablePush: () => void;
+  prefs: NotificationPreferences;
+  pushEnabled: boolean;
+  onToggleType: (type: NotificationType, enabled: boolean) => void;
+  onChangeQuietHours: (startHour: number, endHour: number) => void;
 }
 
-function NotificationsSection({ pushState, onEnablePush }: NotificationsSectionProps) {
+function NotificationsSection({
+  pushState,
+  onEnablePush,
+  prefs,
+  pushEnabled,
+  onToggleType,
+  onChangeQuietHours,
+}: NotificationsSectionProps) {
   const rowLabel = pushState.enabled
     ? 'On'
     : pushState.needsSystemSettings
@@ -120,7 +155,7 @@ function NotificationsSection({ pushState, onEnablePush }: NotificationsSectionP
       {/* Hairline divider */}
       <View className="h-px bg-line mx-5" />
 
-      {/* Enable row */}
+      {/* Enable row — design/behaviour unchanged from 17a */}
       <Pressable
         onPress={onEnablePush}
         {...a11yProps}
@@ -146,6 +181,62 @@ function NotificationsSection({ pushState, onEnablePush }: NotificationsSectionP
           </Text>
         </View>
       )}
+
+      {/* Hairline before per-type section */}
+      <View className="h-px bg-line mx-5" />
+
+      {/*
+       * Gated section — dimmed + non-interactive when push is off.
+       * pointerEvents="none" blocks all touches on the entire subtree.
+       * Individual rows still carry accessibilityState.disabled so
+       * VoiceOver/TalkBack correctly announces them as unavailable.
+       */}
+      <View
+        style={{ opacity: pushEnabled ? 1 : 0.45 }}
+        pointerEvents={pushEnabled ? 'auto' : 'none'}
+      >
+        {/* Per-type toggle rows in NOTIFICATION_PRIORITY order */}
+        {ORDERED_TYPES.map((type, index) => (
+          <View key={type}>
+            {index > 0 && <View className="h-px bg-line mx-5" />}
+            <Pressable
+              onPress={() => onToggleType(type, !prefs.enabledTypes[type])}
+              disabled={!pushEnabled}
+              accessibilityRole="switch"
+              accessibilityLabel={TYPE_LABELS[type]}
+              accessibilityState={{ checked: prefs.enabledTypes[type], disabled: !pushEnabled }}
+              className="flex-row items-center justify-between px-5 py-4"
+            >
+              <Text className="font-sans text-sm text-text">{TYPE_LABELS[type]}</Text>
+              <EmberToggle enabled={prefs.enabledTypes[type]} />
+            </Pressable>
+          </View>
+        ))}
+
+        {/* Hairline before quiet-hours */}
+        <View className="h-px bg-line mx-5" />
+
+        {/* Quiet hours — two HourField steppers side by side */}
+        <View className="px-5 pt-4 pb-5 gap-3">
+          <Text className="font-sans text-xs font-medium uppercase tracking-widest text-text-muted">
+            Quiet hours
+          </Text>
+          <View className="flex-row gap-6">
+            <HourField
+              label="From"
+              hour={prefs.quietStartHour}
+              onChange={(h) => onChangeQuietHours(h, prefs.quietEndHour)}
+              disabled={!pushEnabled}
+            />
+            <HourField
+              label="To"
+              hour={prefs.quietEndHour}
+              onChange={(h) => onChangeQuietHours(prefs.quietStartHour, h)}
+              disabled={!pushEnabled}
+            />
+          </View>
+        </View>
+      </View>
     </Section>
   );
 }
@@ -155,9 +246,20 @@ function NotificationsSection({ pushState, onEnablePush }: NotificationsSectionP
 interface SettingsScreenProps {
   pushState: PushControlState;
   onEnablePush: () => void;
+  prefs: NotificationPreferences;
+  pushEnabled: boolean;
+  onToggleType: (type: NotificationType, enabled: boolean) => void;
+  onChangeQuietHours: (startHour: number, endHour: number) => void;
 }
 
-export function SettingsScreen({ pushState, onEnablePush }: SettingsScreenProps) {
+export function SettingsScreen({
+  pushState,
+  onEnablePush,
+  prefs,
+  pushEnabled,
+  onToggleType,
+  onChangeQuietHours,
+}: SettingsScreenProps) {
   return (
     <ScrollView
       contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
@@ -170,9 +272,16 @@ export function SettingsScreen({ pushState, onEnablePush }: SettingsScreenProps)
         </Text>
       </View>
 
-      {/* Sections — Account and Theme cards slot in below in 17b/17c */}
+      {/* Sections — Account and Theme cards slot in below in later slices */}
       <View className="px-6 gap-8">
-        <NotificationsSection pushState={pushState} onEnablePush={onEnablePush} />
+        <NotificationsSection
+          pushState={pushState}
+          onEnablePush={onEnablePush}
+          prefs={prefs}
+          pushEnabled={pushEnabled}
+          onToggleType={onToggleType}
+          onChangeQuietHours={onChangeQuietHours}
+        />
       </View>
     </ScrollView>
   );

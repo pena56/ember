@@ -236,6 +236,25 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17d SPECCED + DISPATCH-READY (2026-06-30) — Issue #147 (umbrella #17, FOURTH slice = mobile
+  Settings UI), branch feat/147-mobile-notification-preferences, spec specs/17d-mobile-notification-preferences.md.
+  Route standard, UI** (one boundary `apps/mobile`, NO new dep). Wires 17c's persisted
+  `NotificationPreferences` into the Settings modal. **Product decisions (resolved via AskUserQuestion):**
+  (1) toggles + quiet-hours pickers TOGETHER; (2) per-type toggles shown always but DIMMED/disabled until
+  push is enabled (Enable row is the gate). **Deliverables (all `apps/mobile`):** native-store thin
+  pass-throughs `getNotificationPreferences()` / `setNotificationPreferences(prefs)` (clock supplies
+  hlc+newOutboxId, like importPdf — one HLC stamp/set, #2 already guaranteed by 17c); new hook
+  `use-notification-preferences.ts` mirroring `use-push-enablement` (useFocusEffect re-read, fail-soft,
+  optimistic `setEnabledType`/`setQuietHours`); UI in `settings-screen.tsx` — 4 per-type toggles (reuse
+  `EmberToggle`, ordered by `NOTIFICATION_PRIORITY`) + **bespoke `hour-field.tsx`** quiet-hours selector
+  (whole 0–24 hrs, NO `@react-native-community/datetimepicker`); route `app/settings.tsx` mounts the hook
+  + passes props. **UI quality:** `HourField` net-new → frontend-design then impeccable; existing section
+  changed → impeccable; token-only (#6). **Dispatch:** Sonnet executor (frontend-design/impeccable in-step)
+  → fresh-context Opus reviewer (verify #1 local-read/outbox-write, #2 one stamp/set, #6 token-only, gating
+  + a11y) → PR "Closes #147". **DEVICE-BOUND after merge** (RN can't render headless): persistence across
+  modal reopen + restart, light↔dark, 2-device LWW convergence. **NEXT slices for #17:** web settings parity
+  (apps/web), then explicit-primary (convex election) + the two deferred claim-review client units.
+  <!-- 17c MERGED note retained below for trail -->
 - **Unit 17c MERGED (2026-06-30) — PR #146 (squash `5b48884`, branch deleted), Issue #145 CLOSED;
   CI `verify` green (1m35s). Umbrella #17 (Settings) OPEN — 17a + 17b + 17c done.** Notification
   preferences now persist + sync: singleton `notificationPreferences:default` settings record in
