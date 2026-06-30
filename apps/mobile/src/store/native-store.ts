@@ -1,7 +1,7 @@
-import type { Annotation, AnnotationKind, BlobStatus, DocTag, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, ReadingPosition, ReadingSession, SmartView, SmartViewQuery, Tag, TagColor, TextAnchor } from '@ember/core';
+import type { Annotation, AnnotationKind, BlobStatus, DocTag, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, NotificationPreferences, ReadingPosition, ReadingSession, SmartView, SmartViewQuery, Tag, TagColor, TextAnchor } from '@ember/core';
 import { BLOB_SYNC_COLLECTION, DOC_TAGS_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, SMART_VIEWS_COLLECTION, TAGS_COLLECTION, docTagId, editAnnotation, editSmartView, editTag, makeAnnotation, makeDocTag, makeDuplicateDecision, makeOutboxEntry, makeSmartView, makeTag } from '@ember/core';
-import type { BlobStore, GoalConfigRecord, ImportResult, Repository } from '@ember/store';
-import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount } from '@ember/store';
+import type { BlobStore, GoalConfigRecord, ImportResult, NotificationPreferencesRecord, Repository } from '@ember/store';
+import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getNotificationPreferences as getNotificationPreferencesFromStore, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount, setNotificationPreferences as setNotificationPreferencesFromStore } from '@ember/store';
 
 import type { NativeClock } from './native-clock.js';
 
@@ -55,6 +55,21 @@ export interface NativeStore {
    * so no write/outbox path lives here (invariants #2/#5 untouched).
    */
   getGoalConfig(): Promise<GoalConfigRecord>;
+  /**
+   * Return the stored notification preferences, or an unpersisted default when nothing
+   * is saved yet. Read-only passthrough — no outbox write (invariant #2 untouched).
+   * The default has `updatedAt: ''` so any subsequent `setNotificationPreferences` call
+   * wins by HLC compare.
+   */
+  getNotificationPreferences(): Promise<NotificationPreferencesRecord>;
+  /**
+   * Persist the user's notification preferences and enqueue exactly one HLC-stamped
+   * outbox entry (invariant #2). ONE `clock.nextStamp()` call per invocation — the
+   * same stamp is used as the record's `updatedAt` and the outbox entry's `hlc`
+   * so they agree (invariant #2). Cross-device conflicts resolve last-write-wins via
+   * the unit-12 reconciler.
+   */
+  setNotificationPreferences(prefs: NotificationPreferences): Promise<NotificationPreferencesRecord>;
   /**
    * Persist a document's total page count (set-once / idempotent — see 09a). Writes the updated
    * Document record + exactly one HLC-stamped outbox entry only when the count actually changes;
@@ -230,6 +245,17 @@ export function createNativeStore(deps: {
 
     async getGoalConfig(): Promise<GoalConfigRecord> {
       return getGoalConfig(repo);
+    },
+
+    async getNotificationPreferences(): Promise<NotificationPreferencesRecord> {
+      return getNotificationPreferencesFromStore(repo);
+    },
+
+    async setNotificationPreferences(prefs: NotificationPreferences): Promise<NotificationPreferencesRecord> {
+      return setNotificationPreferencesFromStore(
+        { repo, hlc: clock.nextStamp(), newOutboxId: () => clock.newOutboxId() },
+        prefs,
+      );
     },
 
     async setDocumentPageCount(docId: string, pageCount: number): Promise<Document | null> {
