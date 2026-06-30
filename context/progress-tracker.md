@@ -236,6 +236,20 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17b BUILT + REVIEWED + PR OPEN (2026-06-30) — PR #144, Issue #143 (umbrella #17, SECOND slice),
+  branch feat/143-core-notification-preferences.** Sonnet TDD executor built it (21 new tests) →
+  fresh-context Opus reviewer = **APPROVE** (no blockers/nits; re-ran all gates green; verified default
+  parity byte-identical, gate positioned after raw collection / before quiet-hours, #1 core purity + #5
+  single-source, all clamp/fallback edge cases, existing 16a/16d tests unchanged). **Ships (all
+  `packages/core`):** `enabledTypes: Record<NotificationType, boolean>` added to `NotificationConfig` +
+  all-true default (keys from `NOTIFICATION_PRIORITY`), `planNotifications` drops disabled types
+  pre-quiet-hours; new `notification-preferences.ts` (`NotificationPreferences` + `DEFAULT_NOTIFICATION_PREFERENCES`
+  + pure `resolveNotificationConfig` — clamps quiet hours int[0,24], degenerate start>=end → 8/22, sparse
+  partial); barrel export. typecheck 9 ✓ · test core 460→483 (total 844) ✓ · lint 6 ✓. No new dep, no deploy
+  gate (no schema/cron change). **Awaiting merge.** **Next after 17b:** preference persistence + sync
+  (store/outbox record), then mobile Settings UI wiring, then web settings parity + explicit-primary (convex
+  election) + the two deferred claim-review client units.
+  <!-- 17b SPECCED note retained below for trail -->
 - **Unit 17b SPECCED + DISPATCH-READY (2026-06-30) — Issue #143 (umbrella #17, SECOND slice), branch
   feat/143-core-notification-preferences, spec specs/17b-core-notification-preferences.md. Route standard,
   NON-UI** (one boundary `packages/core`, pure TS, no new dep). The preference model that feeds the
