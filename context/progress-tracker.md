@@ -236,6 +236,21 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17c MERGED (2026-06-30) — PR #146 (squash `5b48884`, branch deleted), Issue #145 CLOSED;
+  CI `verify` green (1m35s). Umbrella #17 (Settings) OPEN — 17a + 17b + 17c done.** Notification
+  preferences now persist + sync: singleton `notificationPreferences:default` settings record in
+  `packages/store/notification-preferences.ts` (near-clone of `goal-config.ts`) read/written through
+  Repository + outbox with HLC stamp, riding the generic `records`/`sync.ts` pipeline (LWW via shared
+  reconciler — no convex change, no core change). `get`→normalized-or-default(`updatedAt:''`),
+  `set`→put + exactly one HLC-stamped outbox entry; `normalizePrefs` fills enabledTypes keys + clamps
+  quiet hours int[0,24] (no degenerate fallback — that's core's `resolveNotificationConfig`). Sonnet TDD
+  (10 new tests, store 108→118) → fresh-context Opus review = APPROVE (zero defects; #2 outbox+HLC & #5
+  no-bespoke-merge upheld, no boundary leak). Gates green (typecheck · 1,465 ws tests · lint). Local
+  `main` fast-forwarded. **NEXT slices for #17:** mobile Settings UI wiring (expose prefs via native-store
+  get/set + toggles/quiet-hours pickers into 17a's Settings screen — UI unit, runs frontend-design/impeccable),
+  then web settings parity, then explicit-primary (convex election change) + the two deferred claim-review
+  client units.
+  <!-- 17c SPECCED note retained below for trail -->
 - **Unit 17c SPECCED + DISPATCH-READY (2026-06-30) — Issue #145 (umbrella #17, THIRD slice), branch
   feat/145-store-notification-preferences, spec specs/17c-store-notification-preferences.md. Route standard,
   NON-UI** (one boundary `packages/store`, no new dep). Persist + sync the 17b `NotificationPreferences`
