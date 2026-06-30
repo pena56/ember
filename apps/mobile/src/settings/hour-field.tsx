@@ -76,10 +76,10 @@ export function HourField({ label, hour, onChange, disabled = false }: HourField
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={handleA11yAction}
       accessibilityState={{ disabled }}
-      style={{ opacity: disabled ? 0.5 : 1 }}
-      // Individual touch targets remain functional (the parent section's
-      // pointerEvents="none" gate handles actual interaction blocking when
-      // push is off); disabled still disables the buttons for direct tap.
+      // No self-dim here: in Settings the parent gated section already applies
+      // a single uniform opacity over the whole subtree, so dimming again would
+      // double up (toggles at 0.45, fields at ~0.22). The disabled state still
+      // disables the buttons (and hides them from touch) for direct/standalone tap.
     >
       {/* Label */}
       <Text className="font-sans text-xs font-medium uppercase tracking-widest text-text-muted mb-2">

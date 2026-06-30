@@ -201,6 +201,7 @@ function NotificationsSection({
             {index > 0 && <View className="h-px bg-line mx-5" />}
             <Pressable
               onPress={() => onToggleType(type, !prefs.enabledTypes[type])}
+              disabled={!pushEnabled}
               accessibilityRole="switch"
               accessibilityLabel={TYPE_LABELS[type]}
               accessibilityState={{ checked: prefs.enabledTypes[type], disabled: !pushEnabled }}
