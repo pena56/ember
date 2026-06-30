@@ -236,6 +236,31 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17a MERGED (2026-06-30) — PR #142 (squash `a7dc064`, branch deleted), Issue #141 CLOSED.
+  Umbrella #17 (Settings) OPEN — 17a is its FIRST slice; #16 push delivery now lights up on-device.**
+  Built Sonnet-TDD (pure `derivePushControlState`, 4 tests; thin native/hook/UI glue) → frontend-design +
+  impeccable (Settings modal: section-card layout, bespoke token-driven toggle, a11y) → fresh-context Opus
+  review = APPROVE (no convex/core/store change; raw token never in our schema; #1/#6/#7 held). Two review
+  nits fixed pre-merge (focus-bound refresh; dead provisional fallback). Final gates green (typecheck 9 ·
+  test mobile 357→361 +4 · lint). **Ships:** Settings screen + modal route + Today-header gear, permission
+  → `getExpoPushTokenAsync` → `registerDevice({expoPushToken})`, foreground handler + tap responder,
+  optional `expoPushToken` on `NotificationPort`.
+  **Device bring-up (this session, all merged in #142):** set up a push-capable dev build — added
+  `expo-dev-client` + `eas.json` (development profile, internal APK); user ran `eas login`/`eas init`
+  (wrote `extra.eas.projectId` + owner `pena56`). Real-device debugging surfaced + fixed a chain:
+  (1) **Android FCM** — `getExpoPushTokenAsync` threw "Default FirebaseApp not initialized" → added
+  `android.googleServicesFile` + committed `google-services.json` (NOT secret; FCM V1 service-account key
+  is `.gitignore`d, upload via `eas credentials`); (2) **`SERVICE_NOT_AVAILABLE`** (transient FCM
+  registration) → added retry-with-backoff to `acquireExpoPushToken` + a `console.warn` so token failures
+  are visible; resolved on device by reboot/clock/Play-Services; (3) **toggle reset on modal remount**
+  (reviewer nit #1 as a real bug) → `refresh()` now reconciles `hasToken` from server `getNotificationState`
+  for this deviceId on focus (added to `NotificationPort` + convex adapter + sync-test fake), keeping the
+  optimistic flip on `enable()`. Toggle now turns on AND persists; token acquired (`hasToken:true`).
+  **Remaining device step (user):** Part B — upload `ember-service-account.json` via `eas credentials`
+  (FCM V1) so Expo actually SENDS, then trigger a due intent to confirm a real push lands. **Next: 17b**
+  notification preferences (quiet-hours / enabled-types / explicit-primary + the preference model feeding
+  `deriveNotificationSync`); then 17c+ web settings parity + the two deferred claim-review client units.
+  <!-- 17a SPECCED note retained below for trail -->
 - **Unit 17a SPECCED + DISPATCH-READY (2026-06-29) — Issue #141 (umbrella #17, FIRST slice), branch
   feat/141-mobile-push-enablement, spec specs/17a-mobile-push-enablement.md. Route standard, NET-NEW UI**
   (one boundary `apps/mobile`; product resolved → builds a new Settings screen, so `frontend-design` +
