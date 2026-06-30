@@ -78,11 +78,28 @@ export function usePushEnablement(opts?: { port?: NotificationPort }): PushEnabl
     return portPromiseRef.current;
   }, [injectedPort]);
 
-  // ── Refresh: re-read the OS permission status ─────────────────────────────
+  // ── Refresh: re-read OS permission + the server-side token registration ────
+  // hasToken must come from the durable source (the device's pushDevices record),
+  // not just local optimistic state — otherwise closing/reopening the Settings
+  // modal unmounts the hook and the toggle forgets it was on. Reading the
+  // notification *registration* state (not the document/reading data path) on
+  // focus, async + fail-soft + off the render path, is consistent with #1.
 
   const refresh = useCallback(() => {
-    void getPermissionStatus().then(setPermission).catch(() => { /* fail-soft */ });
-  }, []);
+    void (async () => {
+      try {
+        setPermission(await getPermissionStatus());
+      } catch { /* fail-soft: leave permission as-is */ }
+
+      if (!isAuthenticated || bundle === null) return;
+      const { deviceId } = bundle;
+      try {
+        const port = await getPort();
+        const { devices } = await port.getNotificationState();
+        setHasToken(devices.some((d) => d.deviceId === deviceId && d.hasToken));
+      } catch { /* fail-soft: offline / null convex — keep current hasToken */ }
+    })();
+  }, [isAuthenticated, bundle, getPort]);
 
   // ── Read permission on mount and on focus ──────────────────────────────────
   // useFocusEffect (not useEffect) so returning from the OS Settings app — e.g.
