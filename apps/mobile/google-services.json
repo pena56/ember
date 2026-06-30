@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "714350246923",
+    "project_id": "ember-reader-f8166",
+    "storage_bucket": "ember-reader-f8166.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714350246923:android:8e80bd988eb38f3ec35b0e",
+        "android_client_info": {
+          "package_name": "com.ember.reader"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeFtZbWKKmVpL0hszB9SPH8fbycEf7FL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

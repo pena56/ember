@@ -66,20 +66,37 @@ export async function requestPermission(): Promise<PermissionStatus> {
  *
  * Callers treat null as "token unavailable, leave toggle off, no crash".
  */
-export async function acquireExpoPushToken(projectId: string): Promise<string | null> {
+export async function acquireExpoPushToken(
+  projectId: string,
+  opts?: { retries?: number; baseDelayMs?: number },
+): Promise<string | null> {
   if (!projectId) {
     console.warn('[native-notifications] acquireExpoPushToken: no projectId — token unavailable');
     return null;
   }
-  try {
-    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-    return data ?? null;
-  } catch (error) {
-    // Surface the real reason (FCM/APNs misconfig, network, simulator) instead of
-    // failing silently — callers still treat null as "leave toggle off, no crash".
-    console.warn('[native-notifications] acquireExpoPushToken failed:', error);
-    return null;
+  // FCM/APNs registration can fail transiently right after install (e.g. Android
+  // SERVICE_NOT_AVAILABLE while Play Services finishes registering). Google's
+  // guidance for that class of error is retry-with-backoff, so try a few times
+  // before giving up. A hard misconfig (no google-services.json) still fails fast
+  // on every attempt and ends up null — callers leave the toggle off, no crash.
+  const retries = opts?.retries ?? 3;
+  const baseDelayMs = opts?.baseDelayMs ?? 1000;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+      return data ?? null;
+    } catch (error) {
+      const isLast = attempt === retries;
+      console.warn(
+        `[native-notifications] acquireExpoPushToken failed (attempt ${attempt + 1}/${retries + 1})` +
+          `${isLast ? '' : ' — retrying'}:`,
+        error,
+      );
+      if (isLast) return null;
+      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));
+    }
   }
+  return null;
 }
 
 // ── Android channel ───────────────────────────────────────────────────────────
