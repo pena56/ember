@@ -9,3 +9,9 @@ src/reader/pdf-js-content.ts
 
 expo-env.d.ts
 # @end expo-cli
+
+# Firebase Cloud Messaging V1 service-account private key — SECRET, never commit.
+# Upload it to EAS credentials instead (eas credentials → Android → FCM V1).
+# (google-services.json is NOT secret and is intentionally committed so EAS builds can read it.)
+*-service-account*.json
+firebase-adminsdk*.json

@@ -12,14 +12,23 @@
       "bundleIdentifier": "com.ember.reader"
     },
     "android": {
-      "package": "com.ember.reader"
+      "package": "com.ember.reader",
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2050f072-1068-479c-aa1f-949664629854"
+      }
+    },
+    "owner": "pena56"
   }
 }

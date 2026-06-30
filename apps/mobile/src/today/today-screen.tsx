@@ -14,6 +14,9 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResolveClassNames } from 'uniwind';
 
+import { convex } from '../convex/convex-client.js';
+import { SettingsButton } from '../settings/settings-button.js';
+
 import { ContinueReadingCard } from './continue-reading-card.js';
 import { HabitHeader } from './habit-header.js';
 import { useContinueReading } from './use-continue-reading.js';
@@ -65,6 +68,11 @@ export function TodayScreen() {
     // Page bg on a core View — uniwind className is a no-op on SafeAreaView (02d carry-forward)
     <View className="flex-1 bg-surface">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+        {/* Header — gear opens Settings. Only when Convex is configured;
+            offline-local has no provider above usePushEnablement (invariant #1). */}
+        <View className="flex-row items-center justify-end px-6 py-3">
+          {convex !== null && <SettingsButton />}
+        </View>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
           showsVerticalScrollIndicator={false}
