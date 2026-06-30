@@ -236,6 +236,26 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17e SPECCED + DISPATCH-READY (2026-06-30) — Issue #149 (umbrella #17, FIFTH slice = WEB Settings
+  parity), branch feat/149-web-notification-preferences, spec specs/17e-web-notification-preferences.md.
+  Route standard, UI** (one boundary `apps/web`, NO new dep). Web sibling of 17d. **Decisions (resolved via
+  AskUserQuestion):** (1) PARITY ONLY — web-store get/set + web Settings UI; planner wiring deferred to a
+  separate cross-platform slice; (2) DEDICATED `/settings` route + nav tab (not a dialog). Web has NO
+  push-enable surface → NO dim-gate, controls always active. **Deliverables (all `apps/web`):** web-store
+  thin pass-throughs `get/setNotificationPreferences` (clock-injected, one HLC stamp/set); new
+  `components/ui/switch.tsx` (shadcn wrapper over umbrella `radix-ui` Switch — NO new dep); pure
+  `format-hour.ts`(+test); bespoke `hour-field.tsx` stepper (shadcn Button, 0–24); hook
+  `use-notification-preferences.ts` (load + window-focus re-read, optimistic fail-soft); `settings-page.tsx`
+  (column shell `max-w-2xl px-6 py-10`, Notifications card, 4 Switch rows ordered by `NOTIFICATION_PRIORITY`
+  + exhaustive `TYPE_LABELS`, Quiet hours); `App.tsx` route + `app-shell.tsx` nav Tab. `web-store-notification-preferences.test.ts`
+  mirrors other web-store tests. **UI quality:** net-new page/Switch/HourField → frontend-design then
+  impeccable; token-only (#6). **Dispatch:** Sonnet executor (frontend-design/impeccable in-step) →
+  fresh-context Opus reviewer → PR "Closes #149". **⚠️ KNOWN GAP — toggles are INERT until #150** (no planner
+  reads prefs yet; by design, noted in spec). **NEXT after 17e:** **Unit 17f = Issue #150** — wire
+  `resolveNotificationConfig(prefs)` into `deriveNotificationSync` on BOTH mobile (`run-notification-sync.ts:48`)
+  + web (`use-notification-sync.ts`) so prefs actually take effect; then explicit-primary (convex election) +
+  the two deferred claim-review client units.
+  <!-- 17d MERGED note retained below for trail -->
 - **Unit 17d MERGED (2026-06-30) — PR #148 (squash `9ab026a`, branch deleted), Issue #147 CLOSED;
   CI `verify` green (1m38s). Umbrella #17 (Settings) OPEN — 17a/17b/17c/17d done.** Mobile Settings
   now reads/writes 17c's persisted `NotificationPreferences`: native-store thin pass-throughs
