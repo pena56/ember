@@ -236,6 +236,22 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17d MERGED (2026-06-30) — PR #148 (squash `9ab026a`, branch deleted), Issue #147 CLOSED;
+  CI `verify` green (1m38s). Umbrella #17 (Settings) OPEN — 17a/17b/17c/17d done.** Mobile Settings
+  now reads/writes 17c's persisted `NotificationPreferences`: native-store thin pass-throughs
+  `get/setNotificationPreferences` (one HLC stamp/set), `use-notification-preferences` hook (useFocusEffect
+  re-read, optimistic + fail-soft), 4 per-type `EmberToggle` rows ordered by `NOTIFICATION_PRIORITY`
+  (exhaustive `TYPE_LABELS`), bespoke token-only **`HourField`** quiet-hours stepper (whole 0–24 hrs, NO
+  native datetimepicker; pure `formatHour` + 5 tests). Type rows + quiet hours dim + go inert until push
+  enabled; Enable row stays live. Sonnet executor → fresh-context Opus review = APPROVE-WITH-NITS (both
+  fixed: deduped gated dimming that double-dimmed quiet hours ~0.22, hardened type-row `disabled`). Gates
+  green (typecheck · 366 mobile tests · lint). Local `main` ff'd. **⚠️ DEVICE-BOUND (user, after merge —
+  headless can't render RN):** toggle persistence across modal reopen + app restart, quiet-hours focus
+  re-read, dimmed-state legibility, light↔dark re-theme, 2-device LWW convergence. Note any picker/gesture
+  fixes back in spec 17d (like 02d's bundler notes). **NEXT slices for #17:** web settings parity (apps/web
+  — sibling of 17d), then explicit-primary (convex election change) + the two deferred claim-review client
+  units.
+  <!-- 17d SPECCED note retained below for trail -->
 - **Unit 17d SPECCED + DISPATCH-READY (2026-06-30) — Issue #147 (umbrella #17, FOURTH slice = mobile
   Settings UI), branch feat/147-mobile-notification-preferences, spec specs/17d-mobile-notification-preferences.md.
   Route standard, UI** (one boundary `apps/mobile`, NO new dep). Wires 17c's persisted
