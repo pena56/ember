@@ -62,6 +62,8 @@ export type NotificationConfig = {
   streakRiskHour: number;
   /** Days of inactivity before a lapse-reengage notification fires. Default: 3. */
   lapseDays: number;
+  /** Per-type on/off gate. Default: all true (keys derived from NOTIFICATION_PRIORITY). */
+  enabledTypes: Record<NotificationType, boolean>;
 };
 
 export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
@@ -74,6 +76,10 @@ export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   goalProgressHour: 15,
   streakRiskHour: 21,
   lapseDays: 3,
+  // Derive keys from NOTIFICATION_PRIORITY so it stays single-sourced (invariant #5).
+  enabledTypes: Object.fromEntries(
+    Object.keys(NOTIFICATION_PRIORITY).map((k) => [k, true]),
+  ) as Record<NotificationType, boolean>,
 };
 
 // ---------------------------------------------------------------------------
@@ -239,6 +245,11 @@ export function planNotifications(input: PlanNotificationsInput): PlanNotificati
     }
   }
 
+  // 2b. enabledTypes gate: drop candidates for disabled types.
+  //     Runs after raw collection (conditions still evaluated) but before quiet-hours,
+  //     so a disabled type is never scheduled regardless of its anchor hour.
+  const gated = raw.filter((plan) => cfg.enabledTypes[plan.type]);
+
   // 3. Quiet-hours filter: keep only plans whose anchor hour is within [quietStartHour, quietEndHour)
   //    We recover the anchor hour from scheduledWall: reverse the scheduledWallFor transform.
   const withinQuiet = (plan: NotificationPlan): boolean => {
@@ -249,7 +260,7 @@ export function planNotifications(input: PlanNotificationsInput): PlanNotificati
     return localHour >= quietStartHour && localHour < quietEndHour;
   };
 
-  const candidates = raw
+  const candidates = gated
     .filter(withinQuiet)
     .sort((a, b) => a.priority - b.priority);
 
