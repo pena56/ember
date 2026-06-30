@@ -67,11 +67,17 @@ export async function requestPermission(): Promise<PermissionStatus> {
  * Callers treat null as "token unavailable, leave toggle off, no crash".
  */
 export async function acquireExpoPushToken(projectId: string): Promise<string | null> {
-  if (!projectId) return null;
+  if (!projectId) {
+    console.warn('[native-notifications] acquireExpoPushToken: no projectId — token unavailable');
+    return null;
+  }
   try {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data ?? null;
-  } catch {
+  } catch (error) {
+    // Surface the real reason (FCM/APNs misconfig, network, simulator) instead of
+    // failing silently — callers still treat null as "leave toggle off, no crash".
+    console.warn('[native-notifications] acquireExpoPushToken failed:', error);
     return null;
   }
 }
