@@ -236,6 +236,15 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17b MERGED (2026-06-30) — PR #144 (squash `86ca013`, branch deleted), Issue #143 CLOSED;
+  CI `verify` green (1m37s). Umbrella #17 (Settings) OPEN — 17a + 17b done.** Pure-core preference model
+  now feeds the planner: per-type `enabledTypes` gate + quiet-hours, single-sourced from `NOTIFICATION_PRIORITY`,
+  all-true default keeps planner output byte-identical. Sonnet TDD → fresh-context Opus review = APPROVE
+  (no blockers/nits). core test 460→483. **Next slices for #17:** preference persistence + sync
+  (store/outbox `NotificationPreferences` record, LWW via shared engine), then mobile Settings UI wiring
+  (toggles + quiet-hours pickers into 17a's screen), then web settings parity + explicit-primary (convex
+  election) + the two deferred claim-review client units. Local `main` fast-forwarded cleanly.
+  <!-- 17b BUILT note retained below for trail -->
 - **Unit 17b BUILT + REVIEWED + PR OPEN (2026-06-30) — PR #144, Issue #143 (umbrella #17, SECOND slice),
   branch feat/143-core-notification-preferences.** Sonnet TDD executor built it (21 new tests) →
   fresh-context Opus reviewer = **APPROVE** (no blockers/nits; re-ran all gates green; verified default
