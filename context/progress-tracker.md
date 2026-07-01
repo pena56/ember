@@ -236,6 +236,19 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17f MERGED (2026-07-01) — PR #152 squash-merged to main (commit 50f2b4f, branch deleted), Issue #150 CLOSED.**
+  CI `verify` green (1m38s). The KNOWN GAP is CLOSED: both sync runners now read `store.getNotificationPreferences()`
+  (LOCAL — invariant #1) and spread `...resolveNotificationConfig(prefsRecord.prefs)` into `deriveNotificationSync`'s
+  config, so the 17c/17d/17e persisted toggles + active-hours window actually take effect. Client wiring only (no
+  core/store/UI change); zero decision logic in clients (invariant #5). Built Sonnet TDD → fresh-context Opus review =
+  **APPROVE-WITH-NITS** (all 3 new tests confirmed NON-VACUOUS — each fails if the production spread is deleted; single
+  cosmetic comment nit fixed pre-merge). Tests: mobile +2 (disabled-type dropped; narrowed-window filters), web +1.
+  **Follow-up FILED: Issue #153** — rename misleading `quiet*Hour` fields + reconcile "Quiet hours" UI copy with the
+  actual active-window semantics (core+UI; not urgent, behaviour self-consistent). **umbrella #17 SIXTH slice DONE.**
+  **NEXT:** explicit-primary (convex election) + the two deferred claim-review client units. **OWED device verification:**
+  17a (push settings toggle/permission/token) + 17d (mobile prefs persistence, quiet-hours focus re-read) — headless CI
+  can't render RN. Umbrella #17 remains OPEN.
+<!-- prior state (17f specced) retained below for trail -->
 - **Unit 17f SPECCED + DISPATCH-READY (2026-07-01) — Issue #150, branch feat/150-notification-preferences-wiring,
   spec specs/17f-notification-preferences-wiring.md. Route standard** (two CLIENT boundaries apps/mobile + apps/web,
   but one mechanical wiring of the shared, already-tested core seam `resolveNotificationConfig` — ~4 symmetric
