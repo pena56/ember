@@ -22,6 +22,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BlobBytes, BlobStatusStore } from '@ember/core';
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '@ember/core';
 import { MemoryBlobStore, MemoryRepository } from '@ember/store';
 
 import type { NotificationPort } from '../notify/use-notification-sync.js';
@@ -403,6 +404,41 @@ describe('useNotificationSync', () => {
       deviceId: customDeviceId,
       platform: 'web',
     });
+  });
+
+  it('(9b) narrowed active-hours window — prefs suppress the intent that default window would submit', async () => {
+    // With no sessions, best-time (hour 20, defaultBestHour) is the only candidate under the
+    // default [8, 22) window. Narrowing to [0, 1) places best-time (hour 20) outside the allowed
+    // window → the candidate is filtered → no submitIntent.
+    // This proves prefs reach the engine on the web path.
+    hoisted.authState.isAuthenticated = true;
+    const { bundle } = makeBundle();
+    const repo = new MemoryRepository();
+    const webStore = makeWebStore(repo);
+    const port = makeFakePort();
+
+    // Persist a narrowed active-hours window via the store so getNotificationPreferences returns it.
+    await webStore.setNotificationPreferences({
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+      quietStartHour: 0,
+      quietEndHour: 1,
+    });
+
+    renderHook(bundle, webStore, port);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(port.registerDevice).toHaveBeenCalled();
+    // The only candidate (best-time at hour 20) is outside [0, 1) → filtered → no submitIntent
+    expect(port.submitIntent).not.toHaveBeenCalled();
+    // Goal not met (no sessions) → no suppress keys either
+    expect(port.claimSlot).not.toHaveBeenCalled();
   });
 
   it('(10) goal met session → claimSlot called for suppress keys, not submitIntent', async () => {
