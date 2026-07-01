@@ -236,6 +236,18 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17h MERGED (2026-07-01) — PR #157 squash-merged to main, Issue #156 CLOSED, branch deleted.** CI `verify`
+  passed (1m52s). SECOND slice of explicit-primary DONE (17g convex ✅ #154 → **17h mobile picker ✅ #156** → **17i web
+  picker NEXT**). Mobile Settings now has a "Push device" section: pure `deriveDevicePickerRows` + `formatRelativeLastSeen`
+  seams (24 tests); widened `NotificationPort` + `setPrimaryDevice` + convex adapter; `use-primary-device` hook (captures
+  `nowMs` in focus refresh — screen stays pure); `DeviceSection` (radio ≥2 / info row <2; tokenless selectable+annotated;
+  token-only). **DEVICE VERIFICATION STILL OWED** (headless CI can't render RN — class of 17a/17d): on a real build with
+  ≥2 devices, radios render + selection persists across modal reopen + tokenless annotation + one-device info row.
+  **NEXT:** **17i** web Settings device-picker (web sibling of 17h — same seam, web store/UI), then the stale-intent
+  claim-review correctness gap (disabling a type after its intent was submitted should cancel the pending server intent —
+  real bug post-17f). Umbrella **#17 still OPEN**. Queued: Issue #153 (rename quiet*Hour + reconcile "Quiet hours" copy);
+  owed device verification 17a + 17d + 17h.
+  <!-- prior state — Unit 17h PR OPEN, retained below for trail -->
 - **Unit 17h PR OPEN — awaiting CI + merge (2026-07-01) — PR #157, Issue #156, branch feat/156-mobile-primary-device-picker.**
   Built (Sonnet TDD, 2 executor stalls — stream stall then session limit — recovered: I finished the final verify +
   fixed one lint failure) → fresh-context Opus review = **GO** (all spec checkboxes ✓, invariants #1/#5/#6/#7 clean,
