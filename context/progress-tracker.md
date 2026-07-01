@@ -236,6 +236,40 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17h PR OPEN — awaiting CI + merge (2026-07-01) — PR #157, Issue #156, branch feat/156-mobile-primary-device-picker.**
+  Built (Sonnet TDD, 2 executor stalls — stream stall then session limit — recovered: I finished the final verify +
+  fixed one lint failure) → fresh-context Opus review = **GO** (all spec checkboxes ✓, invariants #1/#5/#6/#7 clean,
+  new tests non-vacuous, 2 non-blocking nits). **Landed:** pure `deriveDevicePickerRows` + `formatRelativeLastSeen`
+  seams (24 tests); widened mobile `NotificationPort` device shape + `setPrimaryDevice` + convex adapter passthrough;
+  `use-primary-device` hook (mirrors use-push-enablement; captures `nowMs` in the focus refresh so the screen stays
+  pure — the spec's `nowMs={Date.now()}` in the route tripped react-hooks/purity, moved into the hook); "Push device"
+  `DeviceSection` (radio ≥2 / informational row <2; tokenless selectable+annotated; token-only ember-dot radio; a11y),
+  built via frontend-design + impeccable. `pnpm -w typecheck`·`test` (mobile 392)·`lint` all clean. **DEVICE
+  VERIFICATION OWED** (headless CI can't render RN — class of 17a/17d). **NEXT:** watch CI on #157 + squash-merge when
+  green (separate explicit instruction), then close #156 + tracker update; then 17i (web picker), then stale-intent
+  claim-review gap. Umbrella **#17 still OPEN**. Queued: Issue #153 (rename quiet*Hour + reconcile copy); owed device
+  verification 17a + 17d + 17h.
+  <!-- prior state — Unit 17h SPECCED + DISPATCH-READY, retained below for trail -->
+- **Unit 17h SPECCED + DISPATCH-READY (2026-07-01) — Issue #156, branch feat/156-mobile-primary-device-picker,
+  spec specs/17h-mobile-primary-device-picker.md. Route standard** (one boundary `apps/mobile`, UI unit, no new dep,
+  seam already landed in 17g). SECOND slice of the split **explicit-primary** feature (17g convex ✅ #154 → **17h**
+  mobile picker (this) → **17i** web picker). **Scope:** widen mobile `NotificationPort.getNotificationState` to the
+  full 17g device shape (`platform/hasToken/lastSeenAt/isPrimary`) + add `setPrimaryDevice` to port + convex adapter;
+  pure `deriveDevicePickerRows({devices,currentDeviceId})` seam (order: current-first, then lastSeenAt desc, tie-break
+  id; marks isCurrent) + pure `formatRelativeLastSeen(now,ts)` (both unit-tested); thin `use-primary-device` hook
+  (mirrors use-push-enablement gating/lazy-port/useFocusEffect; optimistic fire-and-forget setPrimary, off render path);
+  new presentational **"Push device" Section** in settings-screen (after Notifications) — radio group when ≥2 devices,
+  informational row when <2; route wires the hook. **Resolved (baked, veto-able):** own Section card (not nested); NOT
+  gated by this-device pushEnabled (may designate another device); tokenless device SELECTABLE + annotated "Not
+  receiving push yet" (election falls back — 17g preference-honored-when-eligible; the exact call 17g deferred to the
+  client); <2 devices → informational row (no lone radio); "primary" = async PUSH target only (carry from 17g).
+  **UI unit:** build the section via frontend-design → impeccable audit, token-only (#6), honour ui-context.md.
+  **Tests:** device-picker-rows.test.ts (ordering/current/empty/single/null-current) + format-last-seen.test.ts
+  (just-now/m/h/d/negative-clamp); hook+screen typecheck-only (headless — device verification OWED, class of 17a/17d).
+  **Dispatch:** Sonnet TDD executor → fresh-context Opus reviewer → PR "Closes #156". **NEXT after 17h:** 17i (web
+  picker), then the stale-intent claim-review gap. Umbrella **#17 still OPEN**. Also queued: Issue #153 (rename
+  quiet*Hour + reconcile copy); owed device verification 17a + 17d + (now) 17h.
+<!-- prior state (17g merged) retained below for trail -->
 - **Unit 17g MERGED (2026-07-01) — PR #155 squash-merged to main (commit 74b3a37, branch deleted), Issue #154 CLOSED.**
   User-designated primary push device — convex election. FIRST slice of the split **explicit-primary** feature (user chose
   via AskUserQuestion: **user designates the push device**). Route standard, one boundary `convex/`. Landed: server-authoritative

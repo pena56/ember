@@ -23,6 +23,8 @@ import { NOTIFICATION_PRIORITY } from '@ember/core';
 
 import type { PushControlState } from '../notify/push-control-state.js';
 
+import type { DevicePickerRow } from './device-picker-rows.js';
+import { formatRelativeLastSeen } from './format-last-seen.js';
 import { HourField } from './hour-field.js';
 
 // ── Bespoke toggle ────────────────────────────────────────────────────────────
@@ -241,6 +243,121 @@ function NotificationsSection({
   );
 }
 
+// ── Push-device section ─────────────────────────────────────────────────────
+// Concerns push *routing* (which device buzzes) — a distinct concern from the
+// Notifications section's per-type/quiet-hours *content* controls, so it lives
+// in its own sibling Section. NOT gated by this device's push-enablement: the
+// user may designate a *different* device as primary from here.
+
+// Exhaustive platform → display name. A new platform value becomes a TS error
+// here (missing key), never a silent blank row (mirrors TYPE_LABELS above).
+const PLATFORM_LABELS: Record<'ios' | 'android' | 'web', string> = {
+  ios: 'iPhone',
+  android: 'Android',
+  web: 'Web',
+};
+
+// The "ember dot" radio indicator: a border-line ring that fills with the accent
+// when selected — one accent moment, echoing the app's ember/goal-ring motif.
+// The fill is resolved to a token color via useResolveClassNames (invariant #6 —
+// no hardcoded colors), mirroring EmberToggle's approach.
+function DeviceRadioDot({ checked }: { checked: boolean }) {
+  const accentColor = useResolveClassNames('bg-accent').backgroundColor as ColorValue;
+
+  return (
+    <View
+      className={
+        checked
+          ? 'w-6 h-6 rounded-full items-center justify-center border-2 border-accent'
+          : 'w-6 h-6 rounded-full items-center justify-center border-2 border-line'
+      }
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {checked && (
+        <View className="w-3 h-3 rounded-full" style={{ backgroundColor: accentColor as string }} />
+      )}
+    </View>
+  );
+}
+
+interface DeviceSectionProps {
+  devices: DevicePickerRow[];
+  nowMs: number;
+  onSelectPrimary: (deviceId: string) => void;
+}
+
+function DeviceSection({ devices, nowMs, onSelectPrimary }: DeviceSectionProps) {
+  return (
+    <Section label="Push device">
+      {/* Priming copy — warm, second person; conveys routing without mechanics */}
+      <View className="px-5 pt-5 pb-3">
+        <Text className="font-sans text-sm leading-relaxed text-text-muted">
+          Choose which device gets your daily nudge when you&apos;re away.
+        </Text>
+      </View>
+
+      <View className="h-px bg-line mx-5" />
+
+      {devices.length < 2 ? (
+        // A one-device picker is meaningless — show an informational row, no radio.
+        <View className="px-5 py-4">
+          <Text className="font-sans text-sm leading-relaxed text-text-muted">
+            Only this device is registered. Sign in on another device to choose where your
+            nudges land.
+          </Text>
+        </View>
+      ) : (
+        // ≥2 devices → single-select radio group. The server enforces
+        // exactly-one-primary; a tokenless device stays selectable (annotated).
+        devices.map((row, index) => {
+          const label = PLATFORM_LABELS[row.platform];
+
+          return (
+            <View key={row.deviceId}>
+              {index > 0 && <View className="h-px bg-line mx-5" />}
+              <Pressable
+                onPress={() => onSelectPrimary(row.deviceId)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: row.isPrimary }}
+                accessibilityLabel={label + (row.isCurrent ? ' · This device' : '')}
+                accessibilityHint="Sends your daily nudge to this device"
+                className="flex-row items-center justify-between px-5 py-4 gap-3"
+              >
+                <View className="flex-1 gap-1">
+                  {/* Platform label + "This device" chip */}
+                  <View className="flex-row items-center gap-2">
+                    <Text className="font-sans text-sm font-medium text-text">{label}</Text>
+                    {row.isCurrent && (
+                      <View className="rounded-full border border-line px-2 py-0.5">
+                        <Text className="font-sans text-xs text-text-muted">This device</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Muted last-seen line */}
+                  <Text className="font-sans text-xs text-text-muted">
+                    {formatRelativeLastSeen(nowMs, row.lastSeenAt)}
+                  </Text>
+
+                  {/* Tokenless annotation — selectable, but not yet receiving push */}
+                  {!row.hasToken && (
+                    <Text className="font-sans text-xs text-text-muted opacity-75">
+                      Not receiving push yet
+                    </Text>
+                  )}
+                </View>
+
+                <DeviceRadioDot checked={row.isPrimary} />
+              </Pressable>
+            </View>
+          );
+        })
+      )}
+    </Section>
+  );
+}
+
 // ── Settings screen ───────────────────────────────────────────────────────────
 
 interface SettingsScreenProps {
@@ -250,6 +367,10 @@ interface SettingsScreenProps {
   pushEnabled: boolean;
   onToggleType: (type: NotificationType, enabled: boolean) => void;
   onChangeQuietHours: (startHour: number, endHour: number) => void;
+  devices: DevicePickerRow[];
+  currentDeviceId: string | null;
+  nowMs: number;
+  onSelectPrimary: (deviceId: string) => void;
 }
 
 export function SettingsScreen({
@@ -259,6 +380,9 @@ export function SettingsScreen({
   pushEnabled,
   onToggleType,
   onChangeQuietHours,
+  devices,
+  nowMs,
+  onSelectPrimary,
 }: SettingsScreenProps) {
   return (
     <ScrollView
@@ -282,6 +406,7 @@ export function SettingsScreen({
           onToggleType={onToggleType}
           onChangeQuietHours={onChangeQuietHours}
         />
+        <DeviceSection devices={devices} nowMs={nowMs} onSelectPrimary={onSelectPrimary} />
       </View>
     </ScrollView>
   );

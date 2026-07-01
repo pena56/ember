@@ -94,6 +94,9 @@ function makePort(): { port: NotificationPort; calls: string[] } {
       calls.push('claimSlot');
     }),
     getNotificationState: vi.fn(async () => ({ devices: [] })),
+    setPrimaryDevice: vi.fn(async () => {
+      calls.push('setPrimaryDevice');
+    }),
   };
   return { port, calls };
 }
