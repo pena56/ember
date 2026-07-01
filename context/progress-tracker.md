@@ -236,6 +236,23 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17g MERGED (2026-07-01) — PR #155 squash-merged to main (commit 74b3a37, branch deleted), Issue #154 CLOSED.**
+  User-designated primary push device — convex election. FIRST slice of the split **explicit-primary** feature (user chose
+  via AskUserQuestion: **user designates the push device**). Route standard, one boundary `convex/`. Landed: server-authoritative
+  `isPrimary: v.boolean()` on `pushDevices` (NOT outbox-synced — device routing is infra, clear of invariants #1/#2);
+  `setPrimaryDevice({deviceId})` mutation (serializable tx, exactly one primary/owner, ownership-validated → `"Unknown device"`,
+  auth-guarded → `"Unauthenticated"`); `electPrimaryDevice` now two-tier (prefer `isPrimary && hasToken`, fall back to recency
+  when none designated or the choice lost its token, never returns `!hasToken`); `getNotificationState` exposes `isPrimary`
+  (no raw tokens); `registerDevice` defaults false + never mutates on heartbeat. Semantics: "primary" governs the async PUSH
+  target only — foreground still claims via `claimSlot`; invariant #7 unchanged (ledger still the at-most-once gate). convex
+  suite 21→35 tests (pure election + setPrimaryDevice + a runDueSweep e2e proving the flag steers the ledger claim to the
+  designated older-lastSeen device). Executor green; fresh-context Opus reviewer = GO (tests verified non-vacuous); CI verify
+  green (1m36s). **NEXT: 17h** (mobile Settings device-picker) + **17i** (web Settings device-picker) — both consume the
+  `getNotificationState.isPrimary` + `setPrimaryDevice` seam this landed; each reads state, radio-selects primary, calls the
+  mutation, decides whether to visually gate a not-yet-`hasToken` device. Then the **stale-intent claim-review** correctness
+  gap (disable-a-type-after-submit should cancel the pending server intent). Umbrella **#17 still OPEN**. Owed device
+  verification 17a + 17d. Also queued: Issue #153 (rename misleading `quiet*Hour` fields + reconcile "Quiet hours" UI copy).
+<!-- prior state (17g specced) retained below for trail -->
 - **Unit 17g SPECCED + DISPATCH-READY (2026-07-01) — Issue #154, branch feat/154-primary-device-election,
   spec specs/17g-primary-device-election.md. Route standard** (one boundary `convex/`, no new dep, product resolved).
   FIRST slice of the split **explicit-primary** feature — user chose (AskUserQuestion) **user-designates the push
