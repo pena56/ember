@@ -111,6 +111,7 @@ export function AppShell() {
             <Tab to="/today">Today</Tab>
             <Tab to="/library">Library</Tab>
             <Tab to="/stats">Stats</Tab>
+            <Tab to="/settings">Settings</Tab>
           </nav>
 
           {/* Account menu */}

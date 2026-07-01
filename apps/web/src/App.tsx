@@ -23,6 +23,7 @@ import { useAnonymousAuth } from './auth/use-anonymous-auth.js';
 import { LibraryPage } from './library/library-page.js';
 import { useNotificationSync } from './notify/use-notification-sync.js';
 import { ReaderPage } from './reader/reader-page.js';
+import { SettingsPage } from './settings/settings-page.js';
 import { StatsPage } from './stats/stats-page.js';
 import { useWebStore } from './store/store-context.js';
 import { useBlobSync } from './sync/use-blob-sync.js';
@@ -115,6 +116,7 @@ export default function App() {
           <Route path="today" element={<TodayPage />} />
           <Route path="library" element={<LibraryRoute onRetrySync={() => { void retryDeferred(); }} />} />
           <Route path="stats" element={<StatsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
 
         {/* Full-screen reader — outside the shell */}
