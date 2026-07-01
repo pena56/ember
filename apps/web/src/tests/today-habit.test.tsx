@@ -147,6 +147,8 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     createSmartView: notUsed('createSmartView') as WebStore['createSmartView'],
     editSmartView: notUsed('editSmartView') as WebStore['editSmartView'],
     deleteSmartView: notUsed('deleteSmartView') as WebStore['deleteSmartView'],
+    getNotificationPreferences: notUsed('getNotificationPreferences') as WebStore['getNotificationPreferences'],
+    setNotificationPreferences: notUsed('setNotificationPreferences') as WebStore['setNotificationPreferences'],
   };
 }
 
