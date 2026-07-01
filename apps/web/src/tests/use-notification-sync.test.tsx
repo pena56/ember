@@ -47,6 +47,8 @@ const hoisted = vi.hoisted(() => ({
     registerDevice: vi.fn().mockResolvedValue({ ok: true }),
     submitIntent: vi.fn().mockResolvedValue({ accepted: true }),
     claimSlot: vi.fn().mockResolvedValue({ won: true }),
+    getNotificationState: vi.fn().mockResolvedValue({ devices: [] }),
+    setPrimaryDevice: vi.fn().mockResolvedValue({ ok: true }),
   })),
 }));
 
@@ -119,6 +121,8 @@ function makeFakePort(overrides?: Partial<NotificationPort>): NotificationPort {
     registerDevice: vi.fn().mockResolvedValue({ ok: true }),
     submitIntent: vi.fn().mockResolvedValue({ accepted: true }),
     claimSlot: vi.fn().mockResolvedValue({ won: true }),
+    getNotificationState: vi.fn().mockResolvedValue({ devices: [] }),
+    setPrimaryDevice: vi.fn().mockResolvedValue({ ok: true }),
     ...overrides,
   };
 }

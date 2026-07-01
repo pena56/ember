@@ -30,6 +30,18 @@ const DEBOUNCE_MS = 500;
 
 // ── Port ──────────────────────────────────────────────────────────────────────
 
+/**
+ * A single registered device as returned by getNotificationState.
+ * Matches the shape 17g's Convex query returns (no raw push tokens).
+ */
+export interface NotificationStateDevice {
+  deviceId: string;
+  platform: 'ios' | 'android' | 'web';
+  hasToken: boolean;
+  lastSeenAt: number;
+  isPrimary: boolean;
+}
+
 export interface NotificationPort {
   registerDevice(args: { deviceId: string; platform: 'web' }): Promise<unknown>;
   submitIntent(args: {
@@ -42,6 +54,9 @@ export interface NotificationPort {
     body: string;
   }): Promise<unknown>;
   claimSlot(args: { dedupeKey: string; deviceId: string; via: 'suppressed' }): Promise<unknown>;
+  getNotificationState(): Promise<{ devices: NotificationStateDevice[] }>;
+  /** Designates the owner's primary push device; server enforces exactly-one-per-owner. */
+  setPrimaryDevice(args: { deviceId: string }): Promise<unknown>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
