@@ -236,6 +236,30 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17i SPECCED + DISPATCH-READY (2026-07-01) — Issue #158, branch feat/158-web-primary-device-picker,
+  spec specs/17i-web-primary-device-picker.md. Route standard** (one boundary `apps/web`, UI unit, no new dep —
+  `radix-ui` already present, seam landed in 17g). THIRD / final slice of the split **explicit-primary** feature
+  (17g convex ✅ #154 → 17h mobile ✅ #156 → **17i web** (this)). Faithful web sibling of 17h. **Scope (all
+  `apps/web`):** widen the *inline* `NotificationPort` in `notify/use-notification-sync.ts` (add
+  `NotificationStateDevice` + `getNotificationState` + `setPrimaryDevice`; do NOT extract a new file) + convex
+  adapter passthrough; **verbatim** copy the pure seams `deriveDevicePickerRows` + `formatRelativeLastSeen` from
+  mobile (+ 24 tests — cross-app import would be a boundary violation, duplication is the pattern); thin
+  `use-primary-device` web hook (mount load + window-`focus` re-read, optimistic fire-and-forget, captures
+  `nowMs` on refresh — mirrors 17h's purity fix); new `components/ui/radio-group.tsx` (radix umbrella wrapper,
+  token-only, NO new dep); **presentational** `push-device-card.tsx` (jsdom-render-TESTED — the coverage RN's
+  17h couldn't get) wired into `settings-page.tsx` after `NotificationsCard`. **Resolved (baked, veto-able):**
+  own card after Notifications; tokenless device SELECTABLE + annotated "Not receiving push yet" (web's current
+  browser is itself tokenless today); <2 devices → informational row; single-select (server enforces one primary);
+  "primary" = async PUSH target only. **Web-specific:** NO push-enable gate (web has none — 17e), NO `convex ===
+  null` guard (web client throws at import; `useConvexAuth` always safe; page owns hooks, no route/screen split).
+  **Tests:** device-picker-rows + format-last-seen (24 verbatim) + `push-device-card.test.tsx` (radiogroup /
+  aria-checked / This-device chip / tokenless annotation / select / info-row); hook typecheck-only. **UI unit:**
+  build the card via frontend-design → impeccable audit, token-only (#6), honour ui-context.md. **Dispatch:**
+  Sonnet TDD executor → fresh-context Opus reviewer → PR "Closes #158" (separate explicit instruction). **After
+  17i:** the stale-intent claim-review correctness gap (disable-a-type-after-submit should cancel the pending
+  server intent — real bug post-17f). Umbrella **#17 still OPEN**. Owed BROWSER verification on merge (≥2 devices).
+  Queued: Issue #153 (rename quiet*Hour + reconcile copy); owed device verification 17a + 17d + 17h.
+  <!-- prior state — Unit 17h MERGED, retained below for trail -->
 - **Unit 17h MERGED (2026-07-01) — PR #157 squash-merged to main, Issue #156 CLOSED, branch deleted.** CI `verify`
   passed (1m52s). SECOND slice of explicit-primary DONE (17g convex ✅ #154 → **17h mobile picker ✅ #156** → **17i web
   picker NEXT**). Mobile Settings now has a "Push device" section: pure `deriveDevicePickerRows` + `formatRelativeLastSeen`
