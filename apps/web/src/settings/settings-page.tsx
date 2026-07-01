@@ -23,8 +23,11 @@ import { NOTIFICATION_PRIORITY } from '@ember/core';
 
 import { Switch } from '@/components/ui/switch.js';
 
+import { deriveDevicePickerRows } from './device-picker-rows.js';
 import { HourField } from './hour-field.js';
+import { PushDeviceCard } from './push-device-card.js';
 import { useNotificationPreferences } from './use-notification-preferences.js';
+import { usePrimaryDevice } from './use-primary-device.js';
 
 // ── Label map ─────────────────────────────────────────────────────────────────
 // Exhaustive Record so a new NotificationType causes a TS error here (not a silent drop).
@@ -131,6 +134,8 @@ function NotificationsCard({ prefs, onToggleType, onChangeQuietHours }: Notifica
 
 export function SettingsPage() {
   const { prefs, setEnabledType, setQuietHours } = useNotificationPreferences();
+  const { devices, currentDeviceId, nowMs, setPrimary } = usePrimaryDevice();
+  const deviceRows = deriveDevicePickerRows({ devices, currentDeviceId });
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10 flex flex-col gap-10">
@@ -153,6 +158,11 @@ export function SettingsPage() {
           prefs={prefs}
           onToggleType={setEnabledType}
           onChangeQuietHours={setQuietHours}
+        />
+        <PushDeviceCard
+          rows={deviceRows}
+          nowMs={nowMs}
+          onSelectPrimary={setPrimary}
         />
       </div>
     </div>

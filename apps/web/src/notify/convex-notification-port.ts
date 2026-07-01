@@ -18,5 +18,7 @@ export function createConvexNotificationPort(convex: ConvexReactClient): Notific
     registerDevice: (a) => convex.mutation(api.notifications.registerDevice, a),
     submitIntent: (a) => convex.mutation(api.notifications.submitIntent, a),
     claimSlot: (a) => convex.mutation(api.notifications.claimSlot, a),
+    getNotificationState: () => convex.query(api.notifications.getNotificationState, {}),
+    setPrimaryDevice: (a) => convex.mutation(api.notifications.setPrimaryDevice, a),
   };
 }
