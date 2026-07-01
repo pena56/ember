@@ -236,6 +236,20 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17h PR OPEN — awaiting CI + merge (2026-07-01) — PR #157, Issue #156, branch feat/156-mobile-primary-device-picker.**
+  Built (Sonnet TDD, 2 executor stalls — stream stall then session limit — recovered: I finished the final verify +
+  fixed one lint failure) → fresh-context Opus review = **GO** (all spec checkboxes ✓, invariants #1/#5/#6/#7 clean,
+  new tests non-vacuous, 2 non-blocking nits). **Landed:** pure `deriveDevicePickerRows` + `formatRelativeLastSeen`
+  seams (24 tests); widened mobile `NotificationPort` device shape + `setPrimaryDevice` + convex adapter passthrough;
+  `use-primary-device` hook (mirrors use-push-enablement; captures `nowMs` in the focus refresh so the screen stays
+  pure — the spec's `nowMs={Date.now()}` in the route tripped react-hooks/purity, moved into the hook); "Push device"
+  `DeviceSection` (radio ≥2 / informational row <2; tokenless selectable+annotated; token-only ember-dot radio; a11y),
+  built via frontend-design + impeccable. `pnpm -w typecheck`·`test` (mobile 392)·`lint` all clean. **DEVICE
+  VERIFICATION OWED** (headless CI can't render RN — class of 17a/17d). **NEXT:** watch CI on #157 + squash-merge when
+  green (separate explicit instruction), then close #156 + tracker update; then 17i (web picker), then stale-intent
+  claim-review gap. Umbrella **#17 still OPEN**. Queued: Issue #153 (rename quiet*Hour + reconcile copy); owed device
+  verification 17a + 17d + 17h.
+  <!-- prior state — Unit 17h SPECCED + DISPATCH-READY, retained below for trail -->
 - **Unit 17h SPECCED + DISPATCH-READY (2026-07-01) — Issue #156, branch feat/156-mobile-primary-device-picker,
   spec specs/17h-mobile-primary-device-picker.md. Route standard** (one boundary `apps/mobile`, UI unit, no new dep,
   seam already landed in 17g). SECOND slice of the split **explicit-primary** feature (17g convex ✅ #154 → **17h**
