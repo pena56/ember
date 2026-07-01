@@ -236,6 +236,21 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17e IN REVIEW / PR OPEN (2026-07-01) — PR #151 "Closes #149", branch feat/149-web-notification-preferences,
+  commit bee2ef5.** WEB Settings parity (umbrella #17, FIFTH slice). Built Sonnet TDD → fresh-context Opus review
+  = **APPROVE-WITH-NITS, NO blockers, no invariant violations, faithful mobile parity.** Shipped: web-store
+  `get/setNotificationPreferences` pass-throughs (one HLC stamp/set — #2); `components/ui/switch.tsx` (radix-ui
+  umbrella Switch, NO new dep); pure `format-hour.ts`(+test, 9 cases); bespoke `hour-field.tsx`; hook
+  `use-notification-preferences.ts` (mount load + window-focus re-read, optimistic fail-soft, no Convex on render — #1);
+  `settings-page.tsx` (`/settings` route + nav Tab, 4 Switch rows by `NOTIFICATION_PRIORITY`, exhaustive `TYPE_LABELS`,
+  Quiet hours); `web-store-notification-preferences.test.ts` (get-default / set-persists / exactly-one-outbox-entry).
+  **NO push-gate** (web has no enable surface — controls always active). Reviewer nits fixed: dark-mode token parity on
+  HourField buttons; dropped redundant Switch `aria-label`. Gates: typecheck 9 ✓ · test 1,454 ✓ · lint 6 ✓.
+  **⚠️ KNOWN GAP — toggles persist+sync but are INERT until #150** (no planner reads prefs yet; by design).
+  **AWAITING: CI green → squash-merge #151 (--delete-branch) → close #149.** **NEXT: Unit 17f = Issue #150** — wire
+  `resolveNotificationConfig(prefs)` into `deriveNotificationSync` on BOTH mobile (`run-notification-sync.ts:48`) + web
+  (`use-notification-sync.ts`); then explicit-primary (convex election) + the two deferred claim-review client units.
+<!-- prior state (17e specced) retained below for trail -->
 - **Unit 17e SPECCED + DISPATCH-READY (2026-06-30) — Issue #149 (umbrella #17, FIFTH slice = WEB Settings
   parity), branch feat/149-web-notification-preferences, spec specs/17e-web-notification-preferences.md.
   Route standard, UI** (one boundary `apps/web`, NO new dep). Web sibling of 17d. **Decisions (resolved via
