@@ -159,6 +159,35 @@ export const setPrimaryDevice = mutation({
 });
 
 // ---------------------------------------------------------------------------
+// backfillIsPrimary — one-time migration (17g gap, #160). 17g added a REQUIRED
+// isPrimary field to pushDevices without backfilling rows created before it, so
+// deploying the required schema against a live deployment holding legacy rows
+// fails validation. Migration: relax schema to v.optional → deploy → run this →
+// restore v.boolean() → deploy. Idempotent: only patches rows missing the field,
+// so re-running (or running after all rows conform) is a no-op. Internal — never
+// exposed to clients; invoke via `npx convex run notifications:backfillIsPrimary`.
+// ---------------------------------------------------------------------------
+
+export const backfillIsPrimary = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const devices = await ctx.db.query("pushDevices").collect();
+    let patched = 0;
+    for (const device of devices) {
+      // Under the restored required schema isPrimary types as boolean; widen the
+      // read so this still detects legacy rows that physically lack the field
+      // (and so it typechecks in CI, where the committed schema is required).
+      const currentIsPrimary = (device as { isPrimary?: boolean }).isPrimary;
+      if (currentIsPrimary === undefined) {
+        await ctx.db.patch(device._id, { isPrimary: false });
+        patched += 1;
+      }
+    }
+    return { patched, total: devices.length };
+  },
+});
+
+// ---------------------------------------------------------------------------
 // submitIntent — the client's "I plan to deliver this." Upsert by
 // (owner, deviceId, dedupeKey); rejected (no row written) if the slot is
 // already claimed in the ledger. Idempotent.

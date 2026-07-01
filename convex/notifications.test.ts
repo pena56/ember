@@ -887,3 +887,37 @@ test("getNotificationState throws when unauthenticated", async () => {
     t.query(api.notifications.getNotificationState, {}),
   ).rejects.toThrow();
 });
+
+// ===========================================================================
+// backfillIsPrimary (one-time migration, #160)
+// ===========================================================================
+//
+// NOTE: the interesting path — patching rows that physically LACK isPrimary —
+// cannot be exercised here: convex-test validates inserts against the schema,
+// which is required (v.boolean()), so a legacy row can't be seeded. That is the
+// exact blind spot that hid the original 17g gap (schema built every row in
+// memory). We assert the no-op / idempotent behaviour on conforming rows, which
+// locks the function's return shape and that it never clobbers existing choices.
+
+test("backfillIsPrimary is a no-op on conforming rows (returns {patched:0})", async () => {
+  const t = setup();
+  const { asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "a",
+    platform: "web",
+  });
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "b",
+    platform: "ios",
+  });
+  await asUser.mutation(api.notifications.setPrimaryDevice, { deviceId: "b" });
+
+  const res = await t.mutation(internal.notifications.backfillIsPrimary, {});
+  expect(res).toEqual({ patched: 0, total: 2 });
+
+  // The existing primary designation is untouched by the migration.
+  const state = await asUser.query(api.notifications.getNotificationState, {});
+  const primary = state.devices.filter((d) => d.isPrimary);
+  expect(primary.map((d) => d.deviceId)).toEqual(["b"]);
+});
