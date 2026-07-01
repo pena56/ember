@@ -236,6 +236,23 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17g SPECCED + DISPATCH-READY (2026-07-01) — Issue #154, branch feat/154-primary-device-election,
+  spec specs/17g-primary-device-election.md. Route standard** (one boundary `convex/`, no new dep, product resolved).
+  FIRST slice of the split **explicit-primary** feature — user chose (AskUserQuestion) **user-designates the push
+  device** (not implicit recency, not sticky-only). Multi-boundary → SPLIT: **17g** convex foundation (this) → **17h**
+  mobile Settings device-picker → **17i** web Settings device-picker. **17g scope (convex only):** add server-authoritative
+  `isPrimary: boolean` to `pushDevices` (NOT synced via outbox — device routing is infra, clear of invariants #1/#2);
+  `setPrimaryDevice({deviceId})` mutation (serializable tx sets exactly one primary/owner; validates ownership); teach
+  `electPrimaryDevice` to PREFER the designated `isPrimary && hasToken` device, FALL BACK to recency when none designated
+  or the choice lost its token; expose `isPrimary` in `getNotificationState`; `registerDevice` defaults false + never
+  mutates on heartbeat. **Resolved semantics (baked into spec):** "primary" governs the async PUSH target only — local/
+  foreground still claims via `claimSlot` regardless; the choice is a preference honored when eligible; invariant #7
+  unchanged (ledger still the at-most-once gate). **Tests:** notifications.test.ts — pure election (designated wins /
+  ineligible falls back / none = today) + setPrimaryDevice (one-primary / switch / unknown-throws / unauth-throws /
+  default-false) + a runDueSweep e2e (push routes to designated). **Dispatch:** Sonnet TDD executor → fresh-context Opus
+  reviewer → PR "Closes #154". **NEXT after 17g:** 17h + 17i (device-picker UI), then the stale-intent claim-review
+  correctness gap (disable-a-type-after-submit should cancel the pending server intent). Owed device verification 17a + 17d.
+<!-- prior state (17f merged) retained below for trail -->
 - **Unit 17f MERGED (2026-07-01) — PR #152 squash-merged to main (commit 50f2b4f, branch deleted), Issue #150 CLOSED.**
   CI `verify` green (1m38s). The KNOWN GAP is CLOSED: both sync runners now read `store.getNotificationPreferences()`
   (LOCAL — invariant #1) and spread `...resolveNotificationConfig(prefsRecord.prefs)` into `deriveNotificationSync`'s

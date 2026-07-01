@@ -53,6 +53,9 @@ export default defineSchema({
     ),
     hasToken: v.boolean(), // true once an Expo token was recorded; push-eligibility flag
     lastSeenAt: v.number(), // server-stamped each register/heartbeat — the election key
+    // User-designated push target. Server-authoritative; NOT synced via outbox/HLC.
+    // Exactly one true per owner, enforced by setPrimaryDevice (17g).
+    isPrimary: v.boolean(),
   })
     .index("by_owner", ["owner"])
     .index("by_owner_device", ["owner", "deviceId"]),

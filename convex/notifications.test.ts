@@ -56,25 +56,25 @@ async function makeUser(t: ReturnType<typeof convexTest>) {
 
 test("electPrimaryDevice picks the max lastSeenAt among hasToken devices", () => {
   const primary = electPrimaryDevice([
-    { deviceId: "a", hasToken: true, lastSeenAt: 100 },
-    { deviceId: "b", hasToken: true, lastSeenAt: 300 },
-    { deviceId: "c", hasToken: true, lastSeenAt: 200 },
+    { deviceId: "a", hasToken: true, lastSeenAt: 100, isPrimary: false },
+    { deviceId: "b", hasToken: true, lastSeenAt: 300, isPrimary: false },
+    { deviceId: "c", hasToken: true, lastSeenAt: 200, isPrimary: false },
   ]);
   expect(primary?.deviceId).toBe("b");
 });
 
 test("electPrimaryDevice ignores devices without a token", () => {
   const primary = electPrimaryDevice([
-    { deviceId: "web", hasToken: false, lastSeenAt: 999 },
-    { deviceId: "phone", hasToken: true, lastSeenAt: 1 },
+    { deviceId: "web", hasToken: false, lastSeenAt: 999, isPrimary: false },
+    { deviceId: "phone", hasToken: true, lastSeenAt: 1, isPrimary: false },
   ]);
   expect(primary?.deviceId).toBe("phone");
 });
 
 test("electPrimaryDevice tie-breaks by deviceId ascending", () => {
   const primary = electPrimaryDevice([
-    { deviceId: "zebra", hasToken: true, lastSeenAt: 500 },
-    { deviceId: "apple", hasToken: true, lastSeenAt: 500 },
+    { deviceId: "zebra", hasToken: true, lastSeenAt: 500, isPrimary: false },
+    { deviceId: "apple", hasToken: true, lastSeenAt: 500, isPrimary: false },
   ]);
   expect(primary?.deviceId).toBe("apple");
 });
@@ -82,11 +82,42 @@ test("electPrimaryDevice tie-breaks by deviceId ascending", () => {
 test("electPrimaryDevice returns null when no device has a token", () => {
   expect(
     electPrimaryDevice([
-      { deviceId: "web1", hasToken: false, lastSeenAt: 10 },
-      { deviceId: "web2", hasToken: false, lastSeenAt: 20 },
+      { deviceId: "web1", hasToken: false, lastSeenAt: 10, isPrimary: false },
+      { deviceId: "web2", hasToken: false, lastSeenAt: 20, isPrimary: false },
     ]),
   ).toBeNull();
   expect(electPrimaryDevice([])).toBeNull();
+});
+
+test("electPrimaryDevice: designated isPrimary+hasToken wins over a greater lastSeenAt non-primary", () => {
+  // "old" has isPrimary:true but lower lastSeenAt; "new" is more recent but not primary.
+  // Two-tier rule: designated subset wins.
+  const result = electPrimaryDevice([
+    { deviceId: "new", hasToken: true, lastSeenAt: 9000, isPrimary: false },
+    { deviceId: "old", hasToken: true, lastSeenAt: 1000, isPrimary: true },
+  ]);
+  expect(result?.deviceId).toBe("old");
+});
+
+test("electPrimaryDevice: designated device with hasToken:false is ignored; falls back to recency", () => {
+  // "web" is designated primary but has no token → ineligible for push; election
+  // falls back to the most-recently-active hasToken device.
+  const result = electPrimaryDevice([
+    { deviceId: "web", hasToken: false, lastSeenAt: 9999, isPrimary: true },
+    { deviceId: "phone-a", hasToken: true, lastSeenAt: 500, isPrimary: false },
+    { deviceId: "phone-b", hasToken: true, lastSeenAt: 200, isPrimary: false },
+  ]);
+  expect(result?.deviceId).toBe("phone-a");
+});
+
+test("electPrimaryDevice: no designated device → recency fallback (identical to pre-17g)", () => {
+  // All isPrimary:false → same as the original recency heuristic.
+  const result = electPrimaryDevice([
+    { deviceId: "x", hasToken: true, lastSeenAt: 100, isPrimary: false },
+    { deviceId: "y", hasToken: true, lastSeenAt: 800, isPrimary: false },
+    { deviceId: "z", hasToken: true, lastSeenAt: 400, isPrimary: false },
+  ]);
+  expect(result?.deviceId).toBe("y");
 });
 
 // ===========================================================================
@@ -183,6 +214,108 @@ test("registerDevice throws when unauthenticated", async () => {
       platform: "web",
     }),
   ).rejects.toThrow();
+});
+
+// ===========================================================================
+// setPrimaryDevice
+// ===========================================================================
+
+test("setPrimaryDevice: set B → B is primary, A is false", async () => {
+  const t = setup();
+  const { asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "device-a",
+    platform: "ios",
+    expoPushToken: "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaaaa]",
+  });
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "device-b",
+    platform: "android",
+    expoPushToken: "ExponentPushToken[bbbbbbbbbbbbbbbbbbbbbbbb]",
+  });
+
+  await asUser.mutation(api.notifications.setPrimaryDevice, {
+    deviceId: "device-b",
+  });
+
+  const state = await asUser.query(api.notifications.getNotificationState, {});
+  const a = state.devices.find((d) => d.deviceId === "device-a")!;
+  const b = state.devices.find((d) => d.deviceId === "device-b")!;
+  expect(b.isPrimary).toBe(true);
+  expect(a.isPrimary).toBe(false);
+});
+
+test("setPrimaryDevice: switching primary flips atomically — no two-primaries state", async () => {
+  const t = setup();
+  const { asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "device-a",
+    platform: "ios",
+    expoPushToken: "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaaaa]",
+  });
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "device-b",
+    platform: "android",
+    expoPushToken: "ExponentPushToken[bbbbbbbbbbbbbbbbbbbbbbbb]",
+  });
+
+  await asUser.mutation(api.notifications.setPrimaryDevice, {
+    deviceId: "device-b",
+  });
+  // Switch to A — exactly one primary afterwards.
+  await asUser.mutation(api.notifications.setPrimaryDevice, {
+    deviceId: "device-a",
+  });
+
+  const state = await asUser.query(api.notifications.getNotificationState, {});
+  const primaryCount = state.devices.filter((d) => d.isPrimary).length;
+  expect(primaryCount).toBe(1);
+  const a = state.devices.find((d) => d.deviceId === "device-a")!;
+  const b = state.devices.find((d) => d.deviceId === "device-b")!;
+  expect(a.isPrimary).toBe(true);
+  expect(b.isPrimary).toBe(false);
+});
+
+test("setPrimaryDevice: unknown deviceId throws 'Unknown device'", async () => {
+  const t = setup();
+  const { asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "device-a",
+    platform: "ios",
+  });
+
+  await expect(
+    asUser.mutation(api.notifications.setPrimaryDevice, {
+      deviceId: "does-not-exist",
+    }),
+  ).rejects.toThrow("Unknown device");
+});
+
+test("setPrimaryDevice: unauthenticated throws 'Unauthenticated'", async () => {
+  const t = setup();
+  await expect(
+    t.mutation(api.notifications.setPrimaryDevice, {
+      deviceId: "some-device",
+    }),
+  ).rejects.toThrow("Unauthenticated");
+});
+
+test("registerDevice: fresh insert defaults isPrimary to false", async () => {
+  const t = setup();
+  const { asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "new-device",
+    platform: "ios",
+    expoPushToken: "ExponentPushToken[cccccccccccccccccccccccc]",
+  });
+
+  const state = await asUser.query(api.notifications.getNotificationState, {});
+  expect(state.devices).toHaveLength(1);
+  expect(state.devices[0]!.isPrimary).toBe(false);
 });
 
 // ===========================================================================
@@ -476,6 +609,7 @@ test("runDueSweep: skips and cancels stale intents (> STALE_PUSH_MS late), no pu
       platform: "ios",
       hasToken: true,
       lastSeenAt: 1,
+      isPrimary: false,
     }),
   );
 
@@ -518,6 +652,7 @@ test("runDueSweep: skips already-claimed keys and cancels their pending intents"
       platform: "ios",
       hasToken: true,
       lastSeenAt: 1,
+      isPrimary: false,
     }),
   );
   // Slot already claimed (e.g. fired locally on another device).
@@ -570,6 +705,7 @@ test("runDueSweep: leaves intents pending when owner has no push-eligible primar
       platform: "web",
       hasToken: false,
       lastSeenAt: 5,
+      isPrimary: false,
     }),
   );
   await seedIntent(t, userId);
@@ -609,6 +745,7 @@ test("runDueSweep: never touches a non-due intent (scheduledWall > now)", async 
       platform: "ios",
       hasToken: true,
       lastSeenAt: 1,
+      isPrimary: false,
     }),
   );
   // Scheduled far in the future — not due.
@@ -626,6 +763,63 @@ test("runDueSweep: never touches a non-due intent (scheduledWall > now)", async 
       .collect(),
   );
   expect(intents[0]!.status).toBe("pending"); // untouched
+});
+
+test("runDueSweep: designated isPrimary device wins even when it has an older lastSeenAt", async () => {
+  // Two push-capable devices. "phone-old" is designated primary but has a lower
+  // lastSeenAt. Without 17g the recency heuristic would pick "phone-new". With 17g
+  // the designated device wins and the ledger records phone-old.
+  const t = setup();
+  const { userId, asUser } = await makeUser(t);
+
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "phone-old",
+    platform: "ios",
+    expoPushToken: "ExponentPushToken[oooooooooooooooooooooooo]",
+  });
+  await asUser.mutation(api.notifications.registerDevice, {
+    deviceId: "phone-new",
+    platform: "android",
+    expoPushToken: "ExponentPushToken[nnnnnnnnnnnnnnnnnnnnnnnn]",
+  });
+
+  // Make phone-new the most-recently-active (would win under recency).
+  await t.run(async (ctx) => {
+    const newDev = await ctx.db
+      .query("pushDevices")
+      .withIndex("by_owner_device", (q) =>
+        q.eq("owner", userId).eq("deviceId", "phone-new"),
+      )
+      .unique();
+    await ctx.db.patch(newDev!._id, { lastSeenAt: Date.now() + 5000 });
+  });
+
+  // Designate the OLDER device as primary — this is the 17g behaviour under test.
+  await asUser.mutation(api.notifications.setPrimaryDevice, {
+    deviceId: "phone-old",
+  });
+
+  // Both devices submit intents for the same key.
+  await seedIntent(t, userId, { deviceId: "phone-old" });
+  await seedIntent(t, userId, { deviceId: "phone-new" });
+
+  const summary = await t.mutation(internal.notifications.runDueSweep, {});
+  expect(summary.pushed).toBe(1);
+
+  const ledger = await t.run((ctx) =>
+    ctx.db
+      .query("notificationLedger")
+      .withIndex("by_owner_key", (q) =>
+        q.eq("owner", userId).eq("dedupeKey", "streak:2026-06-29"),
+      )
+      .collect(),
+  );
+  expect(ledger).toHaveLength(1);
+  // The DESIGNATED (older lastSeenAt) device claimed the slot — not the most recent.
+  expect(ledger[0]).toMatchObject({
+    deliveredVia: "push",
+    claimedByDeviceId: "phone-old",
+  });
 });
 
 // ===========================================================================
