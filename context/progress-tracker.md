@@ -236,6 +236,28 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17i MERGED (2026-07-01) — PR #159 squash-merged to main, Issue #158 CLOSED, branch deleted.** CI `verify`
+  green; user browser-verified (choice persists across in-app nav; tokenless current-browser "This device" row shows
+  "Not receiving push yet"; <2 devices → info row). THIRD/final slice of **explicit-primary DONE → 17g #154 →
+  17h #156 → 17i #158 all MERGED.** Web Settings now has the "Push device" card: radix RadioGroup wrapper
+  (`components/ui/radio-group.tsx`, token-only, no new dep), presentational jsdom-TESTED `push-device-card.tsx`,
+  `use-primary-device` web hook (mount load + window-focus re-read, optimistic fire-and-forget, nowMs captured on
+  refresh), **verbatim** `deriveDevicePickerRows` + `formatRelativeLastSeen` (+24 tests). Widened the *inline*
+  `NotificationPort` (`getNotificationState` + `setPrimaryDevice` + `NotificationStateDevice`) + convex adapter.
+  **Surfaced + fixed mid-verify — 17g migration gap (Issue #160 / PR #161 MERGED):** browser-verify exposed that 17g
+  added a **REQUIRED** `isPrimary` to `pushDevices` with **no backfill**, so pushing the schema to the live `dev`
+  deployment (`necessary-warbler-246`) failed on **7 pre-17g rows**; convex-test never caught it (builds every row
+  *through* the schema in-memory). Fix = `backfillIsPrimary` internalMutation via the 3-step migration
+  (schema → `v.optional` → deploy → backfill **patched 7/7** → restore `v.boolean()` → deploy), applied to the
+  deployment. **CARRY-FORWARD: any new REQUIRED convex field on an already-populated table needs a backfill migration
+  — convex-test will NOT surface the gap.**
+  **NEXT (queued, unspecced):** (1) **stale-intent claim-review** correctness gap (disable-a-type-after-submit should
+  cancel the pending server intent — real bug post-17f); (2) make `use-primary-device` (web + mobile) **roll back /
+  surface** the optimistic flip when `setPrimary` fails instead of silently swallowing (`.catch(() => {})` — the exact
+  thing that made #160 hard to diagnose); (3) Issue #153 (rename quiet*Hour + reconcile "Quiet hours" copy). Umbrella
+  **#17 still OPEN** (Account + Theme Settings slices remain). Owed device verification: 17a + 17d + 17h (mobile —
+  headless CI can't render RN).
+  <!-- prior state — Unit 17i SPECCED + DISPATCH-READY, retained below for trail -->
 - **Unit 17i SPECCED + DISPATCH-READY (2026-07-01) — Issue #158, branch feat/158-web-primary-device-picker,
   spec specs/17i-web-primary-device-picker.md. Route standard** (one boundary `apps/web`, UI unit, no new dep —
   `radix-ui` already present, seam landed in 17g). THIRD / final slice of the split **explicit-primary** feature
