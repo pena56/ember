@@ -236,6 +236,13 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17e MERGED (2026-07-01) — PR #151 squash-merged to main (commit 10a450a, branch deleted), Issue #149 CLOSED.**
+  CI `verify` green (1m41s). WEB Settings parity (umbrella #17, FIFTH slice) is DONE. **NEXT: Unit 17f = Issue #150** —
+  wire `resolveNotificationConfig(prefs)` into `deriveNotificationSync` on BOTH mobile (`run-notification-sync.ts:48`)
+  + web (`use-notification-sync.ts`) so the persisted toggles actually take effect (closes the KNOWN GAP that 17c/17d/17e
+  toggles are behaviourally inert). After 17f: explicit-primary (convex election) + the two deferred claim-review client
+  units. Owed device verification still outstanding for mobile slices 17a + 17d (headless CI can't render RN).
+<!-- prior state (17e in review / PR open) retained below for trail -->
 - **Unit 17e IN REVIEW / PR OPEN (2026-07-01) — PR #151 "Closes #149", branch feat/149-web-notification-preferences,
   commit bee2ef5.** WEB Settings parity (umbrella #17, FIFTH slice). Built Sonnet TDD → fresh-context Opus review
   = **APPROVE-WITH-NITS, NO blockers, no invariant violations, faithful mobile parity.** Shipped: web-store
