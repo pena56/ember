@@ -21,7 +21,7 @@
 import { useConvexAuth } from 'convex/react';
 import { useEffect, useRef } from 'react';
 
-import { deriveNotificationSync } from '@ember/core';
+import { deriveNotificationSync, resolveNotificationConfig } from '@ember/core';
 
 import { useSyncBundle } from '../store/store-context.js';
 import { useWebStore } from '../store/store-context.js';
@@ -100,10 +100,13 @@ export function useNotificationSync(opts?: { port?: NotificationPort }): void {
         await port.registerDevice({ deviceId, platform: 'web' });
         if (disposed) return;
 
-        // Step 2: Read sessions and goal config (all local — invariant #1).
+        // Step 2: Read sessions, goal config, and notification prefs (all local — invariant #1;
+        //         getNotificationPreferences is a local read, no Convex on the read path).
         const store = storeRef.current;
         const sessions = await store.listSessions();
         const goalConfig = await store.getGoalConfig();
+        if (disposed) return;
+        const prefsRecord = await store.getNotificationPreferences();
         if (disposed) return;
 
         // Step 3: Derive the sync plan from 16a's engine (pure, no I/O).
@@ -113,7 +116,10 @@ export function useNotificationSync(opts?: { port?: NotificationPort }): void {
           sessions,
           now,
           tzOffsetMinutes,
-          config: { goalTargetMs: goalConfig.targetActiveMs },
+          config: {
+            goalTargetMs: goalConfig.targetActiveMs,
+            ...resolveNotificationConfig(prefsRecord.prefs),
+          },
         });
         if (disposed) return;
 

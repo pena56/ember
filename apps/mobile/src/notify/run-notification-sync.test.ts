@@ -18,9 +18,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { localDayOf, notificationCopy } from '@ember/core';
+import { DEFAULT_NOTIFICATION_PREFERENCES, localDayOf, notificationCopy } from '@ember/core';
 import type { ReadingSession } from '@ember/core';
-import type { GoalConfigRecord } from '@ember/store';
+import type { GoalConfigRecord, NotificationPreferencesRecord } from '@ember/store';
 
 import type { NotificationPort } from './notification-port.js';
 import { runNotificationSync } from './run-notification-sync.js';
@@ -34,6 +34,13 @@ const TODAY = localDayOf(NOW_MS, TZ_UTC); // '2025-07-15'
 
 const DEVICE_ID = 'test-device-abc';
 const PLATFORM = 'ios' as const;
+
+/** Default notification preferences record — all types enabled, default quiet window [8, 22). */
+const DEFAULT_PREFS_RECORD: NotificationPreferencesRecord = {
+  id: 'default',
+  prefs: DEFAULT_NOTIFICATION_PREFERENCES,
+  updatedAt: '',
+};
 
 /** Default goal config (20-min target). */
 const DEFAULT_GOAL_CONFIG: GoalConfigRecord = {
@@ -102,6 +109,7 @@ describe('runNotificationSync', () => {
       store: {
         listSessions: async () => [],
         getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => DEFAULT_PREFS_RECORD,
       },
       deviceId: DEVICE_ID,
       platform: PLATFORM,
@@ -121,6 +129,7 @@ describe('runNotificationSync', () => {
       store: {
         listSessions: async () => [goalMetSession()],
         getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => DEFAULT_PREFS_RECORD,
       },
       deviceId: DEVICE_ID,
       platform: PLATFORM,
@@ -162,6 +171,7 @@ describe('runNotificationSync', () => {
       store: {
         listSessions: async () => [partialSession()],
         getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => DEFAULT_PREFS_RECORD,
       },
       deviceId: DEVICE_ID,
       platform: PLATFORM,
@@ -228,6 +238,7 @@ describe('runNotificationSync', () => {
       store: {
         listSessions: async () => sessionsAt3am,
         getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => DEFAULT_PREFS_RECORD,
       },
       deviceId: DEVICE_ID,
       platform: PLATFORM,
@@ -240,6 +251,75 @@ describe('runNotificationSync', () => {
     expect(port.registerDevice).toHaveBeenCalledWith({ deviceId: DEVICE_ID, platform: PLATFORM });
 
     // No intents or claims
+    expect(port.submitIntent).not.toHaveBeenCalled();
+    expect(port.claimSlot).not.toHaveBeenCalled();
+  });
+
+  it('(5) disabled type is dropped — goal-progress disabled → no submitIntent for goal-progress', async () => {
+    // With partialSession + default prefs, case (3) proves goal-progress is the selected intent
+    // (streak.status === 'lit' today so streak-risk is excluded; goal not met → goal-progress
+    // at hour 15 and best-time at hour 20 are candidates; goal-progress wins at priority 1).
+    // Disabling goal-progress routes the engine to best-time instead; assert goal-progress is absent.
+    const { port } = makePort();
+
+    await runNotificationSync({
+      port,
+      store: {
+        listSessions: async () => [partialSession()],
+        getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => ({
+          id: 'default',
+          prefs: {
+            ...DEFAULT_NOTIFICATION_PREFERENCES,
+            enabledTypes: { ...DEFAULT_NOTIFICATION_PREFERENCES.enabledTypes, 'goal-progress': false },
+          },
+          updatedAt: '',
+        }),
+      },
+      deviceId: DEVICE_ID,
+      platform: PLATFORM,
+      now: NOW_MS,
+      tzOffsetMinutes: TZ_UTC,
+    });
+
+    // goal-progress is gated off → must never appear in submitIntent
+    expect(port.submitIntent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'goal-progress' }),
+    );
+    // best-time (next priority) still fires → exactly one intent submitted
+    expect(port.submitIntent).toHaveBeenCalledOnce();
+    expect(port.claimSlot).not.toHaveBeenCalled();
+  });
+
+  it('(6) active-hours window honoured — narrowed window excludes all candidates → no submitIntent', async () => {
+    // With partialSession + default prefs, goal-progress (hour 15) and best-time (hour 20)
+    // are candidates within the default [8, 22) window.  Narrowing to [22, 23) places both
+    // outside the allowed window → filtered → no intent submitted.
+    // Fixed epochs + explicit tzOffsetMinutes (no Date.now()) — invariant #1 style.
+    const { port } = makePort();
+
+    await runNotificationSync({
+      port,
+      store: {
+        listSessions: async () => [partialSession()],
+        getGoalConfig: async () => DEFAULT_GOAL_CONFIG,
+        getNotificationPreferences: async () => ({
+          id: 'default',
+          prefs: {
+            ...DEFAULT_NOTIFICATION_PREFERENCES,
+            quietStartHour: 22,
+            quietEndHour: 23,
+          },
+          updatedAt: '',
+        }),
+      },
+      deviceId: DEVICE_ID,
+      platform: PLATFORM,
+      now: NOW_MS,
+      tzOffsetMinutes: TZ_UTC,
+    });
+
+    // All candidates (hours 15, 20) fall outside the narrowed [22, 23) window → no intent
     expect(port.submitIntent).not.toHaveBeenCalled();
     expect(port.claimSlot).not.toHaveBeenCalled();
   });

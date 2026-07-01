@@ -17,9 +17,9 @@
  *    elects or fires locally.
  */
 
-import { deriveNotificationSync } from '@ember/core';
+import { deriveNotificationSync, resolveNotificationConfig } from '@ember/core';
 import type { ReadingSession } from '@ember/core';
-import type { GoalConfigRecord } from '@ember/store';
+import type { GoalConfigRecord, NotificationPreferencesRecord } from '@ember/store';
 
 import type { NotificationPort } from './notification-port.js';
 
@@ -28,6 +28,7 @@ export interface RunNotificationSyncDeps {
   store: {
     listSessions(): Promise<ReadingSession[]>;
     getGoalConfig(): Promise<GoalConfigRecord>;
+    getNotificationPreferences(): Promise<NotificationPreferencesRecord>;
   };
   deviceId: string;
   platform: 'ios' | 'android';
@@ -39,13 +40,18 @@ export async function runNotificationSync(deps: RunNotificationSyncDeps): Promis
   const { port, store, deviceId, platform, now, tzOffsetMinutes } = deps;
   // 1. Register device (no token) + liveness heartbeat.
   await port.registerDevice({ deviceId, platform });
-  // 2. Read sessions + goal config (all local — invariant #1).
+  // 2. Read sessions, goal config, and notification prefs (all local — invariant #1;
+  //    getNotificationPreferences is a local read, same class as getGoalConfig, no Convex).
   const sessions = await store.listSessions();
   const goalConfig = await store.getGoalConfig();
+  const prefsRecord = await store.getNotificationPreferences();
   // 3. Derive via 16a's engine (pure, hoisted to core in 16d).
   const { intent, suppress } = deriveNotificationSync({
     sessions, now, tzOffsetMinutes,
-    config: { goalTargetMs: goalConfig.targetActiveMs },
+    config: {
+      goalTargetMs: goalConfig.targetActiveMs,
+      ...resolveNotificationConfig(prefsRecord.prefs),
+    },
   });
   // 4. Submit the single selected intent, if any.
   if (intent) {

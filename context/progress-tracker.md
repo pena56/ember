@@ -236,6 +236,24 @@ Update after every meaningful change.
 - typecheck 9 ✓ · test 5 tasks/139 ✓ · lint 6 ✓. No new dep. Invariants #1/#2 + core purity intact.
 
 ## Current Goal
+- **Unit 17f SPECCED + DISPATCH-READY (2026-07-01) — Issue #150, branch feat/150-notification-preferences-wiring,
+  spec specs/17f-notification-preferences-wiring.md. Route standard** (two CLIENT boundaries apps/mobile + apps/web,
+  but one mechanical wiring of the shared, already-tested core seam `resolveNotificationConfig` — ~4 symmetric
+  independent lines/side, zero new logic, zero ambiguity; NOT split, per the pre-agreed cross-platform decision).
+  **Closes the KNOWN GAP:** 17c/17d/17e prefs are behaviourally INERT because neither sync runner reads them. This
+  wires both `apps/mobile/src/notify/run-notification-sync.ts` (+ widen its `store` dep interface with
+  `getNotificationPreferences`) and `apps/web/src/notify/use-notification-sync.ts` to read
+  `store.getNotificationPreferences()` (LOCAL — invariant #1) and spread `...resolveNotificationConfig(prefsRecord.prefs)`
+  into `deriveNotificationSync`'s config. **NO core/store/UI change.** **Key gotchas baked into spec:** (a) `quiet*Hour`
+  fields are actually the ALLOWED/active window (`[start,end)` = notify) despite the name — pre-existing #16 semantics,
+  DO NOT rename/fix; (b) `resolveNotificationConfig`'s degenerate-window (start>=end) fallback to 8/22 is intentional
+  (planner can't express wrap-around) — DO NOT fix. **Tests:** mobile run-notification-sync.test.ts +2 cases
+  (disabled-type dropped; narrowed-window filters), fixture default = DEFAULT_NOTIFICATION_PREFERENCES so existing 4
+  cases hold; web use-notification-sync.test.tsx +1 case (disabled type suppresses intent). **Dispatch:** Sonnet TDD
+  executor → fresh-context Opus reviewer → PR "Closes #150". **Follow-up flagged (out of scope):** rename misleading
+  `quiet*Hour` + reconcile "Quiet hours" UI copy with actual active-window semantics (core+UI). **NEXT after 17f:**
+  explicit-primary (convex election) + the two deferred claim-review client units; owed device verification 17a + 17d.
+<!-- prior state (17e merged) retained below for trail -->
 - **Unit 17e MERGED (2026-07-01) — PR #151 squash-merged to main (commit 10a450a, branch deleted), Issue #149 CLOSED.**
   CI `verify` green (1m41s). WEB Settings parity (umbrella #17, FIFTH slice) is DONE. **NEXT: Unit 17f = Issue #150** —
   wire `resolveNotificationConfig(prefs)` into `deriveNotificationSync` on BOTH mobile (`run-notification-sync.ts:48`)
