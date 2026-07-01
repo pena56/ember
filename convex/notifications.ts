@@ -21,22 +21,34 @@ export const STALE_PUSH_MS = 2 * 60 * 60 * 1000; // 2h
 // ---------------------------------------------------------------------------
 
 /**
- * Most-recently-active push-capable device wins. Filter to hasToken === true;
- * return the one with the greatest lastSeenAt, tie-break by deviceId ascending.
+ * Two-tier election:
+ *   1. Among hasToken===true devices, prefer any with isPrimary===true (at most one
+ *      by construction; if somehow two, tie-break by greatest lastSeenAt then
+ *      deviceId ascending applied only to the isPrimary subset).
+ *   2. If none designated (or the designated device has no token), fall back to the
+ *      same recency tie-break over all hasToken devices.
  * Returns null when no device is push-eligible (e.g. a web-only user).
  */
 export function electPrimaryDevice(
-  devices: Pick<Doc<"pushDevices">, "deviceId" | "hasToken" | "lastSeenAt">[],
-): Pick<Doc<"pushDevices">, "deviceId" | "hasToken" | "lastSeenAt"> | null {
-  let best:
-    | Pick<Doc<"pushDevices">, "deviceId" | "hasToken" | "lastSeenAt">
-    | null = null;
-  for (const d of devices) {
-    if (!d.hasToken) continue;
-    if (best === null) {
-      best = d;
-      continue;
-    }
+  devices: Pick<
+    Doc<"pushDevices">,
+    "deviceId" | "hasToken" | "lastSeenAt" | "isPrimary"
+  >[],
+): Pick<
+  Doc<"pushDevices">,
+  "deviceId" | "hasToken" | "lastSeenAt" | "isPrimary"
+> | null {
+  // Collect push-eligible devices first.
+  const eligible = devices.filter((d) => d.hasToken);
+  if (eligible.length === 0) return null;
+
+  // Prefer the designated subset; fall back to all eligible.
+  const designated = eligible.filter((d) => d.isPrimary);
+  const pool = designated.length > 0 ? designated : eligible;
+
+  let best = pool[0]!;
+  for (let i = 1; i < pool.length; i++) {
+    const d = pool[i]!;
     if (
       d.lastSeenAt > best.lastSeenAt ||
       (d.lastSeenAt === best.lastSeenAt && d.deviceId < best.deviceId)
@@ -92,6 +104,7 @@ export const registerDevice = mutation({
         // Flip hasToken true when a token was recorded; otherwise keep prior.
         hasToken: args.expoPushToken !== undefined ? true : existing.hasToken,
         lastSeenAt: now,
+        // isPrimary is NOT touched on heartbeat — preserve the user's choice.
       });
     } else {
       await ctx.db.insert("pushDevices", {
@@ -100,7 +113,45 @@ export const registerDevice = mutation({
         platform: args.platform,
         hasToken: args.expoPushToken !== undefined,
         lastSeenAt: now,
+        isPrimary: false, // default: no designation on first registration
       });
+    }
+
+    return { ok: true as const };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// setPrimaryDevice — atomically designates one device as the push target for
+// the owner. Sets chosen device's isPrimary to true and all others to false
+// in the same serializable transaction (exactly-one-primary invariant).
+// Does NOT require the chosen device to have a token — the election's fallback
+// covers the interim while push is being enabled.
+// ---------------------------------------------------------------------------
+
+export const setPrimaryDevice = mutation({
+  args: { deviceId: v.string() },
+  handler: async (ctx, args) => {
+    const owner = await getAuthUserId(ctx);
+    if (owner === null) {
+      throw new Error("Unauthenticated");
+    }
+
+    const ownerDevices = await ctx.db
+      .query("pushDevices")
+      .withIndex("by_owner", (q) => q.eq("owner", owner))
+      .collect();
+
+    const target = ownerDevices.find((d) => d.deviceId === args.deviceId);
+    if (!target) {
+      throw new Error("Unknown device");
+    }
+
+    for (const device of ownerDevices) {
+      const shouldBePrimary = device.deviceId === args.deviceId;
+      if (device.isPrimary !== shouldBePrimary) {
+        await ctx.db.patch(device._id, { isPrimary: shouldBePrimary });
+      }
     }
 
     return { ok: true as const };
@@ -384,6 +435,7 @@ export const getNotificationState = query({
         platform: d.platform,
         hasToken: d.hasToken,
         lastSeenAt: d.lastSeenAt,
+        isPrimary: d.isPrimary,
       })),
       ledger: ledger.map((l) => ({
         dedupeKey: l.dedupeKey,
