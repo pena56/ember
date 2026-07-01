@@ -18,7 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { convex } from '../src/convex/convex-client.js';
 import { useNotificationPreferences } from '../src/notify/use-notification-preferences.js';
+import { usePrimaryDevice } from '../src/notify/use-primary-device.js';
 import { usePushEnablement } from '../src/notify/use-push-enablement.js';
+import { deriveDevicePickerRows } from '../src/settings/device-picker-rows.js';
 import { SettingsScreen } from '../src/settings/settings-screen.js';
 
 export default function SettingsRoute() {
@@ -37,6 +39,10 @@ export default function SettingsRoute() {
 function SettingsRouteInner() {
   const { state, enable } = usePushEnablement();
   const { prefs, setEnabledType, setQuietHours } = useNotificationPreferences();
+  const { devices, currentDeviceId, nowMs, setPrimary } = usePrimaryDevice();
+
+  // Order/marking decided once, at the route, in the pure seam (invariant #5).
+  const deviceRows = deriveDevicePickerRows({ devices, currentDeviceId });
 
   // bg-surface must live on a plain View (uniwind className paints it); the
   // native-stack modal's container defaults to a light background, so the token
@@ -51,6 +57,10 @@ function SettingsRouteInner() {
           pushEnabled={state.enabled}
           onToggleType={setEnabledType}
           onChangeQuietHours={setQuietHours}
+          devices={deviceRows}
+          currentDeviceId={currentDeviceId}
+          nowMs={nowMs}
+          onSelectPrimary={setPrimary}
         />
       </SafeAreaView>
     </View>
