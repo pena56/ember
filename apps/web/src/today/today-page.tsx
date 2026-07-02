@@ -1,17 +1,18 @@
 /**
- * today-page.tsx — the Today tab: time-of-day greeting + Continue Reading card.
+ * today-page.tsx — the Today tab: one cohesive hero panel.
  *
- * Quiet, literary voice. No streak ember, no goal ring, no fake numbers.
- * Centered max-w-2xl column matching LibraryPage.
+ * A single floating panel over the ambient backdrop, composed of three bands
+ * that read as one: the time-of-day greeting, the Continue Reading invitation,
+ * and the habit band (streak ember + goal ring). No stacked cards — internal
+ * hairline dividers carry the rhythm.
  *
- * Design: warm editorial — generous vertical rhythm, Fraunces greeting as the
- * page's emotional anchor, soft date/time line in muted Inter.
+ * Quiet, literary voice. No fake numbers. Token-only styling (invariant #6).
  */
 
 import { useNavigate } from 'react-router';
 
-import { ContinueReadingCard } from './continue-reading-card.js';
-import { HabitHeader } from './habit-header.js';
+import { ContinueReadingSection } from './continue-reading-card.js';
+import { HabitBand } from './habit-header.js';
 import { useContinueReading } from './use-continue-reading.js';
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
@@ -38,65 +39,60 @@ function formatDate(): string {
   }).format(new Date());
 }
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
-
-function Spinner() {
-  return (
-    <div
-      className="flex items-center justify-center py-16"
-      role="status"
-      aria-label="Loading your reading progress"
-    >
-      <div className="w-5 h-5 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function TodayPage() {
   const navigate = useNavigate();
   const { items, loading } = useContinueReading();
 
-  const greeting  = getGreeting();
-  const topItem   = items[0];
+  const greeting = getGreeting();
+  const topItem  = items[0];
 
   function handleResume(docId: string) {
     void navigate(`/read/${docId}`);
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12 flex flex-col gap-9">
+    <div className="mx-auto w-full max-w-2xl px-6 py-12">
+      <div className="relative overflow-hidden rounded-lg border border-line bg-surface-raised shadow-float">
+        {/* Ember atmosphere — a faint warm glow anchoring the panel to the field */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent opacity-[0.05] blur-2xl"
+        />
 
-      {/* Greeting — the page's emotional anchor */}
-      <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-4xl font-semibold text-text leading-tight tracking-tight text-balance">
-          {greeting}
-        </h1>
-        <p className="font-sans text-sm text-text-muted">
-          {formatDate()}
-          {!loading && (
-            <>
-              <span className="mx-1.5 text-line" aria-hidden="true">·</span>
-              {getSubtitle(items.length > 0)}
-            </>
-          )}
-        </p>
-      </header>
+        {/* Greeting — the panel's emotional anchor */}
+        <header className="relative flex flex-col gap-2 px-7 pt-7 pb-6">
+          <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight text-text text-balance">
+            {greeting}
+          </h1>
+          <p className="font-sans text-sm text-text-muted">
+            {formatDate()}
+            {!loading && (
+              <>
+                <span className="mx-1.5 text-line" aria-hidden="true">·</span>
+                {getSubtitle(items.length > 0)}
+              </>
+            )}
+          </p>
+        </header>
 
-      {/* Continue Reading — the primary invitation back into a book */}
-      {loading ? (
-        <Spinner />
-      ) : (
-        <section aria-label="Continue reading">
-          <ContinueReadingCard item={topItem} onResume={handleResume} />
+        {/* Continue reading — the primary invitation back into a book */}
+        <section
+          aria-label="Continue reading"
+          className="relative border-t border-line px-7 py-6"
+        >
+          <ContinueReadingSection item={topItem} loading={loading} onResume={handleResume} />
         </section>
-      )}
 
-      {/* Habit header — streak ember + today's goal ring */}
-      <section aria-label="Reading habit">
-        <HabitHeader />
-      </section>
+        {/* Habit — streak ember + today's goal ring */}
+        <section
+          aria-label="Reading habit"
+          className="relative border-t border-line px-7 py-5"
+        >
+          <HabitBand />
+        </section>
+      </div>
     </div>
   );
 }
