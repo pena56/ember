@@ -5,6 +5,33 @@
 /* ── Dark-mode variant: follow data-app-theme attribute, NOT .dark class ── */
 @custom-variant dark (&:where([data-app-theme="warm-dark"], [data-app-theme="warm-dark"] *));
 
+/* ── Floating-card elevation (redesign) ─────────────────────────────────────
+ * Soft shadow that makes cards read as floating over the ambient backdrop.
+ * Token-derived (invariant #6): the shadow color is a color-mix of --color-text,
+ * so it deepens appropriately in warm-dark without any hardcoded palette.
+ * ──────────────────────────────────────────────────────────────────────── */
+@utility shadow-float {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 10px 30px -8px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+@utility shadow-float-sm {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--color-text) 5%, transparent),
+    0 4px 14px -6px color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+/* ── Ember flame flicker (Stats calendar active days) ───────────────────────
+ * A slow, low-amplitude flicker so lit reading days feel alive without being
+ * distracting. Applied via `motion-safe:animate-[ember-flicker_…]`, so it is
+ * automatically suppressed under prefers-reduced-motion.
+ * ──────────────────────────────────────────────────────────────────────── */
+@keyframes ember-flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  45%      { opacity: 0.78; transform: scale(0.92) translateY(0.5px); }
+  70%      { opacity: 0.92; transform: scale(1.02); }
+}
+
 /* ── shadcn CSS variable mapping (warm-light defaults) ─────────────────────
  * These are a thin alias layer over the Amber Ember tokens.
  * ALL palette decisions live in packages/tokens — shadcn vars reference them.

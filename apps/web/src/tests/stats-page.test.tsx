@@ -131,6 +131,7 @@ function makeStubStore(opts: StubOptions = {}): WebStore {
     getGoalConfig: () => Promise.resolve(goal),
     importPdf: notUsed('importPdf') as WebStore['importPdf'],
     getPdfBytes: notUsed('getPdfBytes') as WebStore['getPdfBytes'],
+    deleteDocument: notUsed('deleteDocument') as WebStore['deleteDocument'],
     saveReadingPosition: notUsed('saveReadingPosition') as WebStore['saveReadingPosition'],
     getReadingPosition: notUsed('getReadingPosition') as WebStore['getReadingPosition'],
     recordSession: notUsed('recordSession') as WebStore['recordSession'],

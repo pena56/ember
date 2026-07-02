@@ -26,8 +26,11 @@
   --color-text-muted:     #6f665c;
   --color-line:           #e7ddcb;
 
-  /* ── Reader surface — default: paper (overridden per [data-reader-theme]) ── */
-  /* Declared in @theme so `bg-reader-bg` / `text-reader-text` utilities generate. */
+  /* ── Reader note surface (annotation textarea) ──────────────────────────────
+   * A single warm-paper value for the marginalia textarea. The reader *page*
+   * itself uses the app chrome tokens (surface/text) so it stays on-brand with
+   * the rest of the app and follows warm-light ↔ warm-dark. Declared in @theme
+   * so `bg-reader-bg` / `text-reader-text` utilities generate. */
   --color-reader-bg:   #fbf6ec;
   --color-reader-text: #2a2422;
 
@@ -73,24 +76,3 @@
   --color-accent:         #f2913e;
 }
 
-/* ── Reader themes ──────────────────────────────────────────────────────────── */
-[data-reader-theme='paper'],
-.paper {
-  --color-reader-bg:   #fbf6ec;
-  --color-reader-text: #2a2422;
-}
-
-[data-reader-theme='sepia'],
-.sepia {
-  --color-reader-bg:   #f2e5cc;
-  --color-reader-text: #4a3f2f;
-}
-
-[data-reader-theme='night'],
-.night {
-  --color-reader-bg:   #14110e;
-  --color-reader-text: #c9bead;
-  /* On the near-black page, multiply would crush the tint to black (invisible). Screen
-     lightens the same hue so the highlight reads against the dark surface. */
-  --highlight-blend: screen;
-}

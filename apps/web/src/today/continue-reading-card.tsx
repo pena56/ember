@@ -1,12 +1,12 @@
 /**
- * continue-reading-card.tsx — the "Continue Reading" card on the Today page.
+ * continue-reading-card.tsx — the "Continue Reading" band of the Today hero panel.
  *
- * Shows the most-recently-read book (title + page), with a Resume button.
- * Empty state shows a gentle nudge — quiet voice, no guilt-tripping (brand invariant).
+ * Shows the most-recently-read book (title + page) with a Resume button. Empty
+ * state is a gentle nudge — quiet voice, no guilt-tripping (brand invariant).
  *
- * Design: bookmarked-page aesthetic — left accent stripe (ember color), Fraunces
- * title that breathes, generous whitespace. Token-driven (invariant #6).
- * Builds on shadcn Card + Button primitives per ui-context.
+ * Renders as a band *inside* the shared Today panel (no card chrome of its own),
+ * so the greeting, this invitation, and the habit band read as one composition.
+ * Token-driven (invariant #6); builds on the shadcn Button primitive.
  */
 
 import { NavLink } from 'react-router';
@@ -17,59 +17,70 @@ import type { ContinueReadingItem } from './select-continue-reading.js';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface ContinueReadingCardProps {
+interface ContinueReadingSectionProps {
   item: ContinueReadingItem | undefined;
+  loading: boolean;
   onResume: (docId: string) => void;
+}
+
+// ── Loading skeleton ────────────────────────────────────────────────────────────
+
+function LoadingBand() {
+  return (
+    <div
+      className="flex items-center justify-between gap-8"
+      role="status"
+      aria-label="Loading your reading progress"
+    >
+      <div className="flex flex-col gap-2">
+        <div className="h-3 w-24 rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
+        <div className="h-6 w-48 rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
+        <div className="h-3 w-16 rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
+      </div>
+      <div className="h-9 w-24 rounded-sm bg-line motion-safe:animate-pulse" aria-hidden="true" />
+    </div>
+  );
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyBand() {
   return (
-    <div className="relative rounded-2xl bg-surface-raised border border-line overflow-hidden">
-      {/* Subtle decorative accent — faint ember glow in corner */}
-      <div
-        className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-accent opacity-5 pointer-events-none"
+    <div className="flex items-center gap-5">
+      {/* Ember flame — dimmed, waiting */}
+      <svg
+        width="36"
+        height="44"
+        viewBox="0 0 44 56"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-      />
+        className="shrink-0 text-accent opacity-25"
+      >
+        <path
+          d="M22 2C22 2 6 18 6 32C6 41.941 13.163 50 22 50C30.837 50 38 41.941 38 32C38 22 30 14 27 8C27 8 26 20 22 23C18 20 22 2 22 2Z"
+          fill="currentColor"
+        />
+        <path
+          d="M22 23C22 23 14 31 14 37C14 41.418 17.582 45 22 45C26.418 45 30 41.418 30 37C30 31 22 23 22 23Z"
+          fill="currentColor"
+          fillOpacity="0.4"
+        />
+      </svg>
 
-      <div className="relative flex flex-col items-center gap-6 px-8 py-12 text-center">
-        {/* Ember flame — dimmed, waiting */}
-        <svg
-          width="44"
-          height="52"
-          viewBox="0 0 44 56"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-          className="text-accent opacity-25"
-        >
-          <path
-            d="M22 2C22 2 6 18 6 32C6 41.941 13.163 50 22 50C30.837 50 38 41.941 38 32C38 22 30 14 27 8C27 8 26 20 22 23C18 20 22 2 22 2Z"
-            fill="currentColor"
-          />
-          <path
-            d="M22 23C22 23 14 31 14 37C14 41.418 17.582 45 22 45C26.418 45 30 41.418 30 37C30 31 22 23 22 23Z"
-            fill="currentColor"
-            fillOpacity="0.4"
-          />
-        </svg>
-
-        <div className="flex flex-col gap-2 max-w-[22ch]">
-          <p className="font-serif text-xl text-text leading-snug">
-            Your next chapter awaits.
-          </p>
-          <p className="font-sans text-sm text-text-muted leading-relaxed">
-            Nothing open yet — pick a book from your library to begin.
-          </p>
-        </div>
-
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <p className="font-serif text-lg leading-snug text-text">
+          Your next chapter awaits.
+        </p>
+        <p className="font-sans text-sm leading-relaxed text-text-muted">
+          Nothing open yet — pick a book from your library to begin.
+        </p>
         <NavLink
           to="/library"
           className={[
-            'inline-flex items-center gap-2 font-sans text-sm font-medium',
+            'mt-1 inline-flex items-center gap-1.5 font-sans text-sm font-medium',
             'text-accent underline-offset-4 hover:underline',
-            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded',
+            'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             'transition-colors',
           ].join(' ')}
         >
@@ -83,63 +94,33 @@ function EmptyState() {
   );
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+// ── Section ─────────────────────────────────────────────────────────────────────
 
-export function ContinueReadingCard({ item, onResume }: ContinueReadingCardProps) {
-  if (!item) {
-    return <EmptyState />;
-  }
+export function ContinueReadingSection({ item, loading, onResume }: ContinueReadingSectionProps) {
+  if (loading) return <LoadingBand />;
+  if (!item) return <EmptyBand />;
 
   return (
-    <div className="relative rounded-2xl bg-surface-raised border border-line overflow-hidden group">
-      {/* Left bookmark stripe — the ember accent mark */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1 bg-accent rounded-l-2xl"
-        aria-hidden="true"
-      />
-
-      {/* Subtle glow behind the stripe */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-12 opacity-[0.04] pointer-events-none"
-        style={{
-          background: 'linear-gradient(to right, var(--color-accent), transparent)',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="relative pl-8 pr-6 pt-6 pb-6 flex flex-col gap-5">
-        {/* Label */}
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-          Continue reading
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      {/* Book */}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <p className="font-sans text-xs font-medium text-text-muted">Continue reading</p>
+        <h2 className="truncate font-serif text-2xl font-semibold leading-tight text-text text-balance">
+          {item.title}
+        </h2>
+        <p className="font-sans text-sm text-text-muted">
+          Page {item.page}
         </p>
+      </div>
 
-        {/* Title */}
-        <div className="flex flex-col gap-1.5">
-          <h2 className="font-serif text-2xl font-semibold text-text leading-tight">
-            {item.title}
-          </h2>
-          <p className="font-sans text-sm text-text-muted">
-            Page {item.page}
-          </p>
-        </div>
-
-        {/* Resume action */}
-        <div className="flex items-center gap-4 pt-1">
-          <Button
-            onClick={() => { onResume(item.docId); }}
-            className={[
-              'bg-accent hover:bg-accent/90 active:bg-accent/80',
-              'text-on-accent font-sans font-medium text-sm',
-              'rounded-xl px-5 h-9',
-              'shadow-sm',
-              'transition-all duration-200',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-              'group-hover:shadow-md',
-            ].join(' ')}
-          >
-            Resume
-          </Button>
-        </div>
+      {/* Resume action */}
+      <div className="flex-shrink-0">
+        <Button
+          onClick={() => { onResume(item.docId); }}
+          className="h-9 rounded-sm px-5 font-sans text-sm font-medium"
+        >
+          Resume
+        </Button>
       </div>
     </div>
   );

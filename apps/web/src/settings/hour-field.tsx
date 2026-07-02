@@ -48,8 +48,8 @@ export function HourField({ label, hour, onChange, disabled = false }: HourField
   return (
     // The group gets the label so AT announces "From: stepper group" or similar.
     <div role="group" aria-label={label} className="flex flex-col gap-2">
-      {/* Label — uppercase caption matching the section-header style */}
-      <span className="font-sans text-xs font-medium uppercase tracking-widest text-text-muted">
+      {/* Label — quiet sentence-case, not an uppercase eyebrow */}
+      <span className="font-sans text-xs font-medium text-text-muted">
         {label}
       </span>
 

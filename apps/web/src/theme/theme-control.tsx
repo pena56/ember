@@ -1,8 +1,26 @@
 /**
- * theme-control.tsx — shared ThemeControl component (extracted from library-page.tsx).
- * Renders the System / Light / Dark segmented toggle using the app theme tokens.
- * Behavior is unchanged from the original; it now lives here so the app-shell can use it.
+ * theme-control.tsx — theme picker (System / Light / Dark).
+ *
+ * A dropdown menu (shadcn's canonical mode-toggle pattern) rather than a
+ * segmented control: it stays compact and fully responsive on narrow/mobile
+ * viewports where a 3-segment inline control would crowd. The trigger shows the
+ * current choice; the menu is a single-select radio group with a check on the
+ * active option.
+ *
+ * Token-driven — no hardcoded colors (invariant #6).
  */
+
+import { Check, ChevronDown, Monitor, Moon, Sun } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+import { Button } from '@/components/ui/button.js';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu.js';
 
 import type { ThemePreference } from './resolve-app-theme.js';
 import { useTheme } from './use-theme.js';
@@ -15,37 +33,58 @@ const LABELS: Record<ThemePreference, string> = {
   'warm-light': 'Light',
   'warm-dark': 'Dark',
 };
+const ICONS: Record<ThemePreference, LucideIcon> = {
+  system: Monitor,
+  'warm-light': Sun,
+  'warm-dark': Moon,
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ThemeControl() {
   const { preference, setPreference } = useTheme();
+  const CurrentIcon = ICONS[preference];
 
   return (
-    <div
-      className="flex rounded-md overflow-hidden border border-line bg-surface-raised"
-      role="group"
-      aria-label="Theme"
-    >
-      {PREFERENCES.map((pref) => (
-        <button
-          key={pref}
-          type="button"
-          onClick={() => {
-            setPreference(pref);
-          }}
-          aria-pressed={preference === pref}
-          className={[
-            'font-sans text-sm px-3 py-1.5 transition-colors',
-            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            preference === pref
-              ? 'text-text border-b-2 border-accent font-medium'
-              : 'text-text-muted hover:text-text border-b-2 border-transparent',
-          ].join(' ')}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label="Theme"
+          className="justify-between gap-2 rounded-sm min-w-[8rem]"
         >
-          {LABELS[pref]}
-        </button>
-      ))}
-    </div>
+          <span className="flex items-center gap-2">
+            <CurrentIcon className="size-4 text-text-muted" />
+            <span className="font-sans">{LABELS[preference]}</span>
+          </span>
+          <ChevronDown className="size-4 text-text-muted" />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="min-w-[8rem] rounded-sm">
+        <DropdownMenuRadioGroup
+          value={preference}
+          onValueChange={(v) => { setPreference(v as ThemePreference); }}
+        >
+          {PREFERENCES.map((pref) => {
+            const Icon = ICONS[pref];
+            const active = preference === pref;
+            return (
+              <DropdownMenuRadioItem
+                key={pref}
+                value={pref}
+                // Hide the default left indicator dot; we show a trailing check instead.
+                className="gap-2 rounded-sm pl-2 [&>span:first-child]:hidden"
+              >
+                <Icon className="size-4 text-text-muted" />
+                <span className="flex-1 font-sans">{LABELS[pref]}</span>
+                {active && <Check className="size-4 text-accent" />}
+              </DropdownMenuRadioItem>
+            );
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

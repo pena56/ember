@@ -52,6 +52,9 @@ export interface LibraryTagState {
   activeView: ActiveView;
   setActiveView: (view: ActiveView) => void;
 
+  /** Last-read page per doc (ReadingPosition.id === docId). For progress display. */
+  positionsByDoc: Map<string, { page: number }>;
+
   importFiles: (files: File[]) => Promise<void>;
   refresh: () => void;
 }
@@ -247,6 +250,7 @@ export function useLibraryTags(): LibraryTagState {
     smartViews: snapshot.smartViews,
     activeView,
     setActiveView,
+    positionsByDoc: positionMap,
     importFiles,
     refresh,
   };

@@ -43,7 +43,7 @@ function StatItem({ value, label }: { value: string; label: string }) {
           </span>
         )}
       </div>
-      <span className="font-sans text-xs text-text-muted leading-snug uppercase tracking-[0.08em]">
+      <span className="font-sans text-xs text-text-muted leading-snug">
         {label}
       </span>
     </div>
@@ -66,7 +66,7 @@ export function TotalsStat({ totals, speed }: TotalsStatProps) {
       {/* Reading speed — quiet separator + secondary line */}
       <div className="mt-5 pt-4 border-t border-line">
         <div className="flex items-center justify-between gap-4">
-          <span className="font-sans text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
+          <span className="font-sans text-sm text-text-muted">
             Reading speed
           </span>
           <span className="font-serif text-base font-semibold text-text tabular-nums">

@@ -40,6 +40,11 @@ export interface StatsView {
     cells: { day: string; level: 0 | 1 | 2 | 3 | 4; activeMs: number; label: string }[];
     maxActiveMs: number;       // for the legend
   };
+  calendar: {
+    fromDay: string;           // window start 'YYYY-MM-DD' ('' when no data)
+    toDay: string;             // window end / today 'YYYY-MM-DD' ('' when no data)
+    days: CalendarDay[];       // active days only (activeMs > 0), ascending
+  };
   totals: {
     activeLabel: string;       // "4h 12m" / "12m" / "0m"
     pagesLabel: string;        // "318 pages" / "1 page" / "0 pages"
@@ -58,6 +63,23 @@ export interface StatsView {
     etaLabel: string | null;      // "~2h left" / "Finished" / null
     progressRatio: number | null; // for bar width (0..1) — null → indeterminate
   }[];
+}
+
+/** One calendar day that had reading activity — the click target's payload. */
+export interface CalendarDay {
+  day: string;               // 'YYYY-MM-DD'
+  level: 1 | 2 | 3 | 4;      // ember intensity (shares the heatmap binning)
+  activeMs: number;
+  activeLabel: string;       // "1h 12m"
+  sessionCount: number;
+  pagesTurned: number;       // Σ session.pages.length across the day's sessions
+  books: {
+    docId: string;
+    title: string;
+    activeMs: number;
+    activeLabel: string;
+    pages: number;           // Σ session.pages.length for this book, this day
+  }[];                       // sorted by activeMs desc
 }
 
 // ── Duration formatting ────────────────────────────────────────────────────────
@@ -122,6 +144,62 @@ export function presentStats(input: PresentStatsInput): StatsView {
     return { day: cell.day, level, activeMs: cell.activeMs, label };
   });
 
+  // ── Title lookup (shared by calendar + books) ─────────────────────────────────
+
+  const titleByDocId = new Map<string, string>();
+  for (const doc of docs) {
+    titleByDocId.set(doc.id, doc.title);
+  }
+
+  // ── Calendar (per-day details behind each ember) ──────────────────────────────
+
+  const fromDay = heatmap[0]?.day ?? '';
+  const toDay = heatmap.length > 0 ? heatmap[heatmap.length - 1]!.day : '';
+
+  const sessionsByDay = new Map<string, ReadingSession[]>();
+  for (const s of sessions) {
+    const bucket = sessionsByDay.get(s.localDay);
+    if (bucket) bucket.push(s);
+    else sessionsByDay.set(s.localDay, [s]);
+  }
+
+  const calendarDays: CalendarDay[] = heatmapCells
+    .filter((c) => c.level > 0)
+    .map((c) => {
+      const daySessions = sessionsByDay.get(c.day) ?? [];
+
+      // Aggregate the day's sessions per document.
+      const byDoc = new Map<string, { activeMs: number; pages: number }>();
+      for (const s of daySessions) {
+        const agg = byDoc.get(s.docId) ?? { activeMs: 0, pages: 0 };
+        agg.activeMs += s.activeMs;
+        agg.pages += s.pages.length;
+        byDoc.set(s.docId, agg);
+      }
+
+      const books = [...byDoc.entries()]
+        .map(([docId, agg]) => ({
+          docId,
+          title: titleByDocId.get(docId) ?? docId,
+          activeMs: agg.activeMs,
+          activeLabel: formatDuration(agg.activeMs),
+          pages: agg.pages,
+        }))
+        .sort((a, b) => b.activeMs - a.activeMs);
+
+      const pagesTurned = books.reduce((sum, b) => sum + b.pages, 0);
+
+      return {
+        day: c.day,
+        level: c.level as 1 | 2 | 3 | 4,
+        activeMs: c.activeMs,
+        activeLabel: formatDuration(c.activeMs),
+        sessionCount: daySessions.length,
+        pagesTurned,
+        books,
+      };
+    });
+
   // ── Totals ──────────────────────────────────────────────────────────────────
 
   const { totals, speed, timeOfDay, books: bookProgress } = analytics;
@@ -159,12 +237,6 @@ export function presentStats(input: PresentStatsInput): StatsView {
     if (s.endedAt > current) {
       lastReadByDoc.set(s.docId, s.endedAt);
     }
-  }
-
-  // Build title lookup
-  const titleByDocId = new Map<string, string>();
-  for (const doc of docs) {
-    titleByDocId.set(doc.id, doc.title);
   }
 
   // Filter to docs with ≥1 session, sort by most-recent endedAt desc (stable)
@@ -212,6 +284,11 @@ export function presentStats(input: PresentStatsInput): StatsView {
     heatmap: {
       cells: heatmapCells,
       maxActiveMs,
+    },
+    calendar: {
+      fromDay,
+      toDay,
+      days: calendarDays,
     },
     totals: {
       activeLabel,
