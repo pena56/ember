@@ -1,14 +1,15 @@
 /**
- * stats-page.tsx — the Stats tab: calm analytics overview.
+ * stats-page.tsx — the Stats tab: calm analytics dashboard.
  *
- * Six sections: Streak / Activity / Totals / Time of day / Your books.
- * Matches today-page.tsx column shell: mx-auto w-full max-w-2xl px-6 py-10.
+ * A wider two-column dashboard (max-w-4xl): the streak hero and the activity
+ * calendar + book list run full width, while Totals and When-you-read sit side
+ * by side on md+. Each section uses the shared StatCard shell.
  * Loading → calm skeleton (no fake numbers).
  * !hasData → warm empty state ("Your story starts with a single page.").
  * Token-only styling (invariant #6).
  */
 
-import { ActivityHeatmap } from './activity-heatmap.js';
+import { ActivityCalendar } from './activity-calendar.js';
 import { BookProgressList } from './book-progress-list.js';
 import { StreakStat } from './streak-stat.js';
 import { TimeOfDayStat } from './time-of-day-stat.js';
@@ -17,16 +18,23 @@ import { useStats } from './use-stats.js';
 
 // ── Skeleton ───────────────────────────────────────────────────────────────────
 
+function SkeletonCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-md bg-surface-raised border border-line shadow-float-sm px-6 py-5">
+      {children}
+    </div>
+  );
+}
+
 function StatsSkeleton() {
   return (
     <div
-      className="flex flex-col gap-4"
+      className="grid gap-4 md:grid-cols-2"
       role="status"
       aria-label="Loading your reading stats"
     >
       {/* Streak card skeleton */}
-      <div className="rounded-2xl bg-surface-raised border border-line px-6 py-5">
-        <div className="h-3 w-14 rounded bg-line motion-safe:animate-pulse mb-4" aria-hidden="true" />
+      <SkeletonCard>
         <div className="flex items-end justify-between gap-4">
           <div className="flex flex-col gap-2">
             <div className="h-12 w-20 rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
@@ -34,17 +42,10 @@ function StatsSkeleton() {
           </div>
           <div className="h-8 w-16 rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
         </div>
-      </div>
-
-      {/* Heatmap card skeleton */}
-      <div className="rounded-2xl bg-surface-raised border border-line px-6 py-5">
-        <div className="h-3 w-14 rounded bg-line motion-safe:animate-pulse mb-4" aria-hidden="true" />
-        <div className="h-20 w-full rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
-      </div>
+      </SkeletonCard>
 
       {/* Totals card skeleton */}
-      <div className="rounded-2xl bg-surface-raised border border-line px-6 py-5">
-        <div className="h-3 w-20 rounded bg-line motion-safe:animate-pulse mb-4" aria-hidden="true" />
+      <SkeletonCard>
         <div className="grid grid-cols-2 gap-x-6 gap-y-5">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="flex flex-col gap-1">
@@ -53,19 +54,36 @@ function StatsSkeleton() {
             </div>
           ))}
         </div>
-      </div>
+      </SkeletonCard>
 
-      {/* Two more card skeletons */}
-      {[0, 1].map(i => (
-        <div key={i} className="rounded-2xl bg-surface-raised border border-line px-6 py-5">
-          <div className="h-3 w-24 rounded bg-line motion-safe:animate-pulse mb-4" aria-hidden="true" />
+      {/* When-you-read skeleton — full width */}
+      <div className="md:col-span-2">
+        <SkeletonCard>
           <div className="flex flex-col gap-3">
             {[0, 1, 2, 3].map(j => (
               <div key={j} className="h-4 w-full rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
             ))}
           </div>
-        </div>
-      ))}
+        </SkeletonCard>
+      </div>
+
+      {/* Calendar card skeleton — full width */}
+      <div className="md:col-span-2">
+        <SkeletonCard>
+          <div className="h-48 w-full rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
+        </SkeletonCard>
+      </div>
+
+      {/* Books skeleton — full width */}
+      <div className="md:col-span-2">
+        <SkeletonCard>
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map(j => (
+              <div key={j} className="h-4 w-full rounded bg-line motion-safe:animate-pulse" aria-hidden="true" />
+            ))}
+          </div>
+        </SkeletonCard>
+      </div>
     </div>
   );
 }
@@ -113,54 +131,45 @@ export function StatsPage() {
   const { view, loading } = useStats();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10 flex flex-col gap-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-12 flex flex-col gap-9">
       {/* Page heading */}
-      <div className="flex flex-col gap-1.5">
+      <header className="flex flex-col gap-1.5">
         <h1 className="font-serif text-4xl font-semibold text-text leading-tight tracking-tight text-balance">
           Your reading
         </h1>
-        <p className="font-sans text-sm text-text-muted mt-0.5">
+        <p className="font-sans text-sm text-text-muted">
           A quiet record of the time you&apos;ve spent with books.
         </p>
-      </div>
-
-      {/* Thin section separator */}
-      <div className="h-px w-12 bg-line -mt-6" aria-hidden="true" />
+      </header>
 
       {/* Content — aria-live so AT announces when stats load in */}
       <div aria-live="polite" aria-atomic="false">
-      {loading ? (
-        <StatsSkeleton />
-      ) : !view.hasData ? (
-        <StatsEmpty />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* 1. Streak */}
-          <section aria-label="Reading streak">
+        {loading ? (
+          <StatsSkeleton />
+        ) : !view.hasData ? (
+          <StatsEmpty />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Streak + Totals — the two compact stats, side by side on md+ */}
             <StreakStat streak={view.streak} />
-          </section>
-
-          {/* 2. Activity heatmap */}
-          <section aria-label="Reading activity heatmap">
-            <ActivityHeatmap cells={view.heatmap.cells} />
-          </section>
-
-          {/* 3. Totals + speed */}
-          <section aria-label="Reading totals">
             <TotalsStat totals={view.totals} speed={view.speed} />
-          </section>
 
-          {/* 4. Time of day */}
-          <section aria-label="Time of day patterns">
-            <TimeOfDayStat timeOfDay={view.timeOfDay} />
-          </section>
+            {/* When you read — full width */}
+            <div className="md:col-span-2">
+              <TimeOfDayStat timeOfDay={view.timeOfDay} />
+            </div>
 
-          {/* 5. Books */}
-          <section aria-label="Book progress">
-            <BookProgressList books={view.books} />
-          </section>
-        </div>
-      )}
+            {/* Activity calendar — full width */}
+            <div className="md:col-span-2">
+              <ActivityCalendar calendar={view.calendar} />
+            </div>
+
+            {/* Books — full width */}
+            <div className="md:col-span-2">
+              <BookProgressList books={view.books} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

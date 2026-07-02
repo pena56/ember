@@ -4,17 +4,19 @@
  * Features:
  *  - Continuous scroll (default) with IntersectionObserver-based virtualization
  *  - Paged mode (one page at a time) with prev/next buttons + ←/→ keys
- *  - Reader theme (paper / sepia / night) independent of app chrome
- *  - Toolbar: back chevron, title, page indicator, mode toggle, theme control
- *
- * Navigation: state-based (openDocId in App) — no router dep.
- * Does NOT persist reading position (unit 06) or render highlights (unit 10).
+ *  - Uses the app chrome theme (warm-light / warm-dark) so it stays on-brand
+ *  - Minimal top bar (back, title, page indicator) + floating control dock
+ *    (text size, reading mode) over the shared ambient backdrop
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Annotation, HighlightColor, PageTextGeometry, TextAnchor } from '@ember/core';
-import type { ReaderThemeName } from '@ember/tokens';
+
+import { cn } from '@/lib/utils.js';
+
+import { AmbientBackdrop } from '../shell/ambient-backdrop.js';
 
 import { AnnotationPopover } from './annotation-popover.js';
 import { PdfPage } from './pdf-page.js';
@@ -58,18 +60,16 @@ interface ReaderPageProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const READER_THEMES: ReaderThemeName[] = ['paper', 'sepia', 'night'];
-const THEME_LABELS: Record<ReaderThemeName, string> = {
-  paper: 'Paper',
-  sepia: 'Sepia',
-  night: 'Night',
-};
-
 /** Pages outside this buffer from the visible page are not actively rendered. */
 const ACTIVE_BUFFER = 2;
 
-/** Max display width for the page column (CSS px). */
-const PAGE_MAX_WIDTH = 720;
+/**
+ * Text-size steps: the max page-column width (CSS px) per step. Larger width →
+ * larger rendered text (the "AA" control). Clamped to the container so the page
+ * never overflows the viewport horizontally.
+ */
+const PAGE_WIDTH_STEPS = [600, 680, 760, 840, 920];
+const DEFAULT_SIZE_INDEX = 2;
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 
@@ -128,8 +128,8 @@ function DocumentNotice({
       </svg>
 
       <div className="flex flex-col gap-2 max-w-sm">
-        <p className="font-serif text-lg text-reader-text">{message}</p>
-        <p className="font-sans text-sm text-reader-text opacity-60">{detail}</p>
+        <p className="font-serif text-lg text-text">{message}</p>
+        <p className="font-sans text-sm text-text-muted">{detail}</p>
       </div>
 
       <button
@@ -314,171 +314,194 @@ function PagedReader({
       />
 
       {/* Prev / Next buttons */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={goPrev}
           disabled={currentPage <= 1}
           aria-label="Previous page"
-          className={[
-            'font-sans text-sm px-4 py-2 rounded-md border border-line',
-            'text-reader-text bg-reader-bg',
-            'disabled:opacity-30 disabled:cursor-not-allowed',
+          className={cn(
+            'flex items-center gap-1.5 font-sans text-sm px-4 py-2 rounded-sm',
+            'border border-line text-text bg-surface-raised shadow-float-sm',
+            'disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            'hover:bg-line transition-colors',
-          ].join(' ')}
+            'hover:bg-surface transition-colors',
+          )}
         >
-          ← Prev
+          <ChevronLeft className="size-4" aria-hidden="true" />
+          Prev
         </button>
         <button
           type="button"
           onClick={goNext}
           disabled={currentPage >= numPages}
           aria-label="Next page"
-          className={[
-            'font-sans text-sm px-4 py-2 rounded-md border border-line',
-            'text-reader-text bg-reader-bg',
-            'disabled:opacity-30 disabled:cursor-not-allowed',
+          className={cn(
+            'flex items-center gap-1.5 font-sans text-sm px-4 py-2 rounded-sm',
+            'border border-line text-text bg-surface-raised shadow-float-sm',
+            'disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            'hover:bg-line transition-colors',
-          ].join(' ')}
+            'hover:bg-surface transition-colors',
+          )}
         >
-          Next →
+          Next
+          <ChevronRight className="size-4" aria-hidden="true" />
         </button>
       </div>
     </div>
   );
 }
 
-// ── Reader toolbar ────────────────────────────────────────────────────────────
+// ── Reader top bar ────────────────────────────────────────────────────────────
+// Deliberately minimal so the page stays the hero: back, title, page indicator.
+// The reading controls live in the floating dock below.
 
-function ReaderToolbar({
+function ReaderTopBar({
   title,
   currentPage,
   numPages,
   mode,
-  readerTheme,
   onClose,
-  onModeChange,
-  onThemeChange,
 }: {
   title: string;
   currentPage: number;
   numPages: number;
   mode: ReadMode;
-  readerTheme: ReaderThemeName;
   onClose: () => void;
-  onModeChange: (m: ReadMode) => void;
-  onThemeChange: (t: ReaderThemeName) => void;
 }) {
   return (
-    <header className="sticky top-0 z-10 bg-reader-bg border-b border-line">
-      <div className="mx-auto max-w-4xl px-4 py-2 flex items-center gap-3 flex-wrap">
+    <header className="sticky top-0 z-30 border-b border-line bg-surface">
+      <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
         {/* Back to Library */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Back to Library"
-          className={[
-            'flex items-center gap-1.5 font-sans text-sm text-reader-text',
-            'shrink-0 rounded px-2 py-1',
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 font-sans text-sm',
+            'text-text-muted hover:text-text transition-colors',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            'hover:opacity-70 transition-opacity',
-          ].join(' ')}
+          )}
         >
-          {/* Chevron left */}
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M10 4L6 8L10 12"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ChevronLeft className="size-4" aria-hidden="true" />
           Library
         </button>
 
-        {/* Spacer */}
-        <div className="flex-1 min-w-0">
-          <p
-            className="font-serif text-sm font-medium text-reader-text truncate"
-            title={title}
-          >
-            {title}
-          </p>
-        </div>
+        {/* Title */}
+        <h1
+          className="min-w-0 flex-1 truncate text-center font-serif text-sm font-medium text-text"
+          title={title}
+        >
+          {title}
+        </h1>
 
         {/* Page indicator */}
-        {numPages > 0 && (
-          <span
-            className="font-sans text-xs text-reader-text opacity-60 shrink-0 tabular-nums"
-            // Announce on explicit page turns (paged mode); stay silent while
-            // scrolling, where currentPage changes on every scroll tick.
-            aria-live={mode === 'paged' ? 'polite' : 'off'}
-            aria-atomic="true"
-          >
-            {`page ${currentPage.toString()} of ${numPages.toString()}`}
-          </span>
-        )}
-
-        {/* Scroll / Paged mode toggle */}
-        <div
-          className="flex rounded-md overflow-hidden border border-line shrink-0"
-          role="group"
-          aria-label="Reading mode"
+        <span
+          className="w-24 shrink-0 text-right font-sans text-xs tabular-nums text-text-muted"
+          // Announce on explicit page turns (paged mode); stay silent while
+          // scrolling, where currentPage changes on every scroll tick.
+          aria-live={mode === 'paged' ? 'polite' : 'off'}
+          aria-atomic="true"
         >
+          {numPages > 0 ? `page ${currentPage.toString()} of ${numPages.toString()}` : ''}
+        </span>
+      </div>
+    </header>
+  );
+}
+
+// ── Reader control dock ─────────────────────────────────────────────────────────
+// One floating card, bottom-center, grouping the reading controls: text size and
+// reading mode. On-brand app chrome tokens, with the ember accent marking the
+// active segment.
+
+/** Shared segmented-control button styling. */
+function segClass(active: boolean): string {
+  return cn(
+    'rounded-[6px] px-2.5 py-1 font-sans text-xs transition-colors',
+    'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+    active
+      ? 'bg-accent/15 font-medium text-text'
+      : 'text-text-muted hover:bg-surface hover:text-text',
+  );
+}
+
+function DockDivider() {
+  return <div aria-hidden="true" className="h-5 w-px shrink-0 bg-line" />;
+}
+
+function ReaderDock({
+  sizeIndex,
+  onSizeChange,
+  mode,
+  onModeChange,
+}: {
+  sizeIndex: number;
+  onSizeChange: (delta: number) => void;
+  mode: ReadMode;
+  onModeChange: (m: ReadMode) => void;
+}) {
+  const canDecrease = sizeIndex > 0;
+  const canIncrease = sizeIndex < PAGE_WIDTH_STEPS.length - 1;
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-4">
+      <div
+        className={cn(
+          'pointer-events-auto flex flex-wrap items-center justify-center gap-2',
+          'rounded-md border border-line bg-surface-raised px-2 py-1.5 shadow-float',
+        )}
+      >
+        {/* Text size */}
+        <div className="flex items-center gap-0.5" role="group" aria-label="Text size">
+          <button
+            type="button"
+            onClick={() => { onSizeChange(-1); }}
+            disabled={!canDecrease}
+            aria-label="Decrease text size"
+            className={cn(
+              'flex size-7 items-center justify-center rounded-[6px] leading-none text-text-muted',
+              'hover:bg-surface hover:text-text transition-colors',
+              'disabled:pointer-events-none disabled:opacity-30',
+              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+            )}
+          >
+            <span className="font-serif text-[11px]" aria-hidden="true">A</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { onSizeChange(1); }}
+            disabled={!canIncrease}
+            aria-label="Increase text size"
+            className={cn(
+              'flex size-7 items-center justify-center rounded-[6px] leading-none text-text-muted',
+              'hover:bg-surface hover:text-text transition-colors',
+              'disabled:pointer-events-none disabled:opacity-30',
+              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent',
+            )}
+          >
+            <span className="font-serif text-[17px]" aria-hidden="true">A</span>
+          </button>
+        </div>
+
+        <DockDivider />
+
+        {/* Reading mode */}
+        <div className="flex items-center gap-0.5" role="group" aria-label="Reading mode">
           {(['scroll', 'paged'] as ReadMode[]).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => { onModeChange(m); }}
               aria-pressed={mode === m}
-              className={[
-                'font-sans text-xs px-2.5 py-1 transition-colors capitalize',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                mode === m
-                  ? 'text-reader-text border-b-2 border-accent font-medium bg-reader-bg'
-                  : 'text-reader-text opacity-50 hover:opacity-80 border-b-2 border-transparent bg-reader-bg',
-              ].join(' ')}
+              className={segClass(mode === m)}
             >
               {m === 'scroll' ? 'Scroll' : 'Paged'}
             </button>
           ))}
         </div>
-
-        {/* Reader theme control */}
-        <div
-          className="flex rounded-md overflow-hidden border border-line shrink-0"
-          role="group"
-          aria-label="Reader theme"
-        >
-          {READER_THEMES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => { onThemeChange(t); }}
-              aria-pressed={readerTheme === t}
-              className={[
-                'font-sans text-xs px-2.5 py-1 transition-colors',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                readerTheme === t
-                  ? 'text-reader-text border-b-2 border-accent font-medium bg-reader-bg'
-                  : 'text-reader-text opacity-50 hover:opacity-80 border-b-2 border-transparent bg-reader-bg',
-              ].join(' ')}
-            >
-              {THEME_LABELS[t]}
-            </button>
-          ))}
-        </div>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -570,7 +593,6 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   }, []);
 
   const [mode, setMode] = useState<ReadMode>('scroll');
-  const [readerTheme, setReaderTheme] = useState<ReaderThemeName>('paper');
   // currentPage is tracked alongside the docId that produced it so that switching
   // documents resets to page 1 without needing a separate useEffect setState call.
   const [pageState, setPageState] = useState<{ docId: string; page: number }>({
@@ -595,8 +617,16 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   };
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Compute display width from container (cap at PAGE_MAX_WIDTH)
-  const [displayWidth, setDisplayWidth] = useState(Math.min(PAGE_MAX_WIDTH, 600));
+  // Text size (the "AA" control): an index into PAGE_WIDTH_STEPS. A wider page
+  // column renders larger text. Held in memory for the session.
+  const [sizeIndex, setSizeIndex] = useState(DEFAULT_SIZE_INDEX);
+  const changeSize = useCallback((delta: number) => {
+    setSizeIndex((i) => Math.max(0, Math.min(PAGE_WIDTH_STEPS.length - 1, i + delta)));
+  }, []);
+
+  // Measured content width; display width is derived so a size change and a
+  // resize both flow through the same clamp (page never overflows the viewport).
+  const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -605,13 +635,18 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      const w = entry.contentRect.width;
-      setDisplayWidth(Math.min(PAGE_MAX_WIDTH, Math.max(280, w - 32)));
+      setContainerWidth(entry.contentRect.width);
     });
 
     observer.observe(el);
     return () => { observer.disconnect(); };
   }, []);
+
+  const displayWidth = useMemo(() => {
+    const maxWidth = PAGE_WIDTH_STEPS[sizeIndex] ?? PAGE_WIDTH_STEPS[DEFAULT_SIZE_INDEX]!;
+    const available = containerWidth > 0 ? containerWidth - 32 : maxWidth;
+    return Math.max(280, Math.min(maxWidth, available));
+  }, [sizeIndex, containerWidth]);
 
   // ── Reading position helpers ─────────────────────────────────────────────────
 
@@ -672,11 +707,10 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
   useCapturePageCount({ docId, ready: status === 'ready', numPages });
 
   return (
-    // data-reader-theme drives the token CSS selectors in theme.css
-    <div
-      data-reader-theme={readerTheme}
-      className="min-h-screen flex flex-col bg-reader-bg text-reader-text"
-    >
+    <div className="min-h-screen flex flex-col text-text">
+      {/* Same ambient backdrop as the rest of the app — reader stays on-brand */}
+      <AmbientBackdrop />
+
       {/* Floating highlight swatch toolbar — rendered once at reader level */}
       <SelectionToolbar
         pageGeometries={pageGeometries}
@@ -694,19 +728,26 @@ export function ReaderPage({ docId, title, onClose }: ReaderPageProps) {
         onClose={handleClosePopover}
       />
 
-      <ReaderToolbar
+      <ReaderTopBar
         title={title}
         currentPage={currentPage}
         numPages={numPages}
         mode={mode}
-        readerTheme={readerTheme}
         onClose={onClose}
-        onModeChange={setMode}
-        onThemeChange={setReaderTheme}
       />
 
-      {/* Content area */}
-      <div ref={containerRef} className="flex-1 flex flex-col">
+      {/* Floating control dock — only once the document is ready to read */}
+      {status === 'ready' && (
+        <ReaderDock
+          sizeIndex={sizeIndex}
+          onSizeChange={changeSize}
+          mode={mode}
+          onModeChange={setMode}
+        />
+      )}
+
+      {/* Content area — pb leaves room for the floating dock */}
+      <div ref={containerRef} className="flex-1 flex flex-col pb-24">
         {status === 'loading' && <Spinner />}
 
         {(status === 'error' || status === 'missing') && (

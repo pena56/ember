@@ -195,7 +195,7 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
     return (
       <div
         aria-hidden="true"
-        className="bg-reader-bg rounded shadow-sm border border-line"
+        className="bg-surface-raised rounded-md shadow-float border border-line"
         style={{ width: displayWidth, height: Math.round(placeholderH) }}
       />
     );
@@ -203,7 +203,7 @@ export function PdfPage({ pdf, pageNumber, displayWidth, active, onTextGeometry,
 
   return (
     <div
-      className="relative shadow-sm rounded overflow-hidden border border-line"
+      className="relative shadow-float rounded-md overflow-hidden border border-line"
       style={{ width: displayWidth }}
     >
       <canvas ref={canvasRef} className="block" />

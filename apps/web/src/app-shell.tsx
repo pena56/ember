@@ -1,130 +1,207 @@
 /**
- * app-shell.tsx — shared layout for Today + Library (not the full-screen reader).
+ * app-shell.tsx — shared layout for Today / Library / Stats / Settings
+ * (not the full-screen reader).
  *
- * Sticky top-nav: Ember wordmark (left) + Today/Library NavLinks (center-left) +
- * ThemeControl (right). Body renders <Outlet/> for the active tab.
+ * Redesign: a collapsible left sidebar over an ambient warm-glow backdrop, with
+ * page content floating on top. The sidebar is a translucent, blurred glass
+ * panel: Ember wordmark (top) → collapse toggle → Primary nav (Today / Library /
+ * Stats / Settings) → account shortcut pinned to the footer. Account controls and
+ * theme selection now live inside Settings, not the shell chrome.
  *
- * Marked up semantically: <header> + <nav aria-label="Primary"> + <main>.
+ * Collapsed state persists to localStorage so it survives reloads. Nav labels
+ * stay in the DOM when collapsed (visually hidden) so links keep their accessible
+ * names and tooltips.
+ *
+ * Semantic markup: <aside> + <nav aria-label="Primary"> + <main>.
  * Token-driven — no hardcoded colors (invariant #6).
  */
 
+import { ChartColumn, Library, PanelLeft, Settings, Sunrise } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { NavLink, Outlet } from 'react-router';
 
-import { AccountMenu } from './auth/account-menu.js';
-import { ThemeControl } from './theme/theme-control.js';
+import { AmbientBackdrop } from './shell/ambient-backdrop.js';
+import { SidebarAccount } from './shell/sidebar-account.js';
 
-// ── NavLink active class helper ───────────────────────────────────────────────
+const COLLAPSE_KEY = 'ember:sidebar-collapsed';
 
-function tabClass({ isActive }: { isActive: boolean }) {
-  return [
-    'relative font-sans text-sm px-1 py-1 transition-colors duration-200 outline-none',
-    'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent rounded-sm',
-    // The animated underline is drawn via ::after — we use a group trick with a data attr
-    isActive
-      ? 'text-text font-medium'
-      : 'text-text-muted hover:text-text',
-    // Underline drawn as bottom border on the span inside
-  ].join(' ');
+// ── Nav model ─────────────────────────────────────────────────────────────────
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
 }
 
-// ── Tab with animated underline ───────────────────────────────────────────────
+const NAV_ITEMS: NavItem[] = [
+  { to: '/today', label: 'Today', icon: Sunrise },
+  { to: '/library', label: 'Library', icon: Library },
+  { to: '/stats', label: 'Stats', icon: ChartColumn },
+  { to: '/settings', label: 'Settings', icon: Settings },
+];
 
-function Tab({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <NavLink to={to} className={tabClass}>
-      {({ isActive }) => (
-        <span className="inline-flex flex-col items-center gap-0.5">
-          {children}
-          <span
-            className={[
-              'block h-[1.5px] w-full rounded-full transition-all duration-300 ease-out',
-              isActive ? 'bg-accent opacity-100 scale-x-100' : 'bg-accent opacity-0 scale-x-50',
-            ].join(' ')}
-            style={{ transformOrigin: 'left center' }}
-          />
-        </span>
-      )}
-    </NavLink>
-  );
+// ── Collapse persistence ────────────────────────────────────────────────────
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 // ── Ember wordmark ────────────────────────────────────────────────────────────
 
-function Wordmark() {
+function Wordmark({ collapsed }: { collapsed: boolean }) {
   return (
     <span
-      className="select-none"
+      className="inline-flex items-center gap-2 select-none"
       aria-label="Ember Reader"
     >
-      {/* Flame glyph — tiny ember mark before the word */}
-      <span
-        className="inline-flex items-baseline gap-1.5"
-        aria-hidden="false"
+      {/* Flame glyph — the ember mark */}
+      <svg
+        width="14"
+        height="18"
+        viewBox="0 0 12 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        className="text-accent flex-shrink-0"
+        style={{ filter: 'drop-shadow(0 0 4px color-mix(in srgb, currentColor 55%, transparent))' }}
       >
-        <svg
-          width="12"
-          height="16"
-          viewBox="0 0 12 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-          className="text-accent mb-0.5 flex-shrink-0"
-          style={{ filter: 'drop-shadow(0 0 3px color-mix(in srgb, currentColor 50%, transparent))' }}
-        >
-          <path
-            d="M6 0C6 0 1 6 1 12C1 15.314 3.239 18 6 18C8.761 18 11 15.314 11 12C11 8 8.5 5 7.5 3C7.5 3 7 7 6 8C5 7 6 0 6 0Z"
-            fill="currentColor"
-            fillOpacity="0.9"
-          />
-          <path
-            d="M6 8C6 8 4 11 4 13C4 14.105 4.895 15 6 15C7.105 15 8 14.105 8 13C8 11 6 8 6 8Z"
-            fill="currentColor"
-            fillOpacity="0.35"
-          />
-        </svg>
+        <path
+          d="M6 0C6 0 1 6 1 12C1 15.314 3.239 18 6 18C8.761 18 11 15.314 11 12C11 8 8.5 5 7.5 3C7.5 3 7 7 6 8C5 7 6 0 6 0Z"
+          fill="currentColor"
+          fillOpacity="0.9"
+        />
+        <path
+          d="M6 8C6 8 4 11 4 13C4 14.105 4.895 15 6 15C7.105 15 8 14.105 8 13C8 11 6 8 6 8Z"
+          fill="currentColor"
+          fillOpacity="0.35"
+        />
+      </svg>
+      {!collapsed && (
         <span className="font-serif text-lg font-semibold tracking-tight text-text leading-none">
           Ember
         </span>
-      </span>
+      )}
     </span>
+  );
+}
+
+// ── Nav tab ─────────────────────────────────────────────────────────────────
+
+function Tab({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const Icon = item.icon;
+  return (
+    <NavLink
+      to={item.to}
+      title={collapsed ? item.label : undefined}
+      className={({ isActive }) =>
+        [
+          'flex items-center gap-3 rounded-sm px-3 py-3 outline-none transition-colors duration-150',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+          collapsed ? 'justify-center' : '',
+          isActive
+            ? 'bg-accent/10 text-text font-medium'
+            : 'text-text-muted hover:text-text hover:bg-surface',
+        ].join(' ')
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon
+            className={['size-5 flex-shrink-0', isActive ? 'text-accent' : ''].join(' ')}
+            strokeWidth={isActive ? 2.25 : 2}
+          />
+          <span className={['font-sans text-sm', collapsed ? 'sr-only' : ''].join(' ')}>
+            {item.label}
+          </span>
+        </>
+      )}
+    </NavLink>
   );
 }
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
 export function AppShell() {
-  return (
-    <div className="min-h-screen bg-surface text-text flex flex-col">
-      <header
-        className="sticky top-0 z-10 bg-surface/95 border-b border-line"
-        style={{ backdropFilter: 'blur(8px)' }}
-      >
-        <div className="mx-auto max-w-2xl px-6 h-14 flex items-center gap-6">
-          {/* Wordmark */}
-          <Wordmark />
+  const [collapsed, setCollapsed] = useState<boolean>(readCollapsed);
 
-          {/* Hairline separator */}
-          <span className="h-4 w-px bg-line flex-shrink-0" aria-hidden="true" />
+  const toggle = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* storage unavailable — collapse stays in-memory only */
+      }
+      return next;
+    });
+  }, []);
+
+  return (
+    <div className="relative min-h-screen text-text">
+      <AmbientBackdrop />
+
+      <div className="flex min-h-screen">
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        <aside
+          className={[
+            'sticky top-0 z-10 flex h-screen flex-shrink-0 flex-col',
+            'border-r border-line bg-surface-raised',
+            'transition-[width] duration-200 ease-out motion-reduce:transition-none',
+            collapsed ? 'w-[4.5rem]' : 'w-60',
+          ].join(' ')}
+        >
+          {/* Header: wordmark + collapse toggle */}
+          <div
+            className={[
+              'flex h-14 items-center px-3',
+              collapsed ? 'justify-center' : 'justify-between',
+            ].join(' ')}
+          >
+            {!collapsed && (
+              <div className="pl-1.5">
+                <Wordmark collapsed={false} />
+              </div>
+            )}
+            {collapsed && <Wordmark collapsed />}
+          </div>
+
+          {/* Collapse toggle */}
+          <div className={['px-3 pb-2', collapsed ? 'flex justify-center' : ''].join(' ')}>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-pressed={collapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="flex size-8 items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-surface hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <PanelLeft className="size-4" />
+            </button>
+          </div>
 
           {/* Primary nav */}
-          <nav aria-label="Primary" className="flex items-center gap-5 flex-1">
-            <Tab to="/today">Today</Tab>
-            <Tab to="/library">Library</Tab>
-            <Tab to="/stats">Stats</Tab>
-            <Tab to="/settings">Settings</Tab>
+          <nav aria-label="Primary" className="flex flex-1 flex-col gap-1.5 px-3 pt-1">
+            {NAV_ITEMS.map((item) => (
+              <Tab key={item.to} item={item} collapsed={collapsed} />
+            ))}
           </nav>
 
-          {/* Account menu */}
-          <AccountMenu />
+          {/* Account shortcut — pinned to footer */}
+          <div className="border-t border-line py-3">
+            <SidebarAccount collapsed={collapsed} />
+          </div>
+        </aside>
 
-          {/* Theme control */}
-          <ThemeControl />
-        </div>
-      </header>
-
-      <main className="flex-1">
-        <Outlet />
-      </main>
+        {/* ── Content ─────────────────────────────────────────────────────── */}
+        <main className="min-w-0 flex-1">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

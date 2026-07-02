@@ -83,7 +83,7 @@ export function StreakStat({ streak }: StreakStatProps) {
 
         {/* Longest streak — quiet secondary stat */}
         <div className="flex flex-col items-end gap-0.5 shrink-0">
-          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+          <span className="font-sans text-xs text-text-muted">
             Best
           </span>
           <span className="font-serif text-xl font-semibold text-text leading-none tabular-nums">

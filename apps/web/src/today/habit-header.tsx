@@ -18,7 +18,7 @@ import { useHabitSummary } from './use-habit-summary.js';
 function HabitSkeleton() {
   return (
     <div
-      className="rounded-2xl bg-surface-raised border border-line px-6 py-5"
+      className="rounded-md bg-surface-raised border border-line shadow-float-sm px-6 py-5"
       aria-busy="true"
       aria-label="Loading habit summary"
     >
@@ -70,7 +70,7 @@ export function HabitHeader() {
   }
 
   return (
-    <div className="rounded-2xl bg-surface-raised border border-line px-6 py-5">
+    <div className="rounded-md bg-surface-raised border border-line shadow-float-sm px-6 py-5">
       <div className="flex items-center gap-6">
         {/* Left: streak ember — expressive, larger visual weight */}
         <div className="flex-1 min-w-0">

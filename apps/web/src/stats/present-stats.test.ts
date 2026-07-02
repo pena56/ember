@@ -361,6 +361,86 @@ describe('presentStats — heatmap level binning', () => {
   });
 });
 
+// ── 4b. Calendar per-day details ────────────────────────────────────────────────
+
+describe('presentStats — calendar', () => {
+  function sessionOn(docId: string, day: string, activeMs: number, pages: number[]): ReadingSession {
+    return {
+      id: `s-${docId}-${day}-${activeMs.toString()}`,
+      docId,
+      localDay: day,
+      tzOffsetMinutes: 0,
+      startedAt: 0,
+      endedAt: 1000,
+      activeMs,
+      pages,
+      updatedAt: '',
+    };
+  }
+
+  it('empty pipeline → no calendar days, blank window', () => {
+    const view = presentStats(EMPTY_INPUT);
+    expect(view.calendar.days).toHaveLength(0);
+    expect(view.calendar.fromDay).toBe('');
+    expect(view.calendar.toDay).toBe('');
+  });
+
+  it('window spans first→last heatmap cell', () => {
+    const heatmap = makeHeatmap([
+      { day: '2026-06-01', activeMs: 0 },
+      { day: '2026-06-02', activeMs: 60_000 },
+      { day: '2026-06-03', activeMs: 0 },
+    ]);
+    const view = presentStats({ ...EMPTY_INPUT, heatmap });
+    expect(view.calendar.fromDay).toBe('2026-06-01');
+    expect(view.calendar.toDay).toBe('2026-06-03');
+  });
+
+  it('only active (level > 0) days become embers', () => {
+    const day = '2026-06-13';
+    const heatmap = makeHeatmap([
+      { day: '2026-06-12', activeMs: 0 },
+      { day, activeMs: 30 * 60_000 },
+    ]);
+    const sessions = [sessionOn('doc-1', day, 30 * 60_000, [1, 2, 3])];
+    const view = presentStats({ ...EMPTY_INPUT, heatmap, docs: [makeDoc('doc-1', 'Book One', 100)], sessions });
+    expect(view.calendar.days).toHaveLength(1);
+    expect(view.calendar.days[0]?.day).toBe(day);
+  });
+
+  it('aggregates a day: label from cell, sessions + pages from sessions', () => {
+    const day = '2026-06-13';
+    const heatmap = makeHeatmap([{ day, activeMs: 30 * 60_000 }]);
+    const sessions = [
+      sessionOn('doc-1', day, 20 * 60_000, [1, 2, 3]),
+      sessionOn('doc-1', day, 10 * 60_000, [4, 5]),
+    ];
+    const view = presentStats({ ...EMPTY_INPUT, heatmap, docs: [makeDoc('doc-1', 'Book One', 100)], sessions });
+    const d0 = view.calendar.days[0];
+    expect(d0?.activeLabel).toBe('30m');
+    expect(d0?.sessionCount).toBe(2);
+    expect(d0?.pagesTurned).toBe(5);
+    expect(d0?.books).toHaveLength(1);
+    expect(d0?.books[0]?.title).toBe('Book One');
+    expect(d0?.books[0]?.pages).toBe(5);
+    expect(d0?.books[0]?.activeLabel).toBe('30m');
+  });
+
+  it('per-day books ordered by active time desc; title falls back to docId', () => {
+    const day = '2026-06-13';
+    const heatmap = makeHeatmap([{ day, activeMs: 40 * 60_000 }]);
+    const sessions = [
+      sessionOn('doc-1', day, 10 * 60_000, [1]),       // less time
+      sessionOn('doc-orphan', day, 30 * 60_000, [1, 2]), // more time, no doc record
+    ];
+    const view = presentStats({ ...EMPTY_INPUT, heatmap, docs: [makeDoc('doc-1', 'Book One', 100)], sessions });
+    const books = view.calendar.days[0]?.books;
+    expect(books?.[0]?.docId).toBe('doc-orphan');
+    expect(books?.[0]?.title).toBe('doc-orphan'); // fallback
+    expect(books?.[1]?.docId).toBe('doc-1');
+  });
+});
+
 // ── 5. Totals + speed labels ───────────────────────────────────────────────────
 
 describe('presentStats — totals labels', () => {
@@ -677,5 +757,6 @@ describe('presentStats — empty pipeline yields neutral/zero view', () => {
     expect(view.speed.pagesPerHourLabel).toBe('—');
     expect(view.timeOfDay.hasAny).toBe(false);
     expect(view.books).toHaveLength(0);
+    expect(view.calendar.days).toHaveLength(0);
   });
 });

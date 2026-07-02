@@ -3,7 +3,10 @@
  *
  * (1) / redirects to /today (greeting visible)
  * (2) Library tab navigates to Library (dropzone visible); Today tab navigates back
- * (3) ThemeControl renders in the shell with aria-pressed pattern
+ * (3) Stats tab navigates to /stats
+ * (4) sidebar collapse toggle flips aria-pressed and persists to localStorage
+ *
+ * Theme + account controls now live in Settings (see settings tests), not the shell.
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -211,18 +214,27 @@ describe('AppShell navigation', () => {
     expect(screen.getByRole('link', { name: /library/i })).toBeDefined();
   });
 
-  it('(4) ThemeControl renders in the shell with aria-pressed pattern', async () => {
+  it('(4) sidebar collapse toggle flips aria-pressed and persists', async () => {
     const store = makeMemoryStore();
     renderApp(store, ['/today']);
 
     await waitFor(() => {
-      expect(screen.getByRole('group', { name: 'Theme' })).toBeDefined();
+      expect(screen.getByRole('navigation', { name: 'Primary' })).toBeDefined();
     });
 
-    const buttons = screen.getAllByRole('button', { name: /system|light|dark/i });
-    expect(buttons.length).toBeGreaterThanOrEqual(3);
+    // Starts expanded → toggle is labelled "Collapse sidebar", not pressed.
+    const toggle = screen.getByRole('button', { name: /collapse sidebar/i });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
 
-    const pressed = buttons.filter((b) => b.getAttribute('aria-pressed') === 'true');
-    expect(pressed.length).toBe(1);
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    // Now collapsed → labelled "Expand sidebar", pressed, and persisted.
+    await waitFor(() => {
+      const expandBtn = screen.getByRole('button', { name: /expand sidebar/i });
+      expect(expandBtn.getAttribute('aria-pressed')).toBe('true');
+    });
+    expect(localStorage.getItem('ember:sidebar-collapsed')).toBe('1');
   });
 });

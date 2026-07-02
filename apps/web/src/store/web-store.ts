@@ -1,7 +1,7 @@
 import type { Annotation, AnnotationKind, BlobStatus, DocTag, Document, DuplicateDecision, FlushedSession, Hasher, HighlightColor, NotificationPreferences, ReadingPosition, ReadingSession, SmartView, SmartViewQuery, Tag, TagColor, TextAnchor } from '@ember/core';
 import { BLOB_SYNC_COLLECTION, DOC_TAGS_COLLECTION, DUPLICATE_DECISIONS_COLLECTION, SMART_VIEWS_COLLECTION, TAGS_COLLECTION, docTagId, editAnnotation, editSmartView, editTag, makeAnnotation, makeDocTag, makeDuplicateDecision, makeOutboxEntry, makeSmartView, makeTag } from '@ember/core';
 import type { BlobStore, GoalConfigRecord, ImportResult, NotificationPreferencesRecord, Repository } from '@ember/store';
-import { deleteAnnotation as deleteAnnotationRecord, getGoalConfig, getNotificationPreferences, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount, setNotificationPreferences } from '@ember/store';
+import { deleteAnnotation as deleteAnnotationRecord, deleteDocument as deleteDocumentRecord, getGoalConfig, getNotificationPreferences, getReadingPosition, importDocument, listAnnotations, listDocuments, listReadingPositions, listSessions, recordSession, saveAnnotation, saveReadingPosition, setDocumentPageCount, setNotificationPreferences } from '@ember/store';
 
 import type { WebClock } from './web-clock.js';
 
@@ -12,6 +12,12 @@ export interface WebStore {
   listDocuments(): Promise<Document[]>;
   /** Read back the raw PDF bytes for a stored document by id. Returns undefined when the blob is not found. */
   getPdfBytes(id: string): Promise<Uint8Array | undefined>;
+  /**
+   * Delete a document and cascade to its owned records (tag links, reading
+   * position, annotations) as synced delete tombstones, then free the local
+   * bytes. Reading sessions are preserved (invariant #3 — immutable history).
+   */
+  deleteDocument(id: string): Promise<void>;
   /** Upsert the current reading position for a document (last-write). */
   saveReadingPosition(input: { docId: string; page: number; offset: number }): Promise<ReadingPosition>;
   /** Return the stored reading position for a document, or undefined if none saved. */
@@ -178,6 +184,13 @@ export function createWebStore(deps: {
 
     async getPdfBytes(id: string): Promise<Uint8Array | undefined> {
       return blobs.get(id);
+    },
+
+    async deleteDocument(id: string): Promise<void> {
+      return deleteDocumentRecord(
+        { repo, blobs, newOutboxId: () => clock.newOutboxId(), nextStamp: () => clock.nextStamp() },
+        id,
+      );
     },
 
     async saveReadingPosition(input: { docId: string; page: number; offset: number }): Promise<ReadingPosition> {

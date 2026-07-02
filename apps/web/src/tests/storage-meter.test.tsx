@@ -52,9 +52,11 @@ describe('StorageMeter', () => {
     await mockUsage({ used: 312_000_000, quota: 1_000_000_000, fileCap: 52_428_800 });
     render(<StorageMeter />);
 
-    // Should contain something like "312.0 MB of 1000.0 MB used"
-    const text = screen.getByText(/MB.*used/i);
-    expect(text).toBeDefined();
+    // "used of quota" line (e.g. "312.0 MB of 1000.0 MB")
+    expect(screen.getByText(/MB of .*MB/i)).toBeDefined();
+    // percent-used and free lines
+    expect(screen.getByText(/%\s*used/i)).toBeDefined();
+    expect(screen.getByText(/free/i)).toBeDefined();
   });
 
   it('(4) applies near-limit treatment when usage >= 80% quota', async () => {

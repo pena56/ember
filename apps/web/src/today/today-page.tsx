@@ -66,35 +66,25 @@ export function TodayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10 flex flex-col gap-10">
+    <div className="mx-auto w-full max-w-2xl px-6 py-12 flex flex-col gap-9">
 
-      {/* Greeting block */}
-      <div className="flex flex-col gap-1.5">
-        {/* Date — quiet, muted, contextual */}
-        <p className="font-sans text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
-          {formatDate()}
-        </p>
-
-        <h1 className="font-serif text-4xl font-semibold text-text leading-tight tracking-tight">
+      {/* Greeting — the page's emotional anchor */}
+      <header className="flex flex-col gap-2">
+        <h1 className="font-serif text-4xl font-semibold text-text leading-tight tracking-tight text-balance">
           {greeting}
         </h1>
+        <p className="font-sans text-sm text-text-muted">
+          {formatDate()}
+          {!loading && (
+            <>
+              <span className="mx-1.5 text-line" aria-hidden="true">·</span>
+              {getSubtitle(items.length > 0)}
+            </>
+          )}
+        </p>
+      </header>
 
-        {!loading && (
-          <p className="font-sans text-sm text-text-muted mt-0.5">
-            {getSubtitle(items.length > 0)}
-          </p>
-        )}
-      </div>
-
-      {/* Thin section separator */}
-      <div className="h-px w-12 bg-line" aria-hidden="true" />
-
-      {/* Habit header — streak ember + today's goal ring */}
-      <section aria-label="Reading habit">
-        <HabitHeader />
-      </section>
-
-      {/* Continue Reading */}
+      {/* Continue Reading — the primary invitation back into a book */}
       {loading ? (
         <Spinner />
       ) : (
@@ -102,6 +92,11 @@ export function TodayPage() {
           <ContinueReadingCard item={topItem} onResume={handleResume} />
         </section>
       )}
+
+      {/* Habit header — streak ember + today's goal ring */}
+      <section aria-label="Reading habit">
+        <HabitHeader />
+      </section>
     </div>
   );
 }

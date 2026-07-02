@@ -210,31 +210,32 @@ describe('ReaderPage', () => {
     expect(screen.getByRole('button', { name: /paged/i }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('reader-theme control switches paper→sepia→night with aria-pressed and does NOT mutate data-app-theme', async () => {
+  it('text-size stepper clamps at both ends', async () => {
     renderReader({ docId: 'doc-1' });
 
     await waitFor(() => {
-      const paperBtn = screen.getByRole('button', { name: /paper/i });
-      expect(paperBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByRole('button', { name: /increase text size/i })).toBeDefined();
     });
 
-    // Capture current app theme
-    const appThemeBefore = document.documentElement.dataset['appTheme'];
+    const increase = () => screen.getByRole('button', { name: /increase text size/i }) as HTMLButtonElement;
+    const decrease = () => screen.getByRole('button', { name: /decrease text size/i }) as HTMLButtonElement;
 
-    // Switch to sepia
-    fireEvent.click(screen.getByRole('button', { name: /sepia/i }));
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /sepia/i }).getAttribute('aria-pressed')).toBe('true');
-    });
-    // app theme unchanged
-    expect(document.documentElement.dataset['appTheme']).toBe(appThemeBefore);
+    // Default (middle) step: both directions available.
+    expect(increase().disabled).toBe(false);
+    expect(decrease().disabled).toBe(false);
 
-    // Switch to night
-    fireEvent.click(screen.getByRole('button', { name: /night/i }));
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /night/i }).getAttribute('aria-pressed')).toBe('true');
-    });
-    expect(document.documentElement.dataset['appTheme']).toBe(appThemeBefore);
+    // Two steps up reaches the largest size → increase disables.
+    fireEvent.click(increase());
+    fireEvent.click(increase());
+    expect(increase().disabled).toBe(true);
+
+    // Four steps down reaches the smallest size → decrease disables.
+    fireEvent.click(decrease());
+    fireEvent.click(decrease());
+    fireEvent.click(decrease());
+    fireEvent.click(decrease());
+    expect(decrease().disabled).toBe(true);
+    expect(increase().disabled).toBe(false);
   });
 
   it('shows gentle error notice when pdf load fails, with working back action', async () => {

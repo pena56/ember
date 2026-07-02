@@ -2,16 +2,22 @@
 // Caller supplies all platform capabilities (hasher, now, newOutboxId, hlc).
 
 import {
+  type Annotation,
+  type DocTag,
   type Hasher,
   type Hlc,
   type Document,
+  type ReadingPosition,
+  DOC_TAGS_COLLECTION,
   computeDocumentId,
   makeDocument,
   makeOutboxEntry,
   withDocumentPageCount,
 } from '@ember/core';
 
+import { ANNOTATIONS_COLLECTION } from './annotations.js';
 import type { BlobStore } from './blob-store.js';
+import { READING_POSITIONS_COLLECTION } from './reading-positions.js';
 import type { Repository } from './repository.js';
 
 export const DOCUMENTS_COLLECTION = 'documents';
@@ -118,4 +124,65 @@ export async function setDocumentPageCount(
     }),
   );
   return updated;
+}
+
+/**
+ * Delete a document and cascade to its owned records.
+ *
+ * Removes, each as a repo.delete + one HLC-stamped delete tombstone (invariant #2,
+ * following the deleteTag / deleteAnnotation pattern):
+ *   - the document record            (DOCUMENTS_COLLECTION)
+ *   - every tag link for the doc      (DOC_TAGS_COLLECTION)
+ *   - the reading position, if any    (READING_POSITIONS_COLLECTION; id === docId)
+ *   - every annotation on the doc     (ANNOTATIONS_COLLECTION)
+ * …then deletes the local file bytes (blobs.delete) to free storage.
+ *
+ * Reading SESSIONS are intentionally NOT deleted: they are immutable/append-only
+ * (invariant #3 — no delete path) and carry streak/stats history that must survive
+ * a file being removed.
+ *
+ * Each tombstone gets its own fresh stamp + outbox id (nextStamp / newOutboxId are
+ * called per record) so ordering stays monotonic and every entry is unique.
+ * Deleting a document with no owned records still tombstones the document itself.
+ */
+export async function deleteDocument(
+  deps: {
+    repo: Repository;
+    blobs: BlobStore;
+    newOutboxId: () => string;
+    nextStamp: () => Hlc;
+  },
+  docId: string,
+): Promise<void> {
+  const [docTags, annotations, position] = await Promise.all([
+    deps.repo.query<DocTag>(DOC_TAGS_COLLECTION, (r) => r.documentId === docId),
+    deps.repo.query<Annotation>(ANNOTATIONS_COLLECTION, (r) => r.docId === docId),
+    deps.repo.get<ReadingPosition>(READING_POSITIONS_COLLECTION, docId),
+  ]);
+
+  // Ordered so the document tombstone lands first, then its dependents.
+  const targets: { collection: string; recordId: string }[] = [
+    { collection: DOCUMENTS_COLLECTION, recordId: docId },
+    ...docTags.map((t) => ({ collection: DOC_TAGS_COLLECTION, recordId: t.id })),
+    ...annotations.map((a) => ({ collection: ANNOTATIONS_COLLECTION, recordId: a.id })),
+    ...(position !== undefined
+      ? [{ collection: READING_POSITIONS_COLLECTION, recordId: docId }]
+      : []),
+  ];
+
+  for (const { collection, recordId } of targets) {
+    await deps.repo.delete(collection, recordId);
+    await deps.repo.enqueue(
+      makeOutboxEntry({
+        id: deps.newOutboxId(),
+        hlc: deps.nextStamp(),
+        collection,
+        recordId,
+        op: 'delete',
+      }),
+    );
+  }
+
+  // Free the local bytes last — record tombstones are the source of truth for sync.
+  await deps.blobs.delete(docId);
 }
